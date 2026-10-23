@@ -15,8 +15,6 @@
   <a href="/LICENSE">
     <img alt="AGPL-3.0 license" src="https://img.shields.io/github/license/iBicha/playlet.svg"/>
   </a>
-  <a href="https://channelstore.roku.com/details/4a41d0921265a5e31429a7679442153f:b5bcb5b630c28b01e93bf59856317b43/playlet">
-    <img alt="Roku Channel Store" src="https://img.shields.io/badge/Roku%20Store-Install-blueviolet?logo=roku&logoColor=blueviolet&labelColor=white"/>
   </a>
   <a href="https://github.com/iBicha/playlet/wiki">
     <img alt="Channel Stats" src="https://img.shields.io/badge/%F0%9F%93%88-channel_stats-blue"/>
@@ -25,10 +23,11 @@
 
 # Playlet
 
-Playlet is an unofficial YouTube client for Roku 📺
+Better-Playlet is an unofficial YouTube client and fork for Roku 📺
 
-**[Playlet February 2026 Update](https://github.com/iBicha/playlet/discussions/827)**
+## What is Better-Playlet
 
+Is a vibecoded (because i dont know how to code :C) fork from Playlet made with UI and comfort in mind, puting the youtube comments (compatibility with gifs in comments is a work in progress) and made from scratch the UI (the UI rework is a work in progress).
 
 ## Screenshots
 
@@ -85,19 +84,19 @@ play•let /ˈplālət/
 : a short play
 ```
 
-**Playlet** is about keeping the time you spend on YouTube short and useful. It values your time, so it does not show you ads, and allows you to skip sponsored sections and other irrelevant information that's designed to monitize you and/or waste your time.
+**Better-Playlet** is about keeping the time you spend on YouTube short and useful. It values your time, so it does not show you ads, and allows you to skip sponsored sections and other irrelevant information that's designed to monitize you and/or waste your time.
 
 There's a cliché about how a lot of open source software is **`"Made with ♡"`**. This project in particular is **not**.<br/>
-**Playlet** was created out of **spite**, because I believe I have watched enough back-to-back, unskippable YouTube ads for a lifetime.
+**Better-Playlet** and **Playlet** was created out of **spite**, because I believe I have watched enough back-to-back, unskippable YouTube ads for a lifetime.
 
 By removing all the bloat, the ads, the tracking, we could end up with an even faster app than the official one.
 
-In any case, I hope you find **Playlet** useful, and pleasant to use.
+In any case, I hope you find **Better-Playlet** or **Playlet** useful, and pleasant to use.
 
 ## Disclaimer
 
-**Playlet** does not serve or distribute any material from unauthorized sources.<br/>
-**Playlet** is simply a frontend to other systems (such as [Invidious](https://github.com/iv-org/invidious)), bringing the watching experience to the TV, as opposed to the existing frontends that are web and mobile focused.<br/>
-**Playlet** authors acknowledge that all trademarks and registered trademarks mentioned in this repository and related pages are the property of their respective owners. The use of these trademarks or trade names is for identification purposes only and does not imply any endorsement, affiliation, or sponsorship by the trademark owner.
+**Better-Playlet** does not serve or distribute any material from unauthorized sources.<br/>
+**Better-Playlet** is simply a frontend to other systems (such as [Invidious](https://github.com/iv-org/invidious)), bringing the watching experience to the TV, as opposed to the existing frontends that are web and mobile focused.<br/>
+**Better-Playlet** authors acknowledge that all trademarks and registered trademarks mentioned in this repository and related pages are the property of their respective owners. The use of these trademarks or trade names is for identification purposes only and does not imply any endorsement, affiliation, or sponsorship by the trademark owner.
 
 <!-- markdownlint-configure-file {"MD024": { "siblings_only": true } } -->
