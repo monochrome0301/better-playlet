@@ -5,12 +5,32 @@ function OnContentSet() as void
     if content = invalid
         return
     end if
-    m.top.findNode("authorLabel").text = ValidString(content.author)
-    m.top.findNode("metaLabel").text = ValidString(content.meta)
-    m.top.findNode("textLabel").text = ValidString(content.text)
+    ' replies are indented one step so they read as their comment's children.
+    indent = ValidInt(content.indent) * 32
+    author = m.top.findNode("authorLabel")
+    meta = m.top.findNode("metaLabel")
+    text = m.top.findNode("textLabel")
+    author.translation = [16 + indent, 6]
+    meta.translation = [16 + indent, 34]
+    text.translation = [16 + indent, 58]
+    text.width = 920 - indent
+    author.text = ValidString(content.author)
+    meta.text = ValidString(content.meta)
+    text.text = ValidString(content.text)
+    Repaint()
 end function
 
+' The focused row sits on the list's light focus highlight, so its labels flip to dark to stay readable.
 function Repaint() as void
-    highlight = m.top.findNode("highlight")
-    highlight.opacity = 0.12 * m.top.focusPercent
+    if m.top.itemHasFocus
+        SetLabelColors("#1A1A1AFF", "#3C3C3CFF", "#1A1A1AFF")
+    else
+        SetLabelColors("#EBEBEBFF", "#AAAAAAFF", "#DDDDDDFF")
+    end if
+end function
+
+function SetLabelColors(authorColor as string, metaColor as string, textColor as string) as void
+    m.top.findNode("authorLabel").color = authorColor
+    m.top.findNode("metaLabel").color = metaColor
+    m.top.findNode("textLabel").color = textColor
 end function

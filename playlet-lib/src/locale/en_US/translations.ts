@@ -1025,6 +1025,18 @@
         <translation>Comments are disabled</translation>
     </message>
     <message>
+        <source>View replies</source>
+        <translation>View replies</translation>
+    </message>
+    <message>
+        <source>Hide replies</source>
+        <translation>Hide replies</translation>
+    </message>
+    <message>
+        <source>Hearted by creator</source>
+        <translation>Hearted by creator</translation>
+    </message>
+    <message>
         <source>Request not sent.</source>
         <translation>Request not sent.</translation>
     </message>

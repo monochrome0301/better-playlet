@@ -98,6 +98,60 @@ namespace Tests
             m.assertTrue(rows[0].title.InStr(Tr(Locale.PlaybackMenu.Subtitles)) = 0)
         end function
 
+        @describe("comment rows")
+
+        function Comment(fields as object) as object
+            comment = {
+                author: "@a"
+                text: "hi"
+                likes: "12"
+                publishedTime: "2 days ago"
+                hearted: false
+                replyToken: ""
+                replyRows: []
+                expanded: false
+            }
+            comment.Append(fields)
+            return comment
+        end function
+
+        @it("projects a comment with likes, age and the creator-heart marker")
+        function _()
+            rows = PlayerOverlayLogic.CommentRows([m.Comment({ hearted: true })], false)
+            m.assertEqual(rows.Count(), 1)
+            m.assertEqual(rows[0].kind, "comment")
+            m.assertEqual(rows[0].commentIndex, 0)
+            m.assertEqual(rows[0].indent, 0)
+            m.assertEqual(rows[0].meta, "12 · 2 days ago · " + Tr(Locale.PlaybackMenu.HeartedByCreator))
+        end function
+
+        @it("indents replies under their expanded comment, and appends the load-more row")
+        function _()
+            comments = [
+                m.Comment({ replyToken: "t1", expanded: true, replyRows: [m.Comment({ author: "@reply", likes: "" })] })
+                m.Comment({ author: "@b" })
+            ]
+            rows = PlayerOverlayLogic.CommentRows(comments, true)
+            m.assertEqual(rows.Count(), 4)
+            m.assertEqual(rows[0].kind, "comment")
+            m.assertEqual(rows[0].meta.InStr(Tr(Locale.PlaybackMenu.HideReplies)) > 0, true)
+            m.assertEqual(rows[1].kind, "reply")
+            m.assertEqual(rows[1].commentIndex, 0)
+            m.assertEqual(rows[1].indent, 1)
+            m.assertEqual(rows[1].author, "@reply")
+            m.assertEqual(rows[2].kind, "comment")
+            m.assertEqual(rows[3].kind, "more")
+        end function
+
+        @it("offers the replies hint only on comments that carry a replies token")
+        function _()
+            rows = PlayerOverlayLogic.CommentRows([m.Comment({})], false)
+            m.assertEqual(rows[0].meta, "12 · 2 days ago")
+
+            rows = PlayerOverlayLogic.CommentRows([m.Comment({ replyToken: "t1" })], false)
+            m.assertTrue(rows[0].meta.InStr(Tr(Locale.PlaybackMenu.ViewReplies)) > 0)
+        end function
+
     end class
 
 end namespace

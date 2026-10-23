@@ -107,6 +107,7 @@ function TestSetup() as void
     m.commentsList.visible = false
     m.commentsList.status = ""
     m.commentsList.comments = []
+    m.commentsRows = []
     m.top.availableAudioTracks = []
     m.top.availableSubtitleTracks = []
     m.top.audioTrack = invalid
@@ -275,6 +276,14 @@ end function
 function TestShowComments() as void
     m.commentsOpen = true
     m.commentsList.visible = true
+end function
+
+' TestStaleOverlay — both overlays claim to be open while neither is on screen (a half-finished open).
+function TestStaleOverlay() as void
+    m.commentsOpen = true
+    m.commentsList.visible = false
+    m.menuLevel = "main"
+    m.playerMenu.visible = false
 end function
 
 ' TestCoordinatorFields — every non-function key on the coordinator's m, for the unmodeled-axis meta-test

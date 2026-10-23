@@ -1,12 +1,12 @@
 <component name="CommentRow" extends="Group">
-    <!-- One comment of the player's comments overlay. Pure projection of its itemContent (author / meta / text). -->
+    <!-- One comment (or reply) of the player's comments overlay. Pure projection of its itemContent
+         (author / meta / text / indent). The MarkupList draws the focus highlight behind the focused row, so
+         the labels go dark in Repaint to stay readable on it. -->
     <interface>
         <field id="itemContent" type="node" onChange="OnContentSet" />
         <field id="itemHasFocus" type="boolean" onChange="Repaint" />
-        <field id="focusPercent" type="float" onChange="Repaint" />
     </interface>
     <children>
-        <Rectangle id="highlight" width="960" height="112" color="0xFFFFFF" opacity="0" />
         <Label id="authorLabel" translation="[16,6]" width="760" height="30"
             font="font:SmallestBoldSystemFont" color="0xFEFEFEFF" />
         <Label id="metaLabel" translation="[16,34]" width="760" height="24"

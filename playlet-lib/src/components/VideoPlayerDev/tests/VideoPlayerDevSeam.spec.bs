@@ -1094,6 +1094,19 @@ namespace Tests
             m.top.findNode("autoHide").control = "stop"
         end function
 
+        ' An overlay state that says open with nothing on screen must not own the remote: swallowing Back there
+        ' is an app with no way out, and it is what "the settings button gets the app stuck" looks like.
+        @it("a half-finished overlay open cannot own the remote")
+        function _()
+            m.top.callFunc("TestStaleOverlay")
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Down, true), "the player owns Down")
+            snap = m.Snap()
+            m.assertFalse(snap.commentsOpen, "the stale comments overlay healed")
+            m.assertEqual(snap.menuLevel, PlayerOverlayLogic.Level.None, "the stale menu healed")
+            m.assertTrue(snap.chromeShown, "and Down revealed the controls")
+            m.top.findNode("autoHide").control = "stop"
+        end function
+
         ' The coordinator twin of the brain's unmodeled-axis meta-test: every m.* field on the coordinator must
         ' be consciously classified here. A NEW coordinator field fails this until someone decides what it is —
         ' a state axis needs transition coverage, a flag needs its consuming path tested.
@@ -1121,7 +1134,7 @@ namespace Tests
                 classified[name] = "axis"
             end for
             ' flags / scratch — one-shot latches and counters with a single consuming path.
-            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId"]
+            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsRows", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId", "commentsJobKind", "commentsJobIndex"]
                 classified[name] = "flag"
             end for
             ' NOT coordinator state — node-scope + test-environment entries, pinned EXPLICITLY (no hidden

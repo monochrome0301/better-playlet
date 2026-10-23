@@ -7,8 +7,11 @@ import "pkg:/source/utils/Types.bs"
 
 namespace Innertube
 
-    ' One page of the video's top-level comments. The first page (empty continuation) resolves the comments
-    ' continuation from the watch page first; later pages pass the token straight back in.
+    ' engagementToolbarStateEntityPayload.heartState seen when the video's creator hearted a comment.
+    const HEARTED_TOOLBAR_STATE = "TOOLBAR_HEART_STATE_HEARTED"
+
+    ' One page of comments: the video's top-level comments (empty continuation resolves the token from the watch
+    ' page first) or one comment's replies (the token straight from that comment's thread).
     function GetCommentsPage(videoId as string, continuation as string, cancellation as object) as object
         if StringUtils.IsNullOrEmpty(continuation)
             nextRequest = CreateNextRequest({ "videoId": videoId })
@@ -66,11 +69,36 @@ namespace Innertube
         end if
         for each item in items
             token = ObjectUtils.Dig(item, ["continuationItemRenderer", "continuationEndpoint", "continuationCommand", "token"])
+            if not IsString(token)
+                ' "View replies" / "Load more" render the same continuation command as a button.
+                token = ObjectUtils.Dig(item, ["continuationItemRenderer", "button", "buttonRenderer", "command", "continuationCommand", "token"])
+            end if
             if IsString(token) and token <> ""
                 return token
             end if
         end for
         return ""
+    end function
+
+    ' The replies continuation token of one comment thread, or "" when the comment has no replies. The first
+    ' replies page carries the button to load the rest, so only the token is needed here.
+    function FindRepliesContinuation(thread as object) as string
+        replies = ObjectUtils.Dig(thread, ["replies"])
+        if IsAssociativeArray(replies)
+            for each key in ["contents", "subThreads"]
+                token = FindContinuationToken(replies[key])
+                if token <> ""
+                    return token
+                end if
+            end for
+            ' "View replies" carries its own button.
+            token = ValidString(ObjectUtils.Dig(replies, ["viewReplies", "buttonRenderer", "command", "continuationCommand", "token"]))
+            if token <> ""
+                return token
+            end if
+        end if
+        ' classic renderer: commentRenderer.moreReplies holds the same continuation item shape.
+        return FindContinuationToken(ObjectUtils.Dig(thread, ["comment", "commentRenderer", "moreReplies"]))
     end function
 
     function ParseCommentsResponse(payload as object) as object
@@ -81,17 +109,21 @@ namespace Innertube
             disabled: false
         }
 
-        ' Comment bodies live in frameworkUpdates entities, keyed by the commentViewModel on each thread.
+        ' Comment bodies live in frameworkUpdates entities, keyed by the commentViewModel on each thread; the
+        ' creator-heart state rides the same batch in a separate toolbar-state entity.
         entities = ParseCommentEntities(payload)
+        toolbarStates = ParseToolbarStates(payload)
 
         items = []
         commands = payload.onResponseReceivedEndpoints
         if IsArray(commands)
             for each command in commands
-                continuationItems = ObjectUtils.Dig(command, ["reloadContinuationItemsCommand", "continuationItems"])
-                if IsArray(continuationItems)
-                    items.Append(continuationItems)
-                end if
+                for each key in ["reloadContinuationItemsCommand", "appendContinuationItemsCommand"]
+                    continuationItems = ObjectUtils.Dig(command, [key, "continuationItems"])
+                    if IsArray(continuationItems)
+                        items.Append(continuationItems)
+                    end if
+                end for
             end for
         end if
 
@@ -111,8 +143,12 @@ namespace Innertube
             end if
 
             thread = ObjectUtils.Dig(item, ["commentThreadRenderer"])
+            if not IsAssociativeArray(thread) and IsAssociativeArray(ObjectUtils.Dig(item, ["commentViewModel"]))
+                ' A reply page may deliver the reply as the bare view model, with no thread wrapper.
+                thread = item
+            end if
             if IsAssociativeArray(thread)
-                comment = ParseCommentThread(thread, entities)
+                comment = ParseCommentThread(thread, entities, toolbarStates)
                 if comment <> invalid
                     result.comments.Push(comment)
                 end if
@@ -133,13 +169,22 @@ namespace Innertube
     end function
 
     function ParseCommentEntities(payload as object) as object
+        return ParseEntities(payload, "commentEntityPayload")
+    end function
+
+    ' The toolbar-state entities (heartState / likeState), keyed by the thread's toolbarStateKey.
+    function ParseToolbarStates(payload as object) as object
+        return ParseEntities(payload, "engagementToolbarStateEntityPayload")
+    end function
+
+    function ParseEntities(payload as object, payloadKey as string) as object
         entities = {}
         mutations = ObjectUtils.Dig(payload, ["frameworkUpdates", "entityBatchUpdate", "mutations"])
         if not IsArray(mutations)
             return entities
         end if
         for each mutation in mutations
-            entity = ObjectUtils.Dig(mutation, ["payload", "commentEntityPayload"])
+            entity = ObjectUtils.Dig(mutation, ["payload", payloadKey])
             if IsAssociativeArray(entity)
                 key = ValidString(entity.key)
                 if key <> ""
@@ -150,8 +195,11 @@ namespace Innertube
         return entities
     end function
 
-    function ParseCommentThread(thread as object, entities as object) as dynamic
+    function ParseCommentThread(thread as object, entities as object, toolbarStates as object) as dynamic
         viewModel = ObjectUtils.Dig(thread, ["commentViewModel", "commentViewModel"])
+        if not IsAssociativeArray(viewModel)
+            viewModel = ObjectUtils.Dig(thread, ["commentViewModel"])
+        end if
         if IsAssociativeArray(viewModel)
             entity = entities[ValidString(viewModel.commentKey)]
             if IsAssociativeArray(entity)
@@ -164,6 +212,8 @@ namespace Innertube
                     publishedTime: ValidString(properties.publishedTime)
                     likes: ValidString(toolbar.likeCountNotliked)
                     replies: ValidString(toolbar.replyCount)
+                    hearted: ToolbarHearted(toolbar, toolbarStates[ValidString(viewModel.toolbarStateKey)])
+                    replyContinuation: FindRepliesContinuation(thread)
                 }
             end if
         end if
@@ -180,7 +230,29 @@ namespace Innertube
             publishedTime: ParseText(ObjectUtils.Dig(renderer, ["publishedTimeText"]))
             likes: ParseText(ObjectUtils.Dig(renderer, ["voteCount"]))
             replies: ValidString(renderer.replyCount)
+            hearted: ClassicHearted(renderer)
+            replyContinuation: FindRepliesContinuation(thread)
         }
+    end function
+
+    ' The modern heart state: the toolbarStateKey's entity, or the inline toolbar state when the response
+    ' carries it there instead.
+    function ToolbarHearted(toolbar as object, toolbarState as object) as boolean
+        if IsAssociativeArray(toolbarState)
+            return ValidString(toolbarState.heartState) = HEARTED_TOOLBAR_STATE
+        end if
+        return ValidString(toolbar.heartState) = HEARTED_TOOLBAR_STATE
+    end function
+
+    ' The classic renderer's creatorHeart node, which only appears (isHearted=true) on a hearted comment.
+    function ClassicHearted(renderer as object) as boolean
+        for each path in [["creatorHeart"], ["actionButtons", "commentActionButtonsRenderer", "creatorHeart"]]
+            heart = ObjectUtils.Dig(renderer, path)
+            if IsAssociativeArray(heart)
+                return ValidBool(heart.isHearted)
+            end if
+        end for
+        return false
     end function
 
     function ParseCommentCount(countText as object) as string

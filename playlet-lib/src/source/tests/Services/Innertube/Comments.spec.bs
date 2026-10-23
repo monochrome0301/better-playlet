@@ -93,6 +93,104 @@ namespace Tests
             m.assertEqual(result.continuation, "")
         end function
 
+        @it("reads the creator heart from the toolbar state entity, and the replies token from the thread")
+        function _()
+            payload = m.Parse(`{
+                "frameworkUpdates": {"entityBatchUpdate": {"mutations": [
+                    {"payload": {"commentEntityPayload": {
+                        "key": "k1",
+                        "properties": {"content": {"content": "hi"}, "publishedTime": "1 day ago"},
+                        "author": {"displayName": "@a"},
+                        "toolbar": {"likeCountNotliked": "3", "replyCount": "2"}
+                    }}},
+                    {"payload": {"engagementToolbarStateEntityPayload": {"key": "ts1", "heartState": "TOOLBAR_HEART_STATE_HEARTED"}}}
+                ]}},
+                "onResponseReceivedEndpoints": [{"reloadContinuationItemsCommand": {"continuationItems": [
+                    {"commentThreadRenderer": {
+                        "commentViewModel": {"commentViewModel": {"commentKey": "k1", "toolbarStateKey": "ts1"}},
+                        "replies": {"contents": [
+                            {"continuationItemRenderer": {"button": {"buttonRenderer": {"command": {"continuationCommand": {"token": "replies-token"}}}}}}
+                        ]}
+                    }}
+                ]}}]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.comments.Count(), 1)
+            m.assertEqual(result.comments[0].hearted, true)
+            m.assertEqual(result.comments[0].replyContinuation, "replies-token")
+        end function
+
+        @it("a comment without the hearted state is not marked, and one with no replies has no token")
+        function _()
+            payload = m.Parse(`{
+                "frameworkUpdates": {"entityBatchUpdate": {"mutations": [
+                    {"payload": {"commentEntityPayload": {
+                        "key": "k1",
+                        "properties": {"content": {"content": "hi"}},
+                        "author": {"displayName": "@a"},
+                        "toolbar": {}
+                    }}},
+                    {"payload": {"engagementToolbarStateEntityPayload": {"key": "ts1", "heartState": "TOOLBAR_HEART_STATE_UNHEARTED"}}}
+                ]}},
+                "onResponseReceivedEndpoints": [{"reloadContinuationItemsCommand": {"continuationItems": [
+                    {"commentThreadRenderer": {"commentViewModel": {"commentViewModel": {"commentKey": "k1", "toolbarStateKey": "ts1"}}}}
+                ]}}]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.comments[0].hearted, false)
+            m.assertEqual(result.comments[0].replyContinuation, "")
+        end function
+
+        @it("reads a replies page delivered under appendContinuationItemsCommand")
+        function _()
+            payload = m.Parse(`{
+                "frameworkUpdates": {"entityBatchUpdate": {"mutations": [
+                    {"payload": {"commentEntityPayload": {
+                        "key": "r1",
+                        "properties": {"content": {"content": "a reply"}, "publishedTime": "1 hour ago"},
+                        "author": {"displayName": "@rep"},
+                        "toolbar": {"likeCountNotliked": "1"}
+                    }}}
+                ]}},
+                "onResponseReceivedEndpoints": [{"appendContinuationItemsCommand": {"continuationItems": [
+                    {"commentThreadRenderer": {
+                        "commentViewModel": {"commentViewModel": {"commentKey": "r1"}},
+                        "replies": {"viewReplies": {"buttonRenderer": {"command": {"continuationCommand": {"token": "more-replies"}}}}}
+                    }}
+                ]}}]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.comments.Count(), 1)
+            m.assertEqual(result.comments[0].author, "@rep")
+            m.assertEqual(result.comments[0].text, "a reply")
+            m.assertEqual(result.comments[0].replyContinuation, "more-replies")
+        end function
+
+        @it("reads the classic creator heart and its moreReplies continuation")
+        function _()
+            payload = m.Parse(`{
+                "onResponseReceivedEndpoints": [{"reloadContinuationItemsCommand": {"continuationItems": [
+                    {"commentThreadRenderer": {"comment": {"commentRenderer": {
+                        "authorText": {"simpleText": "@classic"},
+                        "contentText": {"runs": [{"text": "hi"}]},
+                        "creatorHeart": {"isHearted": true},
+                        "replyCount": "4"
+                    }}}}
+                ]}}]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.comments[0].hearted, true)
+            m.assertEqual(result.comments[0].replies, "4")
+        end function
+
     end class
 
 end namespace

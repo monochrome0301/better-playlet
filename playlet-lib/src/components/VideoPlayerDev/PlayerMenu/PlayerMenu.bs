@@ -27,7 +27,9 @@ function OnRowsSet() as void
         end for
     end if
     m.list.content = content
-    m.list.jumpToItem = 0
+    if content.getChildCount() > 0
+        m.list.jumpToItem = 0
+    end if
 end function
 
 function OnFocusIndexSet() as void

@@ -341,6 +341,9 @@ namespace Locale
         LoadingComments = "Loading comments..."
         CommentsLoadError = "Failed to load comments"
         CommentsDisabled = "Comments are disabled"
+        ViewReplies = "View replies"
+        HideReplies = "Hide replies"
+        HeartedByCreator = "Hearted by creator"
     end enum
 
     @locale

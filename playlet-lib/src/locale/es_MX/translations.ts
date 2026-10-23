@@ -149,6 +149,18 @@
         <translation>Cargar más</translation>
     </message>
     <message>
+        <source>View replies</source>
+        <translation>Ver respuestas</translation>
+    </message>
+    <message>
+        <source>Hide replies</source>
+        <translation>Ocultar respuestas</translation>
+    </message>
+    <message>
+        <source>Hearted by creator</source>
+        <translation>Le gustó al creador</translation>
+    </message>
+    <message>
         <source>Search history preferences</source>
         <translation>Preferencias de historial de búsqueda</translation>
     </message>

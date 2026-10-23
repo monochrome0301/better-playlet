@@ -178,4 +178,74 @@ namespace PlayerOverlayLogic
         return rows
     end function
 
+    ' --- Comments overlay rows ---
+
+    ' The comment's meta line: likes · age · the creator-heart marker.
+    function CommentMeta(comment as object) as string
+        parts = []
+        likes = ValidString(comment.likes)
+        if likes <> ""
+            parts.Push(likes)
+        end if
+        publishedTime = ValidString(comment.publishedTime)
+        if publishedTime <> ""
+            parts.Push(publishedTime)
+        end if
+        if ValidBool(comment.hearted)
+            parts.Push(Tr(Locale.PlaybackMenu.HeartedByCreator))
+        end if
+        return parts.Join(" · ")
+    end function
+
+    ' The visible rows of the comments overlay: every comment, its replies while it is expanded, then the
+    ' load-more row. Kinds: "comment" (OK toggles its replies), "reply" (inert), "more" (OK loads the next page).
+    function CommentRows(comments as object, hasMore as boolean) as object
+        rows = []
+        if IsArray(comments)
+            for i = 0 to comments.Count() - 1
+                comment = comments[i]
+                if not IsAssociativeArray(comment)
+                    continue for
+                end if
+                rows.Push(CommentRow("comment", i, comment, 0))
+                if ValidBool(comment.expanded)
+                    for each reply in ValidArray(comment.replyRows)
+                        rows.Push(CommentRow("reply", i, reply, 1))
+                    end for
+                end if
+            end for
+        end if
+        if hasMore
+            rows.Push({ kind: "more", commentIndex: -1, author: "", meta: "", text: Tr(Locale.WebApp.LoadMore), indent: 0 })
+        end if
+        return rows
+    end function
+
+    ' One projected row. A comment that has replies says so in its meta line, so OK on it is discoverable.
+    function CommentRow(kind as string, commentIndex as integer, comment as object, indent as integer) as object
+        meta = CommentMeta(comment)
+        if kind = "comment" and ValidString(comment.replyToken) <> ""
+            if ValidBool(comment.expanded)
+                meta = MetaWith(meta, Tr(Locale.PlaybackMenu.HideReplies))
+            else
+                meta = MetaWith(meta, Tr(Locale.PlaybackMenu.ViewReplies))
+            end if
+        end if
+        return {
+            kind: kind
+            commentIndex: commentIndex
+            author: ValidString(comment.author)
+            meta: meta
+            text: ValidString(comment.text)
+            indent: indent
+        }
+    end function
+
+    function MetaWith(meta as string, part as string) as string
+        if meta = ""
+            return part
+        end if
+        return meta + " · " + part
+    end function
+
 end namespace
