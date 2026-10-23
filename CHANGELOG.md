@@ -7,8 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Player settings menu to change quality (resumes at the same position), subtitles and audio track without leaving playback
+- Comments overlay in the player, with pagination, reply threads and creator-hearted markers
+- Settings and comments buttons in the player control row
+
+### Changed
+
+- Documentation rebranded to Better-Playlet
+
 ### Fixed
 
+- Comment selection readability in the player's comments list
+- Up/Down now reveal the player UI when it is hidden
+- Settings menu overlay could report itself open while invisible
 - DRM playback errors on certain TVs, by filtering out FairPlay-only streams
 
 ## [0.48.10] - 2026-10-17
