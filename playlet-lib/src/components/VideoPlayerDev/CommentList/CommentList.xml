@@ -1,0 +1,21 @@
+<component name="CommentList" extends="Group" includes="Focus">
+    <!-- The player's comments overlay. The coordinator builds `comments` (author / meta / text rows) and the
+         status line; this component projects them into a MarkupList and reports Back + the selected row. -->
+    <interface>
+        <field id="title" type="string" alias="titleLabel.text" />
+        <field id="status" type="string" onChange="OnStatusSet" />
+        <field id="comments" type="array" onChange="OnCommentsSet" />
+        <field id="focusIndex" type="integer" onChange="OnFocusIndexSet" />
+        <field id="selected" type="assocarray" alwaysNotify="true" />
+        <field id="closed" type="boolean" alwaysNotify="true" />
+    </interface>
+    <children>
+        <Rectangle id="scrim" width="1280" height="720" color="0x000000" opacity="0.9" />
+        <Label id="titleLabel" translation="[80,36]" width="1000" height="48"
+            font="font:MediumBoldSystemFont" color="0xFEFEFEFF" />
+        <Label id="statusLabel" translation="[80,92]" width="1000" height="32"
+            font="font:SmallestSystemFont" color="0xBBBBBBFF" visible="false" />
+        <MarkupList id="list" translation="[70,130]" itemSize="[960,116]"
+            itemComponentName="CommentRow" numRows="5" vertFocusAnimationStyle="floatingFocus" />
+    </children>
+</component>

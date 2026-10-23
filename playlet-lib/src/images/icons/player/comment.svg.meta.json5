@@ -1,0 +1,11 @@
+{
+  inputHash: '',
+  outputs: [
+    {
+      outputFilePath: 'images/icons/player/comment.png',
+      outputHash: '',
+      width: 42,
+      height: 42,
+    },
+  ],
+}

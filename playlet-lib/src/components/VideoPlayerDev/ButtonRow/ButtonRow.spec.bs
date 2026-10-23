@@ -30,11 +30,12 @@ namespace Tests
 
         @it("exposes its button count and auto-positions the clusters (centered + right-aligned)")
         function _()
-            m.assertEqual(m.top.buttonCount, 2)
-            ' one 42px button per cluster: centered on 640 -> x=619; right-aligned to 1212 -> x=1170. Pins the
-            ' ClusterWidth math so a drift in BUTTON_WIDTH/itemSpacings can't silently de-center.
+            m.assertEqual(m.top.buttonCount, 4)
+            ' one 42px button in the center cluster: centered on 640 -> x=619. Three in the right cluster (minimize,
+            ' comments, settings): 3*42 + 2*20 = 166 wide, right-aligned to 1212 -> x=1046. Pins the ClusterWidth
+            ' math so a drift in BUTTON_WIDTH/itemSpacings can't silently de-center.
             m.assertEqual(m.top.findNode("CenterCluster").translation[0], 619.0)
-            m.assertEqual(m.top.findNode("RightCluster").translation[0], 1170.0)
+            m.assertEqual(m.top.findNode("RightCluster").translation[0], 1046.0)
         end function
 
         @describe("virtual-focus highlight")
@@ -44,6 +45,8 @@ namespace Tests
             m.top.rowFocused = false
             m.assertFalse(m.top.findNode("PlayPauseButton").focused)
             m.assertFalse(m.top.findNode("MinimizeButton").focused)
+            m.assertFalse(m.top.findNode("CommentsButton").focused)
+            m.assertFalse(m.top.findNode("SettingsButton").focused)
         end function
 
         @it("the focused button follows focusedIndex while the row holds focus")
@@ -55,6 +58,12 @@ namespace Tests
             m.top.focusedIndex = 1
             m.assertFalse(m.top.findNode("PlayPauseButton").focused)
             m.assertTrue(m.top.findNode("MinimizeButton").focused)
+            m.top.focusedIndex = 2
+            m.assertTrue(m.top.findNode("CommentsButton").focused)
+            m.assertFalse(m.top.findNode("SettingsButton").focused)
+            m.top.focusedIndex = 3
+            m.assertFalse(m.top.findNode("CommentsButton").focused)
+            m.assertTrue(m.top.findNode("SettingsButton").focused)
         end function
 
         @describe("nudge")

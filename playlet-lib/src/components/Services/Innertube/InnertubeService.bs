@@ -1,4 +1,5 @@
 import "pkg:/components/Services/Innertube/BrowseEndpoint.bs"
+import "pkg:/components/Services/Innertube/CommentsEndpoint.bs"
 import "pkg:/components/Services/Innertube/Constants.bs"
 import "pkg:/components/Services/Innertube/Context.bs"
 import "pkg:/components/Services/Innertube/GetDrmLicenseEndpoint.bs"
@@ -740,6 +741,10 @@ namespace InnertubeService
         end if
 
         return result
+    end function
+
+    function GetComments(videoId as string, options = invalid as object) as object
+        return Innertube.GetCommentsPage(videoId, ValidString(OptionUtils.Get(options, "continuation")), OptionUtils.Get(options, "cancellation"))
     end function
 
     function ResolveUrl(url as string, options = invalid as object) as object

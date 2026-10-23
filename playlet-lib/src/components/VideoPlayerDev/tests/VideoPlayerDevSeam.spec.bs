@@ -1068,6 +1068,32 @@ namespace Tests
             end for
         end function
 
+        ' The overlays own the remote while open: the settings menu opens at main, Back returns to main from a
+        ' sub-level, and Back at main closes it; the comments overlay opens and closes the same way.
+        @it("playback settings and comments overlays open and close")
+        function _()
+            m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.None, "menu starts closed")
+            m.top.callFunc("TestOpenMenu")
+            m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.Main)
+            m.assertTrue(m.top.findNode("playerMenu").visible)
+            ' a key the overlay did not consume is swallowed instead of reaching the transport/player.
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Left, true), "the open menu consumes unowned keys")
+            ' Back from the main level closes (the menu component raises closed; the coordinator decides).
+            m.top.findNode("playerMenu").closed = true
+            m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.None, "closed on Back at main")
+            m.assertFalse(m.top.findNode("playerMenu").visible)
+
+            m.top.callFunc("TestShowComments")
+            m.assertTrue(m.Snap().commentsOpen)
+            m.assertTrue(m.top.findNode("commentsList").visible)
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Ok, true), "the open comments overlay owns OK")
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Back, true), "the open comments overlay owns Back")
+            m.top.findNode("commentsList").closed = true
+            m.assertFalse(m.Snap().commentsOpen, "closed on Back")
+            m.assertFalse(m.top.findNode("commentsList").visible)
+            m.top.findNode("autoHide").control = "stop"
+        end function
+
         ' The coordinator twin of the brain's unmodeled-axis meta-test: every m.* field on the coordinator must
         ' be consciously classified here. A NEW coordinator field fails this until someone decides what it is —
         ' a state axis needs transition coverage, a flag needs its consuming path tested.
@@ -1083,19 +1109,19 @@ namespace Tests
                 classified[name] = "controller"
             end for
             ' cached child nodes / timers / animations / reusable helpers (structure, not state).
-            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime"]
+            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime", "playerMenu", "commentsList"]
                 classified[name] = "node"
             end for
             ' in-flight job handles.
-            for each name in ["videoContentJob", "sponsorBlockSegmentsJob", "markVideoWatchedJob"]
+            for each name in ["videoContentJob", "sponsorBlockSegmentsJob", "markVideoWatchedJob", "commentsJob"]
                 classified[name] = "job"
             end for
             ' STATE AXES — discrete coordinator state; each needs its transitions covered by a seam test.
-            for each name in ["chromeMode", "focusTarget", "focusedButton", "armedTimerId"]
+            for each name in ["chromeMode", "focusTarget", "focusedButton", "armedTimerId", "menuLevel", "commentsOpen"]
                 classified[name] = "axis"
             end for
             ' flags / scratch — one-shot latches and counters with a single consuming path.
-            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive"]
+            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId"]
                 classified[name] = "flag"
             end for
             ' NOT coordinator state — node-scope + test-environment entries, pinned EXPLICITLY (no hidden

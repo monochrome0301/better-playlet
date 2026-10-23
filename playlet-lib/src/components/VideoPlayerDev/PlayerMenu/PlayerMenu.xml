@@ -1,0 +1,20 @@
+<component name="PlayerMenu" extends="Group" includes="Focus">
+    <!-- Playback settings overlay. The coordinator owns the row data and what a selection means; this component
+         only projects rows into a LabelList and reports the selected index / Back. Real focus lives on the list
+         (the player hands focus over while the menu is open, and takes it back when the overlay closes). -->
+    <interface>
+        <field id="title" type="string" alias="titleLabel.text" />
+        <field id="rows" type="array" onChange="OnRowsSet" />
+        <field id="focusIndex" type="integer" onChange="OnFocusIndexSet" />
+        <field id="selected" type="assocarray" alwaysNotify="true" />
+        <field id="closed" type="boolean" alwaysNotify="true" />
+    </interface>
+    <children>
+        <Rectangle id="scrim" width="1280" height="720" color="0x000000" opacity="0.72" />
+        <Rectangle id="panel" width="620" height="500" translation="[330,110]" color="0x1F1F1F" opacity="0.97" />
+        <Label id="titleLabel" translation="[370,140]" width="540" height="44"
+            font="font:MediumBoldSystemFont" color="0xFEFEFEFF" />
+        <LabelList id="optionsList" translation="[360,200]" itemSize="[560,54]"
+            font="font:SmallestSystemFont" numRows="7" vertFocusAnimationStyle="floatingFocus" />
+    </children>
+</component>

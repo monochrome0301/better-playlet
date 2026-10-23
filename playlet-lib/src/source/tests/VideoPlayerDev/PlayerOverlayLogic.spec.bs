@@ -1,0 +1,103 @@
+import "pkg:/components/VideoPlayerDev/PlayerOverlayLogic.bs"
+
+namespace Tests
+
+    @suite
+    class PlayerOverlayLogicTests extends Rooibos.BaseTestSuite
+
+        function Metadata(heights as object) as object
+            formats = []
+            for each height in heights
+                formats.Push({ height: height })
+            end for
+            return { adaptiveFormats: formats }
+        end function
+
+        function Titles(options as object) as object
+            titles = []
+            for each option in options
+                titles.Push(option.title)
+            end for
+            return titles
+        end function
+
+        @describe("quality options")
+
+        @it("lists Auto then every distinct height, sharpest first")
+        function _()
+            options = PlayerOverlayLogic.BuildQualityOptions(m.Metadata([720, 1080, 720, 480]), "auto")
+            m.assertEqual(options.Count(), 4)
+            m.assertEqual(options[0].value, "auto")
+            m.assertEqual(options[0].title, "[x] " + Tr(Locale.Settings.AutoQuality))
+            m.assertEqual(options[1].value, "1080p")
+            m.assertEqual(options[2].value, "720p")
+            m.assertEqual(options[3].value, "480p")
+        end function
+
+        @it("marks the selected quality, and auto when there is no override")
+        function _()
+            options = PlayerOverlayLogic.BuildQualityOptions(m.Metadata([1080, 720]), "720p")
+            m.assertEqual(options[2].title, "[x] 720p")
+
+            options = PlayerOverlayLogic.BuildQualityOptions(m.Metadata([1080]), "")
+            m.assertEqual(options[0].title, "[x] " + Tr(Locale.Settings.AutoQuality))
+        end function
+
+        @it("returns no options when the metadata has no heights (the row is hidden)")
+        function _()
+            m.assertEqual(PlayerOverlayLogic.BuildQualityOptions(invalid, "auto").Count(), 0)
+            m.assertEqual(PlayerOverlayLogic.BuildQualityOptions(m.Metadata([]), "auto").Count(), 0)
+        end function
+
+        @describe("track options")
+
+        @it("subtitle options start with Off and mark the selected track")
+        function _()
+            tracks = [
+                { TrackName: "pkg:/a.vtt", Language: "en", Description: "English" }
+                { TrackName: "pkg:/b.vtt", Language: "es", Description: "Spanish" }
+            ]
+            options = PlayerOverlayLogic.BuildSubtitleOptions(tracks, tracks[1])
+            m.assertEqual(options.Count(), 3)
+            m.assertEqual(options[0].value, "off")
+            m.assertEqual(options[0].title, "[  ] " + Tr(Locale.PlaybackMenu.Off))
+            m.assertEqual(options[1].title, "[  ] English")
+            m.assertEqual(options[2].title, "[x] Spanish")
+        end function
+
+        @it("Off is selected when no subtitle track is active")
+        function _()
+            options = PlayerOverlayLogic.BuildSubtitleOptions([], invalid)
+            m.assertEqual(options.Count(), 1)
+            m.assertEqual(options[0].title, "[x] " + Tr(Locale.PlaybackMenu.Off))
+        end function
+
+        @it("audio options mark the selected language and label by Description then Language")
+        function _()
+            tracks = [
+                { TrackName: "a", Language: "en", Description: "English" }
+                { TrackName: "b", Language: "es" }
+            ]
+            options = PlayerOverlayLogic.BuildAudioOptions(tracks, tracks[0])
+            m.assertEqual(options.Count(), 2)
+            m.assertEqual(options[0].title, "[x] English")
+            m.assertEqual(options[1].title, "[  ] es")
+        end function
+
+        @describe("main rows")
+
+        @it("includes only the levels that have choices, and always the comments shortcut")
+        function _()
+            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false)
+            m.assertEqual(rows.Count(), 2)
+            m.assertEqual(rows[0].value, PlayerOverlayLogic.Level.Quality)
+            m.assertEqual(rows[1].value, "comments")
+
+            rows = PlayerOverlayLogic.MainRows("Auto", false, "Off", true, "English", true)
+            m.assertEqual(rows.Count(), 4)
+            m.assertTrue(rows[0].title.InStr(Tr(Locale.PlaybackMenu.Subtitles)) = 0)
+        end function
+
+    end class
+
+end namespace

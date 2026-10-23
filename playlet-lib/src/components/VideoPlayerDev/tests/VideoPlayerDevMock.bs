@@ -77,6 +77,13 @@ function TestSetup() as void
         m.top.unobserveField(deviceField)
     end for
 
+    ' the overlay components survive across tests; their field observers would stack per TestSetup (one handler run
+    ' per prior setup on every selection). Drop them before OnNodeReady re-registers exactly one.
+    for each overlayField in ["selected", "closed"]
+        m.playerMenu.unobserveField(overlayField)
+        m.commentsList.unobserveField(overlayField)
+    end for
+
     ' The mock node is shared across tests and `duration` is not alwaysNotify, so a leftover duration=100
     ' swallows the next test's identical write and OnDuration never fires. Reset with the observers off.
     m.top.state = VideoState.None
@@ -96,6 +103,15 @@ function TestSetup() as void
     ' the children survive across tests too: clear what a previous test's transport or live content left.
     m.transportTimer.control = "none"
     m.trickPlayBar.isLive = false
+    m.playerMenu.visible = false
+    m.commentsList.visible = false
+    m.commentsList.status = ""
+    m.commentsList.comments = []
+    m.top.availableAudioTracks = []
+    m.top.availableSubtitleTracks = []
+    m.top.audioTrack = invalid
+    m.top.subtitleTrack = invalid
+    m.top.globalCaptionMode = ""
 end function
 
 function OnTestNudge() as void
@@ -250,6 +266,17 @@ function TestContentJobFailed(errorMessage as string) as void
     })
 end function
 
+' TestOpenMenu — the playback settings overlay's open transition, minus a real remote.
+function TestOpenMenu() as void
+    OpenMenu()
+end function
+
+' TestShowComments — the comments overlay's open transition, minus the fetch job.
+function TestShowComments() as void
+    m.commentsOpen = true
+    m.commentsList.visible = true
+end function
+
 ' TestCoordinatorFields — every non-function key on the coordinator's m, for the unmodeled-axis meta-test
 ' (the coordinator twin of the brain's reflection test). Call AFTER TestSetup so Initialize/OnNodeReady have
 ' populated m. The ONLY filtering here is the two DYNAMICALLY-named runtime families ("__delay_<uuid>" and
@@ -292,6 +319,8 @@ function TestSnapshot() as object
         buttonRowVisible: m.buttonRow.visible
         barPositionMs: m.trickPlayBar.positionMs
         spinnerMode: m.spinner.mode
+        menuLevel: m.menuLevel
+        commentsOpen: m.commentsOpen
         brain: TestBrainSnapshot()
     }
 end function

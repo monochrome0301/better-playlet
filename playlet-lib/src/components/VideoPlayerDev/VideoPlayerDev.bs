@@ -7,10 +7,12 @@ import "pkg:/components/VideoPlayer/Lounge.bs"
 import "pkg:/components/VideoPlayerDev/ErrorDialogController.bs"
 import "pkg:/components/VideoPlayerDev/PlaybackTelemetry.bs"
 import "pkg:/components/VideoPlayerDev/PlayerCoordinatorLogic.bs"
+import "pkg:/components/VideoPlayerDev/PlayerOverlayLogic.bs"
 import "pkg:/components/VideoPlayerDev/SponsorBlockController.bs"
 import "pkg:/components/VideoPlayerDev/TransportController.bs"
 import "pkg:/components/VideoPlayerDev/VideoNode.bs"
 import "pkg:/components/VideoQueue/VideoQueueUtils.bs"
+import "pkg:/source/utils/FocusManagement.bs"
 import "pkg:/source/utils/Locale.bs"
 import "pkg:/source/utils/Logging.bs"
 import "pkg:/source/utils/RemoteKeys.bs"
@@ -51,9 +53,25 @@ function Initialize()
     m.videoContentJob = invalid
     m.sponsorBlockSegmentsJob = invalid
     m.markVideoWatchedJob = invalid
+    m.commentsJob = invalid
     m.watchTimeMarker = -1
     m.reportWatchTime = false
     m.onCloseCalled = false
+    ' playback settings overlay state (Level.None = closed) + the per-load quality override it applies.
+    m.menuLevel = PlayerOverlayLogic.Level.None
+    m.menuRows = []
+    m.qualityOverride = ""
+    m.selectedSubtitleTrack = invalid
+    m.selectedAudioTrack = invalid
+    m.reloadPositionMs = -1
+    m.sourceContentNode = invalid
+    ' comments overlay state.
+    m.commentsOpen = false
+    m.commentsData = []
+    m.commentsCount = 0
+    m.commentsContinuation = ""
+    m.commentsHasMore = false
+    m.commentsVideoId = ""
     ' a setSeek that arrived while the content loads (ms, -1 = none): the content-load seek goes there instead.
     m.loadingSetSeekMs = -1
 
@@ -93,6 +111,8 @@ function Initialize()
     m.largePause = m.top.findNode("largePause")
     m.buttonRow = m.top.findNode("buttonRow")
     m.fullScreenHint = m.top.findNode("fullScreenHint")
+    m.playerMenu = m.top.findNode("playerMenu")
+    m.commentsList = m.top.findNode("commentsList")
 
     m.autoHide = m.top.findNode("autoHide")
     m.transportTimer = m.top.findNode("transportTimer")
@@ -170,6 +190,10 @@ function OnNodeReady()
     m.top.ObserveField("bufferingStatus", FuncName(OnBufferingStatus))
     m.top.ObserveField("playStartInfo", FuncName(OnPlayStartInfo))
     m.top.ObserveField("streamingSegment", FuncName(OnStreamingSegment))
+    m.playerMenu.ObserveField("selected", FuncName(OnMenuSelected))
+    m.playerMenu.ObserveField("closed", FuncName(OnMenuClosed))
+    m.commentsList.ObserveField("selected", FuncName(OnCommentsSelected))
+    m.commentsList.ObserveField("closed", FuncName(OnCommentsClosed))
 
     ' a player that starts minimized shows the PiP hint (1s after the shrink settles, auto-hides after 5s).
     m.showFullScreenHint = not m.container.fullscreen
@@ -324,6 +348,12 @@ end function
 ' Key router — route intent, hold no behavior.
 '===============================================================================
 function OnKeyEvent(key as string, press as boolean) as boolean
+    ' An open overlay owns the remote: its own list already handled Up/Down/OK and Back; everything else is
+    ' swallowed here so it cannot scrub, close the player, or toggle PiP behind the overlay.
+    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen
+        return true
+    end if
+
     ' The SponsorBlock manual-skip notice outranks the focus tiers: while it is armed and on screen, OK does
     ' what the notice says (skip) no matter which tier holds focus, and Back dismisses the notice (the escape
     ' hatch for "I don't want to skip") instead of acting on the player.
@@ -551,6 +581,10 @@ function ActivateButton(index as integer) as void
     else if index = PlayerCoordinatorLogic.PlayerButton.Minimize
         MinimizeReset()
         VideoQueueUtils.ToggleVideoPictureInPicture(m.videoQueue)
+    else if index = PlayerCoordinatorLogic.PlayerButton.Comments
+        OpenComments()
+    else if index = PlayerCoordinatorLogic.PlayerButton.Settings
+        OpenMenu()
     end if
     SyncFocus()
 end function
@@ -565,6 +599,347 @@ function SyncFocus() as void
     m.buttonRow.focusedIndex = m.focusedButton
     m.buttonRow.playing = (m.top.state = VideoState.Playing)
     m.trickPlayBar.focused = chromeShown and (m.focusTarget = PlayerCoordinatorLogic.FocusTarget.Bar)
+end function
+
+'===============================================================================
+' Playback settings menu — quality (reloads the stream), subtitles and audio (live track switch), and the
+' comments shortcut. The overlay is a two-level list: the main level shows the current values, a selection
+' opens one level (Back walks back to main), or applies a track / reloads at the picked quality.
+'===============================================================================
+function OpenMenu() as void
+    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen
+        return
+    end if
+    SetMenuLevel(PlayerOverlayLogic.Level.Main)
+end function
+
+function SetMenuLevel(level as string) as void
+    m.menuLevel = level
+    if level = PlayerOverlayLogic.Level.Main
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.PlaybackSettings)
+        m.menuRows = BuildMainMenuRows()
+    else if level = PlayerOverlayLogic.Level.Quality
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.Quality)
+        m.menuRows = PlayerOverlayLogic.BuildQualityOptions(ContentMetadata(), CurrentQuality())
+    else if level = PlayerOverlayLogic.Level.Subtitles
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.Subtitles)
+        m.menuRows = PlayerOverlayLogic.BuildSubtitleOptions(ContentSubtitleTracks(), m.selectedSubtitleTrack)
+    else if level = PlayerOverlayLogic.Level.Audio
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.Audio)
+        m.menuRows = PlayerOverlayLogic.BuildAudioOptions(AvailableAudioTracks(), m.selectedAudioTrack)
+    end if
+    m.playerMenu.rows = m.menuRows
+    m.playerMenu.focusIndex = 0
+    m.playerMenu.visible = true
+    NodeSetFocus(m.playerMenu, true)
+end function
+
+function CloseMenu() as void
+    m.menuLevel = PlayerOverlayLogic.Level.None
+    m.playerMenu.visible = false
+    if not m.commentsOpen
+        NodeSetFocus(m.top, true)
+    end if
+    ArmAutoHide()
+end function
+
+function OnMenuClosed() as void
+    if m.menuLevel = PlayerOverlayLogic.Level.Main
+        CloseMenu()
+    else
+        SetMenuLevel(PlayerOverlayLogic.Level.Main)
+    end if
+end function
+
+function OnMenuSelected() as void
+    index = m.playerMenu.selected.index
+    if index < 0 or index >= m.menuRows.Count()
+        return
+    end if
+
+    if m.menuLevel = PlayerOverlayLogic.Level.Main
+        value = m.menuRows[index].value
+        if value = "comments"
+            CloseMenu()
+            OpenComments()
+        else
+            SetMenuLevel(value)
+        end if
+        return
+    end if
+
+    value = m.menuRows[index].value
+    if m.menuLevel = PlayerOverlayLogic.Level.Quality
+        CloseMenu()
+        ApplyQuality(value)
+    else if m.menuLevel = PlayerOverlayLogic.Level.Subtitles
+        ApplySubtitle(value)
+        SetMenuLevel(PlayerOverlayLogic.Level.Main)
+    else if m.menuLevel = PlayerOverlayLogic.Level.Audio
+        ApplyAudio(value)
+        SetMenuLevel(PlayerOverlayLogic.Level.Main)
+    end if
+end function
+
+function BuildMainMenuRows() as object
+    quality = CurrentQuality()
+    qualityLabel = quality
+    if PlayerOverlayLogic.IsAutoQuality(quality)
+        qualityLabel = Tr(Locale.Settings.AutoQuality)
+    end if
+    qualityOptions = PlayerOverlayLogic.BuildQualityOptions(ContentMetadata(), quality)
+    ' Only the streams Playlet builds itself can be re-filtered by quality; a muxed/DRM manifest cannot.
+    source = ""
+    content = m.top.content
+    if content <> invalid and content.hasField("playletStreamSource")
+        source = ValidString(content.playletStreamSource)
+    end if
+    canChangeQuality = (source = "adaptiveFormats" or source = "hlsUrl") and qualityOptions.Count() > 0
+
+    subtitleTracks = ContentSubtitleTracks()
+    subtitleLabel = Tr(Locale.PlaybackMenu.Off)
+    if IsAssociativeArray(m.selectedSubtitleTrack)
+        subtitleLabel = PlayerOverlayLogic.TrackLabel(m.selectedSubtitleTrack)
+    end if
+
+    audioTracks = AvailableAudioTracks()
+    audioLabel = ""
+    hasAudio = IsArray(audioTracks) and audioTracks.Count() > 1
+    if IsArray(audioTracks) and audioTracks.Count() > 0
+        audioTrack = m.selectedAudioTrack
+        if not IsAssociativeArray(audioTrack)
+            audioTrack = audioTracks[0]
+        end if
+        audioLabel = PlayerOverlayLogic.TrackLabel(audioTrack)
+    end if
+
+    return PlayerOverlayLogic.MainRows(qualityLabel, canChangeQuality, subtitleLabel, subtitleTracks.Count() > 0, audioLabel, hasAudio)
+end function
+
+function CurrentQuality() as string
+    if not StringUtils.IsNullOrEmpty(m.qualityOverride)
+        return m.qualityOverride
+    end if
+    preferences = m.top.preferences
+    if preferences <> invalid and preferences.hasField("playback.preferred_quality")
+        quality = ValidString(preferences["playback.preferred_quality"])
+        if not StringUtils.IsNullOrEmpty(quality)
+            return quality
+        end if
+    end if
+    return "auto"
+end function
+
+function ContentMetadata() as object
+    content = m.top.content
+    if content <> invalid and content.hasField("metadata")
+        return content.metadata
+    end if
+    return invalid
+end function
+
+function ContentSubtitleTracks() as object
+    content = m.top.content
+    if content <> invalid and content.hasField("SubtitleTracks")
+        return ValidArray(content.SubtitleTracks)
+    end if
+    return []
+end function
+
+function AvailableAudioTracks() as object
+    if m.top.hasField("availableAudioTracks")
+        return ValidArray(m.top.availableAudioTracks)
+    end if
+    return []
+end function
+
+function MatchAvailableTrack(available as object, track as object) as object
+    if IsArray(available)
+        for each candidate in available
+            if IsAssociativeArray(candidate) and PlayerOverlayLogic.SameTrack(candidate, track)
+                return candidate
+            end if
+        end for
+    end if
+    return track
+end function
+
+function ApplyQuality(quality as string) as void
+    if m.sourceContentNode = invalid
+        return
+    end if
+    m.qualityOverride = quality
+    m.reloadPositionMs = Int(m.top.position * 1000)
+    ' the reload recreates the content node, so the live track selections no longer apply.
+    m.selectedSubtitleTrack = invalid
+    m.selectedAudioTrack = invalid
+    m.top.globalCaptionMode = "Off"
+    m.spinner.mode = SpinMode.Loading
+    ApplyContent(m.sourceContentNode)
+end function
+
+function ApplySubtitle(value as string) as void
+    if value = "off"
+        m.selectedSubtitleTrack = invalid
+        m.top.globalCaptionMode = "Off"
+        return
+    end if
+
+    tracks = ContentSubtitleTracks()
+    index = value.ToInt()
+    if index < 0 or index >= tracks.Count()
+        return
+    end if
+    track = MatchAvailableTrack(m.top.availableSubtitleTracks, tracks[index])
+    m.selectedSubtitleTrack = track
+    m.top.globalCaptionMode = "On"
+    m.top.subtitleTrack = track
+end function
+
+function ApplyAudio(value as string) as void
+    tracks = AvailableAudioTracks()
+    index = value.ToInt()
+    if index < 0 or index >= tracks.Count()
+        return
+    end if
+    track = tracks[index]
+    m.selectedAudioTrack = track
+    m.top.audioTrack = track
+end function
+
+'===============================================================================
+' Comments overlay — first page + "load more" pagination. The job runs off the player; the video keeps
+' playing behind the overlay.
+'===============================================================================
+function OpenComments() as void
+    content = m.top.content
+    if m.commentsOpen or content = invalid or StringUtils.IsNullOrEmpty(content.videoId)
+        return
+    end if
+
+    m.commentsOpen = true
+    m.commentsData = []
+    m.commentsCount = 0
+    m.commentsContinuation = ""
+    m.commentsHasMore = false
+    m.commentsVideoId = content.videoId
+
+    m.commentsList.title = Tr(Locale.PlaybackMenu.Comments)
+    m.commentsList.comments = []
+    m.commentsList.visible = true
+    NodeSetFocus(m.commentsList, true)
+    FetchComments("")
+end function
+
+function FetchComments(continuation as string) as void
+    if m.commentsJob <> invalid
+        m.commentsJob.cancel = true
+        JobSystem.UnobserveCallback(m.commentsJob)
+    end if
+    m.commentsList.status = Tr(Locale.PlaybackMenu.LoadingComments)
+    m.commentsJob = JobSystem.CreateCallback(OnCommentsJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.VideoCommentsJob, {
+        videoId: m.commentsVideoId
+        continuation: continuation
+    }, m.commentsJob)
+end function
+
+function OnCommentsJobDone(event as object) as void
+    JobSystem.UnobserveCallback(event.getRoSGNode())
+    m.commentsJob = invalid
+
+    info = event.getInfo()
+    if info.cancel = true or m.onCloseCalled = true or not m.commentsOpen
+        return
+    end if
+
+    if not info.success
+        m.commentsList.status = Tr(Locale.PlaybackMenu.CommentsLoadError)
+        return
+    end if
+
+    data = info.data
+    if not IsAssociativeArray(data)
+        data = {}
+    end if
+    if ValidBool(data.disabled) and m.commentsCount = 0
+        m.commentsList.status = Tr(Locale.PlaybackMenu.CommentsDisabled)
+        return
+    end if
+
+    count = ValidString(data.count)
+    if count <> ""
+        m.commentsList.title = Tr(Locale.PlaybackMenu.Comments) + " (" + count + ")"
+    end if
+
+    previousCount = m.commentsCount
+    comments = data.comments
+    if IsArray(comments)
+        for each comment in comments
+            m.commentsData.Push(CommentRowData(comment))
+        end for
+        m.commentsCount += comments.Count()
+    end if
+
+    m.commentsContinuation = ValidString(data.continuation)
+    m.commentsHasMore = m.commentsContinuation <> ""
+    ShowCommentRows(previousCount)
+end function
+
+function CommentRowData(comment as object) as object
+    metaParts = []
+    likes = ValidString(comment.likes)
+    if likes <> ""
+        metaParts.Push(likes)
+    end if
+    publishedTime = ValidString(comment.publishedTime)
+    if publishedTime <> ""
+        metaParts.Push(publishedTime)
+    end if
+    return {
+        author: ValidString(comment.author)
+        meta: metaParts.Join(" · ")
+        text: ValidString(comment.text)
+    }
+end function
+
+function ShowCommentRows(focusIndex as integer) as void
+    rows = []
+    for each row in m.commentsData
+        rows.Push(row)
+    end for
+    if m.commentsHasMore
+        rows.Push({ author: "", meta: "", text: Tr(Locale.WebApp.LoadMore) })
+    end if
+    m.commentsList.comments = rows
+    m.commentsList.focusIndex = focusIndex
+    if m.commentsCount = 0 and not m.commentsHasMore
+        m.commentsList.status = Tr(Locale.PlaybackMenu.NoComments)
+    else
+        m.commentsList.status = ""
+    end if
+end function
+
+function OnCommentsSelected() as void
+    if m.commentsJob <> invalid
+        return
+    end if
+    index = m.commentsList.selected.index
+    if m.commentsHasMore and index >= m.commentsCount
+        FetchComments(m.commentsContinuation)
+    end if
+end function
+
+function OnCommentsClosed() as void
+    m.commentsOpen = false
+    m.commentsList.visible = false
+    if m.commentsJob <> invalid
+        m.commentsJob.cancel = true
+        JobSystem.UnobserveCallback(m.commentsJob)
+        m.commentsJob = invalid
+    end if
+    NodeSetFocus(m.top, true)
+    ArmAutoHide()
 end function
 
 '===============================================================================
@@ -768,8 +1143,9 @@ function OnVideoState(event as object) as void
         m.videoPlayedSuccessfully = true
         ' recovered after an error dialog -> dismiss it.
         DismissErrorDialog()
-        ' a mid-stream buffer cleared while idle -> drop the buffering spinner.
-        if m.spinner.mode = SpinMode.Buffering
+        ' a mid-stream buffer cleared while idle -> drop the buffering spinner. A quality switch also clears
+        ' its loading overlay here: the first frame already happened, so the branch above won't.
+        if m.spinner.mode <> SpinMode.Off
             m.spinner.mode = SpinMode.Off
         end if
     else if state = VideoState.Buffering
@@ -1087,6 +1463,13 @@ end function
 ' Content load, initial seek, previous-player handoff, close.
 '===============================================================================
 function PlayWithContent(contentNode as object)
+    m.sourceContentNode = contentNode
+    ApplyContent(contentNode)
+end function
+
+' Load a source content node (queue/bookmark node) through the content job. Also the quality-switch path:
+' ApplyQuality re-runs this on the node kept in m.sourceContentNode.
+function ApplyContent(contentNode as object)
     LogInfo("PlayWithContent videoId=", contentNode.videoId, " title=", contentNode.title)
     videoContentNode = CreateObject("roSGNode", "ContentNode")
 
@@ -1145,6 +1528,7 @@ function StartVideoContentJob(videoContentNode as object)
         loungeService: m.top.loungeService
         playletServerPort: m.top.webServer.port
         profilesService: m.top.profilesService
+        qualityOverride: m.qualityOverride
     }
 
     m.videoContentJob = JobSystem.CreateCallback(OnVideoContentJobDone)
@@ -1284,6 +1668,13 @@ function SeekToInitialPosition(content as object) as void
         LogDebug("seeking to the setSeek that arrived while loading:", m.loadingSetSeekMs)
         ApplySeek(m.loadingSetSeekMs)
         m.loadingSetSeekMs = -1
+        return
+    end if
+    ' a quality switch reloads the same video: hold the playhead where the viewer left it.
+    if m.reloadPositionMs >= 0
+        LogDebug("seeking to the position held across a quality switch:", m.reloadPositionMs)
+        ApplySeek(m.reloadPositionMs)
+        m.reloadPositionMs = -1
         return
     end if
     if content.Live = true
@@ -1510,6 +1901,10 @@ function OnClose() as void
         content.unobserveField("title")
         content.unobserveField("secondaryTitle")
     end if
+    m.playerMenu.unobserveField("selected")
+    m.playerMenu.unobserveField("closed")
+    m.commentsList.unobserveField("selected")
+    m.commentsList.unobserveField("closed")
     m.autoHide.unobserveField("fire")
     m.transportTimer.unobserveField("fire")
     m.liveBadgeHold.unobserveField("fire")
@@ -1534,6 +1929,12 @@ function OnClose() as void
     if m.markVideoWatchedJob <> invalid
         m.markVideoWatchedJob.cancel = true
         m.markVideoWatchedJob = invalid
+    end if
+
+    if m.commentsJob <> invalid
+        m.commentsJob.cancel = true
+        JobSystem.UnobserveCallback(m.commentsJob)
+        m.commentsJob = invalid
     end if
 
     if m.sponsorBlockSegmentsJob <> invalid

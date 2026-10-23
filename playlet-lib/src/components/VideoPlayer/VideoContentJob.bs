@@ -132,7 +132,7 @@ function ExecuteJob() as void
     end if
 
     streamSource = SelectStreamSource(metadata)
-    streamUrls = CreateStreamUrls(streamSource, metadata, videoLoadId, service, preferencesNode, backend, playletServerPort)
+    streamUrls = CreateStreamUrls(streamSource, metadata, videoLoadId, service, preferencesNode, backend, playletServerPort, ValidString(input.qualityOverride))
     if streamUrls.Count() = 0
         contentNode.addFields({ metadata: metadata, videoLoadId: videoLoadId })
         error = "No playable streams found for this video."
@@ -283,10 +283,14 @@ function SelectStreamSource(metadata as object) as string
     return StreamSource.None
 end function
 
-function CreateStreamUrls(source as string, metadata as object, videoLoadId as string, service as Invidious.InvidiousService, preferences as object, backend as string, playletServerPort as integer) as object
+function CreateStreamUrls(source as string, metadata as object, videoLoadId as string, service as Invidious.InvidiousService, preferences as object, backend as string, playletServerPort as integer, qualityOverride as string) as object
     instance = service.GetInstance()
     proxyVideos = preferences["invidious.proxy_videos"]
-    preferredQuality = preferences["playback.preferred_quality"]
+    ' A quality picked in the player applies to this load only; otherwise the playback preference decides.
+    preferredQuality = qualityOverride
+    if StringUtils.IsNullOrEmpty(preferredQuality)
+        preferredQuality = preferences["playback.preferred_quality"]
+    end if
 
     streamUrls = []
 

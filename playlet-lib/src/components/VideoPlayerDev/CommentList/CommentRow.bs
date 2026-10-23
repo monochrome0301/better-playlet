@@ -1,0 +1,16 @@
+import "pkg:/source/utils/Types.bs"
+
+function OnContentSet() as void
+    content = m.top.itemContent
+    if content = invalid
+        return
+    end if
+    m.top.findNode("authorLabel").text = ValidString(content.author)
+    m.top.findNode("metaLabel").text = ValidString(content.meta)
+    m.top.findNode("textLabel").text = ValidString(content.text)
+end function
+
+function Repaint() as void
+    highlight = m.top.findNode("highlight")
+    highlight.opacity = 0.12 * m.top.focusPercent
+end function

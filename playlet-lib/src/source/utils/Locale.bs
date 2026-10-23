@@ -330,6 +330,20 @@ namespace Locale
     end enum
 
     @locale
+    enum PlaybackMenu
+        PlaybackSettings = "Playback settings"
+        Quality = "Quality"
+        Subtitles = "Subtitles"
+        Audio = "Audio"
+        Comments = "Comments"
+        Off = "Off"
+        NoComments = "No comments yet"
+        LoadingComments = "Loading comments..."
+        CommentsLoadError = "Failed to load comments"
+        CommentsDisabled = "Comments are disabled"
+    end enum
+
+    @locale
     enum HttpClient
         RequestNotSent = "Request not sent."
         RequestTimedOut = "Request timed out."

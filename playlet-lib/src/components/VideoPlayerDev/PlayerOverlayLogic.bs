@@ -1,0 +1,181 @@
+import "pkg:/source/utils/CodecCapabilities.bs"
+import "pkg:/source/utils/Locale.bs"
+import "pkg:/source/utils/Types.bs"
+
+' Pure menu data for the player's settings overlay: what each level lists and which row is selected.
+' The coordinator owns the nodes and the key routing; these are plain functions of the loaded content.
+namespace PlayerOverlayLogic
+
+    enum Level
+        None = ""
+        Main = "main"
+        Quality = "quality"
+        Subtitles = "subtitles"
+        Audio = "audio"
+    end enum
+
+    ' [x] marks the active option; fixed width so the labels line up in a LabelList.
+    function Option(title as string, value as string, selected as boolean) as object
+        if selected
+            return { title: "[x] " + title, value: value }
+        end if
+        return { title: "[  ] " + title, value: value }
+    end function
+
+    ' Auto, then every distinct height in the video's adaptive formats, sharpest first.
+    ' Empty when the metadata offers no distinct height (the row is then hidden).
+    function BuildQualityOptions(metadata as object, selectedQuality as string) as object
+        heights = {}
+        formats = invalid
+        if IsAssociativeArray(metadata)
+            formats = metadata.adaptiveFormats
+        end if
+        if IsArray(formats)
+            ' 1440p/2160p exist on YouTube only as AV1/VP9 and the DASH player plays fragmented MP4, so the
+            ' options stop at 1080p on devices without an AV1 decoder (same rule as the settings screen).
+            allowHighQuality = CodecCapabilities.CanDecodeAv1()
+            for each format in formats
+                if not IsAssociativeArray(format)
+                    continue for
+                end if
+                height = FormatHeight(format)
+                if height > 0 and (height <= 1080 or allowHighQuality)
+                    heights[height.ToStr()] = true
+                end if
+            end for
+        end if
+
+        sorted = []
+        for each key in heights
+            sorted.Push(key.ToInt())
+        end for
+        for i = 0 to sorted.Count() - 2
+            for j = i + 1 to sorted.Count() - 1
+                if sorted[j] > sorted[i]
+                    swap = sorted[i]
+                    sorted[i] = sorted[j]
+                    sorted[j] = swap
+                end if
+            end for
+        end for
+
+        if sorted.Count() = 0
+            return []
+        end if
+
+        options = [Option(Tr(Locale.Settings.AutoQuality), "auto", IsAutoQuality(selectedQuality))]
+        for each height in sorted
+            value = height.ToStr() + "p"
+            options.Push(Option(value, value, HasQuality(selectedQuality, value)))
+        end for
+        return options
+    end function
+
+    ' Innertube formats carry height; Invidious sometimes only has "resolution" ("1080p60") or "size"
+    ' ("1920x1080"). Either way, the quality list needs the vertical resolution.
+    function FormatHeight(format as object) as integer
+        height = ValidInt(format.height)
+        if height > 0
+            return height
+        end if
+
+        resolution = ValidString(format.resolution)
+        pIndex = resolution.InStr("p")
+        if pIndex > 0
+            return ValidInt(resolution.Left(pIndex))
+        end if
+
+        size = ValidString(format.size)
+        if size.InStr("x") > 0
+            return ValidInt(size.Split("x")[1])
+        end if
+
+        return 0
+    end function
+
+    function IsAutoQuality(quality as string) as boolean
+        return quality = "" or quality = "auto"
+    end function
+
+    function HasQuality(quality as string, value as string) as boolean
+        if IsAutoQuality(quality)
+            return false
+        end if
+        for each entry in quality.Split(",")
+            if entry.Trim() = value
+                return true
+            end if
+        end for
+        return false
+    end function
+
+    ' Off + the video's side-loaded caption tracks.
+    function BuildSubtitleOptions(tracks as object, selectedTrack as object) as object
+        options = [Option(Tr(Locale.PlaybackMenu.Off), "off", selectedTrack = invalid)]
+        if not IsArray(tracks)
+            return options
+        end if
+        for i = 0 to tracks.Count() - 1
+            track = tracks[i]
+            if not IsAssociativeArray(track)
+                continue for
+            end if
+            options.Push(Option(TrackLabel(track), i.ToStr(), SameTrack(track, selectedTrack)))
+        end for
+        return options
+    end function
+
+    ' The DASH manifest's audio tracks (languages / auto-dubbed variants).
+    function BuildAudioOptions(tracks as object, selectedTrack as object) as object
+        options = []
+        if not IsArray(tracks)
+            return options
+        end if
+        for i = 0 to tracks.Count() - 1
+            track = tracks[i]
+            if not IsAssociativeArray(track)
+                continue for
+            end if
+            options.Push(Option(TrackLabel(track), i.ToStr(), SameTrack(track, selectedTrack)))
+        end for
+        return options
+    end function
+
+    function TrackLabel(track as object) as string
+        label = ValidString(track.Description)
+        if label = ""
+            label = ValidString(track.Language)
+        end if
+        if label = ""
+            label = ValidString(track.TrackName)
+        end if
+        return label
+    end function
+
+    function SameTrack(track as object, selectedTrack as object) as boolean
+        if not IsAssociativeArray(selectedTrack)
+            return false
+        end if
+        trackName = ValidString(track.TrackName)
+        if trackName <> ""
+            return trackName = ValidString(selectedTrack.TrackName)
+        end if
+        return ValidString(track.Language) = ValidString(selectedTrack.Language)
+    end function
+
+    function MainRows(qualityLabel as string, hasQuality as boolean, subtitleLabel as string, hasSubtitles as boolean, audioLabel as string, hasAudio as boolean) as object
+        rows = []
+        if hasQuality
+            rows.Push({ title: Tr(Locale.PlaybackMenu.Quality) + ": " + qualityLabel, value: Level.Quality })
+        end if
+        if hasSubtitles
+            rows.Push({ title: Tr(Locale.PlaybackMenu.Subtitles) + ": " + subtitleLabel, value: Level.Subtitles })
+        end if
+        if hasAudio
+            rows.Push({ title: Tr(Locale.PlaybackMenu.Audio) + ": " + audioLabel, value: Level.Audio })
+        end if
+        rows.Push({ title: Tr(Locale.PlaybackMenu.Comments), value: "comments" })
+        return rows
+    end function
+
+end namespace

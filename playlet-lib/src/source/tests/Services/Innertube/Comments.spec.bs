@@ -1,0 +1,98 @@
+import "pkg:/components/Services/Innertube/CommentsEndpoint.bs"
+
+namespace Tests
+
+    @suite
+    class CommentsTests extends Rooibos.BaseTestSuite
+
+        function Parse(text as string) as object
+            ' bs:disable-next-line NO_PARSE_JSON
+            return ParseJson(text)
+        end function
+
+        @describe("FindCommentsContinuation")
+
+        @it("takes the token from the watch page's comments section")
+        function _()
+            payload = m.Parse(`{
+                "contents": {"twoColumnWatchNextResults": {"results": {"results": {"contents": [
+                    {"itemSectionRenderer": {"sectionIdentifier": "other", "contents": [
+                        {"continuationItemRenderer": {"continuationEndpoint": {"continuationCommand": {"token": "wrong"}}}}
+                    ]}},
+                    {"itemSectionRenderer": {"sectionIdentifier": "comment-item-section", "contents": [
+                        {"continuationItemRenderer": {"continuationEndpoint": {"continuationCommand": {"token": "comments-token"}}}}
+                    ]}}
+                ]}}}}
+            }`)
+            m.assertEqual(Innertube.FindCommentsContinuation(payload), "comments-token")
+        end function
+
+        @it("returns empty when the watch page has no comments section")
+        function _()
+            payload = m.Parse(`{"contents": {"twoColumnWatchNextResults": {"results": {"results": {"contents": []}}}}}`)
+            m.assertEqual(Innertube.FindCommentsContinuation(payload), "")
+        end function
+
+        @describe("ParseCommentsResponse")
+
+        @it("reads the count and comments from the modern entity payload")
+        function _()
+            payload = m.Parse(`{
+                "frameworkUpdates": {"entityBatchUpdate": {"mutations": [
+                    {"payload": {"commentEntityPayload": {
+                        "key": "k1",
+                        "properties": {"content": {"content": "hello world"}, "publishedTime": "2 days ago"},
+                        "author": {"displayName": "@author"},
+                        "toolbar": {"likeCountNotliked": "12", "replyCount": "3"}
+                    }}}
+                ]}},
+                "onResponseReceivedEndpoints": [
+                    {"reloadContinuationItemsCommand": {"continuationItems": [
+                        {"commentsHeaderRenderer": {"countText": {"runs": [{"text": "1,234"}, {"text": " Comments"}]}}}
+                    ]}},
+                    {"reloadContinuationItemsCommand": {"continuationItems": [
+                        {"commentThreadRenderer": {"commentViewModel": {"commentViewModel": {"commentKey": "k1"}}}},
+                        {"continuationItemRenderer": {"continuationEndpoint": {"continuationCommand": {"token": "next-token"}}}}
+                    ]}}
+                ]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.count, "1,234")
+            m.assertEqual(result.comments.Count(), 1)
+            m.assertEqual(result.comments[0].author, "@author")
+            m.assertEqual(result.comments[0].text, "hello world")
+            m.assertEqual(result.comments[0].likes, "12")
+            m.assertEqual(result.comments[0].replies, "3")
+            m.assertEqual(result.comments[0].publishedTime, "2 days ago")
+            m.assertEqual(result.continuation, "next-token")
+        end function
+
+        @it("falls back to the classic commentRenderer")
+        function _()
+            payload = m.Parse(`{
+                "onResponseReceivedEndpoints": [{"reloadContinuationItemsCommand": {"continuationItems": [
+                    {"commentThreadRenderer": {"comment": {"commentRenderer": {
+                        "authorText": {"simpleText": "@classic"},
+                        "contentText": {"runs": [{"text": "hi "}, {"text": "there"}]},
+                        "publishedTimeText": {"simpleText": "1 year ago"},
+                        "voteCount": {"simpleText": "5"},
+                        "replyCount": "2"
+                    }}}}
+                ]}}]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.comments.Count(), 1)
+            m.assertEqual(result.comments[0].author, "@classic")
+            m.assertEqual(result.comments[0].text, "hi there")
+            m.assertEqual(result.comments[0].likes, "5")
+            m.assertEqual(result.comments[0].replies, "2")
+            m.assertEqual(result.continuation, "")
+        end function
+
+    end class
+
+end namespace

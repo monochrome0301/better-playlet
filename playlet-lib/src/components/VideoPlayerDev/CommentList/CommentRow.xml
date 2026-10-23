@@ -1,0 +1,17 @@
+<component name="CommentRow" extends="Group">
+    <!-- One comment of the player's comments overlay. Pure projection of its itemContent (author / meta / text). -->
+    <interface>
+        <field id="itemContent" type="node" onChange="OnContentSet" />
+        <field id="itemHasFocus" type="boolean" onChange="Repaint" />
+        <field id="focusPercent" type="float" onChange="Repaint" />
+    </interface>
+    <children>
+        <Rectangle id="highlight" width="960" height="112" color="0xFFFFFF" opacity="0" />
+        <Label id="authorLabel" translation="[16,6]" width="760" height="30"
+            font="font:SmallestBoldSystemFont" color="0xFEFEFEFF" />
+        <Label id="metaLabel" translation="[16,34]" width="760" height="24"
+            font="font:SmallestSystemFont" color="0xAAAAAAFF" />
+        <Label id="textLabel" translation="[16,58]" width="920" height="50"
+            font="font:SmallestSystemFont" color="0xDDDDDDFF" wrap="true" maxLines="3" />
+    </children>
+</component>

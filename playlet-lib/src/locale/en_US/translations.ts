@@ -985,6 +985,46 @@
         <translation>Error closing video</translation>
     </message>
     <message>
+        <source>Playback settings</source>
+        <translation>Playback settings</translation>
+    </message>
+    <message>
+        <source>Quality</source>
+        <translation>Quality</translation>
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation>Subtitles</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <source>Comments</source>
+        <translation>Comments</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Off</translation>
+    </message>
+    <message>
+        <source>No comments yet</source>
+        <translation>No comments yet</translation>
+    </message>
+    <message>
+        <source>Loading comments...</source>
+        <translation>Loading comments...</translation>
+    </message>
+    <message>
+        <source>Failed to load comments</source>
+        <translation>Failed to load comments</translation>
+    </message>
+    <message>
+        <source>Comments are disabled</source>
+        <translation>Comments are disabled</translation>
+    </message>
+    <message>
         <source>Request not sent.</source>
         <translation>Request not sent.</translation>
     </message>

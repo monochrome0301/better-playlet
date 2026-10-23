@@ -121,5 +121,11 @@
         <!-- Coordinator pulses `trigger` only on an explicit pause-from-playing, `cancel` on resume. Not chrome-gated. -->
         <LargePause id="largePause" />
 
+        <!-- ===================== overlays (paint above everything above) ===================== -->
+        <!-- Playback settings (quality / subtitles / audio / comments) and the comments list. Both stay hidden
+             until opened; the coordinator hands them real focus while open and routes their selections. -->
+        <PlayerMenu id="playerMenu" visible="false" />
+        <CommentList id="commentsList" visible="false" />
+
     </children>
 </component>

@@ -1,0 +1,18 @@
+import "pkg:/components/Services/Innertube/InnertubeService.bs"
+
+@job("VideoCommentsJob")
+function ExecuteJob() as void
+    input = JobGetInput()
+
+    result = InnertubeService.GetComments(input.videoId, {
+        continuation: ValidString(input.continuation)
+        cancellation: JobGetCancellation()
+    })
+
+    if result.error <> invalid
+        JobError(result.error)
+        return
+    end if
+
+    JobSuccessData(result)
+end function

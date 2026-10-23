@@ -1,0 +1,195 @@
+import "pkg:/components/Services/Innertube/NextEndpoint.bs"
+import "pkg:/components/Services/Innertube/Parser.bs"
+import "pkg:/source/utils/Logging.bs"
+import "pkg:/source/utils/ObjectUtils.bs"
+import "pkg:/source/utils/StringUtils.bs"
+import "pkg:/source/utils/Types.bs"
+
+namespace Innertube
+
+    ' One page of the video's top-level comments. The first page (empty continuation) resolves the comments
+    ' continuation from the watch page first; later pages pass the token straight back in.
+    function GetCommentsPage(videoId as string, continuation as string, cancellation as object) as object
+        if StringUtils.IsNullOrEmpty(continuation)
+            nextRequest = CreateNextRequest({ "videoId": videoId })
+            nextRequest.Cancellation(cancellation)
+            nextResponse = nextRequest.Await()
+            if not nextResponse.IsSuccess()
+                return { error: nextResponse.ErrorMessage() }
+            end if
+
+            continuation = FindCommentsContinuation(nextResponse.Json())
+            if StringUtils.IsNullOrEmpty(continuation)
+                return { comments: [], continuation: "", count: "", disabled: true }
+            end if
+        end if
+
+        request = CreateNextRequest({ "continuation": continuation })
+        request.Cancellation(cancellation)
+        response = request.Await()
+        if not response.IsSuccess()
+            return { error: response.ErrorMessage() }
+        end if
+
+        payload = response.Json()
+        if not IsAssociativeArray(payload)
+            return { error: "Invalid comments response" }
+        end if
+
+        return ParseCommentsResponse(payload)
+    end function
+
+    ' The comments section continuation token from the watch page, or "" when the video has no comments section.
+    function FindCommentsContinuation(payload as object) as string
+        sections = ObjectUtils.Dig(payload, ["contents", "twoColumnWatchNextResults", "results", "results", "contents"])
+        if not IsArray(sections)
+            return ""
+        end if
+
+        for each section in sections
+            renderer = ObjectUtils.Dig(section, ["itemSectionRenderer"])
+            if ValidString(ObjectUtils.Dig(renderer, ["sectionIdentifier"])) <> "comment-item-section"
+                continue for
+            end if
+            token = FindContinuationToken(renderer.contents)
+            if token <> ""
+                return token
+            end if
+        end for
+
+        return ""
+    end function
+
+    function FindContinuationToken(items as dynamic) as string
+        if not IsArray(items)
+            return ""
+        end if
+        for each item in items
+            token = ObjectUtils.Dig(item, ["continuationItemRenderer", "continuationEndpoint", "continuationCommand", "token"])
+            if IsString(token) and token <> ""
+                return token
+            end if
+        end for
+        return ""
+    end function
+
+    function ParseCommentsResponse(payload as object) as object
+        result = {
+            comments: []
+            continuation: ""
+            count: ""
+            disabled: false
+        }
+
+        ' Comment bodies live in frameworkUpdates entities, keyed by the commentViewModel on each thread.
+        entities = ParseCommentEntities(payload)
+
+        items = []
+        commands = payload.onResponseReceivedEndpoints
+        if IsArray(commands)
+            for each command in commands
+                continuationItems = ObjectUtils.Dig(command, ["reloadContinuationItemsCommand", "continuationItems"])
+                if IsArray(continuationItems)
+                    items.Append(continuationItems)
+                end if
+            end for
+        end if
+
+        ' Older responses deliver the page under continuationContents instead.
+        if items.Count() = 0
+            legacyItems = ObjectUtils.Dig(payload, ["continuationContents", "commentSectionContinuation", "contents"])
+            if IsArray(legacyItems)
+                items.Append(legacyItems)
+            end if
+        end if
+
+        for each item in items
+            header = ObjectUtils.Dig(item, ["commentsHeaderRenderer"])
+            if IsAssociativeArray(header)
+                result.count = ParseCommentCount(ObjectUtils.Dig(header, ["countText"]))
+                continue for
+            end if
+
+            thread = ObjectUtils.Dig(item, ["commentThreadRenderer"])
+            if IsAssociativeArray(thread)
+                comment = ParseCommentThread(thread, entities)
+                if comment <> invalid
+                    result.comments.Push(comment)
+                end if
+                continue for
+            end if
+
+            token = ObjectUtils.Dig(item, ["continuationItemRenderer", "continuationEndpoint", "continuationCommand", "token"])
+            if IsString(token) and token <> ""
+                result.continuation = token
+            end if
+        end for
+
+        if result.continuation = ""
+            result.continuation = ValidString(ObjectUtils.Dig(payload, ["continuationContents", "commentSectionContinuation", "continuations", 0, "nextContinuationData", "continuation"]))
+        end if
+
+        return result
+    end function
+
+    function ParseCommentEntities(payload as object) as object
+        entities = {}
+        mutations = ObjectUtils.Dig(payload, ["frameworkUpdates", "entityBatchUpdate", "mutations"])
+        if not IsArray(mutations)
+            return entities
+        end if
+        for each mutation in mutations
+            entity = ObjectUtils.Dig(mutation, ["payload", "commentEntityPayload"])
+            if IsAssociativeArray(entity)
+                key = ValidString(entity.key)
+                if key <> ""
+                    entities[key] = entity
+                end if
+            end if
+        end for
+        return entities
+    end function
+
+    function ParseCommentThread(thread as object, entities as object) as dynamic
+        viewModel = ObjectUtils.Dig(thread, ["commentViewModel", "commentViewModel"])
+        if IsAssociativeArray(viewModel)
+            entity = entities[ValidString(viewModel.commentKey)]
+            if IsAssociativeArray(entity)
+                properties = ValidAssociativeArray(entity.properties)
+                author = ValidAssociativeArray(entity.author)
+                toolbar = ValidAssociativeArray(entity.toolbar)
+                return {
+                    author: ValidString(author.displayName)
+                    text: ValidString(ObjectUtils.Dig(properties, ["content", "content"]))
+                    publishedTime: ValidString(properties.publishedTime)
+                    likes: ValidString(toolbar.likeCountNotliked)
+                    replies: ValidString(toolbar.replyCount)
+                }
+            end if
+        end if
+
+        ' Classic renderer, still returned by some clients.
+        renderer = ObjectUtils.Dig(thread, ["comment", "commentRenderer"])
+        if not IsAssociativeArray(renderer)
+            return invalid
+        end if
+
+        return {
+            author: ParseText(ObjectUtils.Dig(renderer, ["authorText"]))
+            text: ParseText(ObjectUtils.Dig(renderer, ["contentText"]))
+            publishedTime: ParseText(ObjectUtils.Dig(renderer, ["publishedTimeText"]))
+            likes: ParseText(ObjectUtils.Dig(renderer, ["voteCount"]))
+            replies: ValidString(renderer.replyCount)
+        }
+    end function
+
+    function ParseCommentCount(countText as object) as string
+        text = ParseText(countText)
+        ' e.g. "2,460,368 Comments" -> "2,460,368"
+        if text.InStr(" Comments") <> -1
+            return text.Left(text.InStr(" Comments"))
+        end if
+        return ""
+    end function
+
+end namespace

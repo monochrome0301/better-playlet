@@ -29,10 +29,15 @@
                 iconUri="pkg:/images/icons/player/play.png"
                 iconUri2="pkg:/images/icons/player/pause.png" />
         </Group>
-        <!-- minimize, right-aligned to the trackbar's right edge (x=1212). -->
+        <!-- minimize, comment shortcut, and playback settings, right-aligned to the trackbar's right edge
+             (x=1212). Focus order matches m.buttons in ButtonRow.bs. -->
         <Group id="RightCluster">
             <VideoPlayerButton id="MinimizeButton"
                 iconUri="pkg:/images/icons/player/minimize.png" />
+            <VideoPlayerButton id="CommentsButton"
+                iconUri="pkg:/images/icons/player/comment.png" />
+            <VideoPlayerButton id="SettingsButton"
+                iconUri="pkg:/images/icons/settings.png" />
         </Group>
     </children>
 </component>
