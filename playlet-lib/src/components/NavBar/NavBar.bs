@@ -55,11 +55,12 @@ function OnListFirstFocus() as void
     end if
 
     m.itemsList.unobserveField("focusedChild")
+    ' observe before jumping: some engines fire itemFocused synchronously on jumpToItem
+    m.itemsList.observeField("itemFocused", FuncName(OnItemFocused))
     initialFocus = m.top.initialFocus
     if initialFocus > -1
         m.itemsList.jumpToItem = initialFocus
     end if
-    m.itemsList.observeField("itemFocused", FuncName(OnItemFocused))
     m.top.observeField("focusedChild", FuncName(OnFocusedChildChange))
 end function
 

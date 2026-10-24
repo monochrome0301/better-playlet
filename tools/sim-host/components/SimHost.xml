@@ -1,0 +1,12 @@
+<component name="SimHost" extends="Scene">
+    <interface>
+        <field id="exitChannel" type="bool" alwaysNotify="true" />
+        <field id="launchArgs" type="assocarray" />
+        <field id="inputArgs" type="assocarray" alwaysNotify="true" />
+    </interface>
+    <children>
+        <Group id="MainSceneContainer" />
+        <Label id="LoadingIndicator" visible="false" text="Loading..." />
+    </children>
+    <script type="text/brightscript" uri="pkg:/components/SimHost.brs" />
+</component>
