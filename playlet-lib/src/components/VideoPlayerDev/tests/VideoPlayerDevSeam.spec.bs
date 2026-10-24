@@ -1076,21 +1076,25 @@ namespace Tests
             m.top.callFunc("TestOpenMenu")
             m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.Main)
             m.assertTrue(m.top.findNode("playerMenu").visible)
+            m.assertTrue(m.top.findNode("playerMenu").focus, "the open menu holds the remote")
             ' a key the overlay did not consume is swallowed instead of reaching the transport/player.
             m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Left, true), "the open menu consumes unowned keys")
             ' Back from the main level closes (the menu component raises closed; the coordinator decides).
             m.top.findNode("playerMenu").closed = true
             m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.None, "closed on Back at main")
             m.assertFalse(m.top.findNode("playerMenu").visible)
+            m.assertFalse(m.top.findNode("playerMenu").focus, "the closed menu releases the remote")
 
             m.top.callFunc("TestShowComments")
             m.assertTrue(m.Snap().commentsOpen)
             m.assertTrue(m.top.findNode("commentsList").visible)
+            m.assertTrue(m.top.findNode("commentsList").focus, "the open comments overlay holds the remote")
             m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Ok, true), "the open comments overlay owns OK")
             m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Back, true), "the open comments overlay owns Back")
             m.top.findNode("commentsList").closed = true
             m.assertFalse(m.Snap().commentsOpen, "closed on Back")
             m.assertFalse(m.top.findNode("commentsList").visible)
+            m.assertFalse(m.top.findNode("commentsList").focus, "the closed comments overlay releases the remote")
             m.top.findNode("autoHide").control = "stop"
         end function
 

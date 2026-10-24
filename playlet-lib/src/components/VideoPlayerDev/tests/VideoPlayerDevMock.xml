@@ -108,8 +108,8 @@
             <Poster id="pauseGradient" width="1280" height="720" />
             <BifDisplay id="bifDisplay" />
             <Group id="titleArea">
-                <Label id="titleLabel" />
-                <Label id="secondaryTitleLabel" />
+                <EmojiLabel id="titleLabel" baseFont="font:BoldSystemFontFile" baseSize="30" />
+                <EmojiLabel id="secondaryTitleLabel" baseFont="font:SystemFontFile" baseSize="24" />
                 <Clock id="clock" />
             </Group>
             <TrickPlayBar id="trickPlayBar" />

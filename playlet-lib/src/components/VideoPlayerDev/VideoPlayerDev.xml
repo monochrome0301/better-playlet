@@ -93,14 +93,12 @@
                      whole HUD continuously (~25fps) for as long as the chrome is up. The LayoutGroup keeps the
                      secondary title flowing under however many lines the title takes. -->
                 <LayoutGroup translation="[68, 40]" layoutDirection="vert" itemSpacings="[5]">
-                    <Label id="titleLabel" width="900" wrap="true" maxLines="3"
-                        color="0xFEFEFEFF" horizAlign="left">
-                        <Font role="font" uri="font:BoldSystemFontFile" size="30" />
-                    </Label>
-                    <Label id="secondaryTitleLabel" width="900" height="26"
-                        color="0xFEFEFEFF" horizAlign="left" vertAlign="top" wrap="false">
-                        <Font role="font" uri="font:SystemFontFile" size="24" />
-                    </Label>
+                    <EmojiLabel id="titleLabel" width="900" wrap="true" maxLines="3"
+                        color="0xFEFEFEFF" horizAlign="left"
+                        baseFont="font:BoldSystemFontFile" baseSize="30" />
+                    <EmojiLabel id="secondaryTitleLabel" width="900" height="26"
+                        color="0xFEFEFEFF" horizAlign="left" vertAlign="top" wrap="false"
+                        baseFont="font:SystemFontFile" baseSize="24" />
                 </LayoutGroup>
                 <Clock id="clock" />
             </Group>

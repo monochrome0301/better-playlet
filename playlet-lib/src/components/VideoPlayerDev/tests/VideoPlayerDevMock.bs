@@ -278,6 +278,7 @@ end function
 function TestShowComments() as void
     m.commentsOpen = true
     m.commentsList.visible = true
+    NodeSetFocus(m.commentsList, true)
 end function
 
 ' TestOpenDetails - the video-details overlay's real open transition (title/stats/description from content.metadata).

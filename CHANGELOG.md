@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Emoji in titles, queue cells, queue notifications and comments, drawn with a bundled emoji font
+- Reply count next to the "View replies" hint in the player's comments
+
+### Fixed
+
+- "View replies" doing nothing on comments whose replies arrive under the commentRepliesRenderer wrapper
+- Up/Down keys staying dead after closing the player menu, comments or video details, because focus stayed on the hidden list
+- Player settings menu not opening at all when a quality was selected
+
 ## [0.49.0] - 2026-10-23
 
 ### Added

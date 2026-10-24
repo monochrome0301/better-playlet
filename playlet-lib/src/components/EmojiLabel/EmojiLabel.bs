@@ -1,0 +1,40 @@
+import "pkg:/source/utils/ColorUtils.bs"
+import "pkg:/source/utils/EmojiText.bs"
+import "pkg:/source/utils/EmojiTextRanges.bs"
+import "pkg:/source/utils/Types.bs"
+
+function Init()
+    ' The comment row flips its labels to dark when focused, so the emoji style has to follow the color.
+    m.top.ObserveField("color", FuncName(ApplyStyles))
+    ApplyStyles()
+    OnRawText()
+end function
+
+function OnRawText() as void
+    m.top.text = EmojiText.Markup(m.top.rawText)
+end function
+
+function ApplyStyles() as void
+    size = m.top.baseSize
+    if size <= 0
+        size = 18
+    end if
+    font = m.top.baseFont
+    if font = ""
+        font = "font:SmallestSystemFont"
+    end if
+
+    color = ColorUtils.IntToHex(m.top.color)
+    m.top.drawingStyles = {
+        "default": {
+            fontUri: font
+            fontSize: size
+            color: color
+        }
+        "emoji": {
+            fontUri: "pkg:/fonts/emoji.ttf"
+            fontSize: size
+            color: color
+        }
+    }
+end function

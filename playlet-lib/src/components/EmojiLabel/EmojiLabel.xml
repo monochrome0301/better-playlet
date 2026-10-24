@@ -1,0 +1,10 @@
+<component name="EmojiLabel" extends="MultiStyleLabel">
+    <!-- A Label that can draw the bundled monochrome emoji font. Set rawText, not text: text holds the
+         MultiStyleLabel markup EmojiText.Markup generates from it. baseFont/baseSize describe the system font
+         the normal text keeps using; the emoji style mirrors its size and color. -->
+    <interface>
+        <field id="rawText" type="string" onChange="OnRawText" />
+        <field id="baseFont" type="string" value="font:SmallestSystemFont" onChange="ApplyStyles" />
+        <field id="baseSize" type="integer" value="18" onChange="ApplyStyles" />
+    </interface>
+</component>

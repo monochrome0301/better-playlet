@@ -23,7 +23,7 @@ namespace Tests
             spinner = m.top.findNode("spinner")
             m.assertTrue(spinner.visible)
             m.assertEqual(spinner.control, "start")
-            ' title/secondary title pass through (aliased).
+            ' title/secondary title pass through.
             m.assertEqual(m.top.findNode("loadingTitleLabel").text, "Rick Astley")
             m.assertEqual(m.top.findNode("loadingSecondaryTitleLabel").text, "RickAstleyVEVO")
         end function

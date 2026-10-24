@@ -1,0 +1,74 @@
+import "pkg:/source/utils/EmojiText.bs"
+import "pkg:/source/utils/EmojiTextRanges.bs"
+
+namespace Tests
+
+    @suite
+    class EmojiTextTests extends Rooibos.BaseTestSuite
+
+        @describe("EmojiText")
+
+        @it("Leaves plain text alone")
+        function _()
+            m.assertEqual(EmojiText.Markup("Hola, mundo"), "Hola, mundo")
+        end function
+
+        @it("Keeps accented Latin in the base font")
+        function _()
+            m.assertEqual(EmojiText.Markup("ñandú áéíóú"), "ñandú áéíóú")
+        end function
+
+        @it("Keeps CJK in the base font")
+        function _()
+            m.assertEqual(EmojiText.Markup("日本語"), "日本語")
+        end function
+
+        @it("Wraps an emoji")
+        function _()
+            m.assertEqual(EmojiText.Markup("Hola 😀"), "Hola <emoji>😀</emoji>")
+        end function
+
+        @it("Keeps adjacent emoji in one run")
+        function _()
+            m.assertEqual(EmojiText.Markup("😀😀"), "<emoji>😀😀</emoji>")
+        end function
+
+        @it("Wraps symbols the bundled font covers")
+        function _()
+            m.assertEqual(EmojiText.Markup("★♥♪"), "<emoji>★♥♪</emoji>")
+        end function
+
+        @it("Drops modifiers the bundled font does not have")
+        function _()
+            thumbsUp = Chr(&h1F44D)
+            skinTone = Chr(&h1F3FD)
+            m.assertEqual(EmojiText.Markup(thumbsUp + skinTone), "<emoji>" + thumbsUp + "</emoji>")
+        end function
+
+        @it("Escapes angle brackets")
+        function _()
+            m.assertEqual(EmojiText.Markup("a < b > c"), "a ‹ b › c")
+        end function
+
+        @it("Keeps newlines")
+        function _()
+            m.assertEqual(EmojiText.Markup("uno" + Chr(10) + "dos"), "uno" + Chr(10) + "dos")
+        end function
+
+        @it("Returns empty for empty")
+        function _()
+            m.assertEqual(EmojiText.Markup(""), "")
+        end function
+
+        @it("Coverage table is sorted and non-overlapping")
+        function _()
+            ranges = EmojiText.RangeTable()
+            m.assertTrue(ranges.Count() > 0)
+            for i = 1 to ranges.Count() - 1
+                m.assertTrue(ranges[i][0] > ranges[i - 1][1], "overlap at " + StrI(i, 10))
+            end for
+        end function
+
+    end class
+
+end namespace

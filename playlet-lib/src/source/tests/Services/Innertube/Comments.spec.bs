@@ -145,6 +145,33 @@ namespace Tests
             m.assertEqual(result.comments[0].replyContinuation, "")
         end function
 
+        @it("reads the replies token from the commentRepliesRenderer wrapper")
+        function _()
+            payload = m.Parse(`{
+                "frameworkUpdates": {"entityBatchUpdate": {"mutations": [
+                    {"payload": {"commentEntityPayload": {
+                        "key": "k1",
+                        "properties": {"content": {"content": "hi"}},
+                        "author": {"displayName": "@a"},
+                        "toolbar": {"replyCount": "4"}
+                    }}}
+                ]}},
+                "onResponseReceivedEndpoints": [{"reloadContinuationItemsCommand": {"continuationItems": [
+                    {"commentThreadRenderer": {
+                        "commentViewModel": {"commentViewModel": {"commentKey": "k1"}},
+                        "replies": {"commentRepliesRenderer": {"contents": [
+                            {"continuationItemRenderer": {"button": {"buttonRenderer": {"command": {"continuationCommand": {"token": "wrapped-token"}}}}}}
+                        ]}}
+                    }}
+                ]}}]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.comments[0].replies, "4")
+            m.assertEqual(result.comments[0].replyContinuation, "wrapped-token")
+        end function
+
         @it("reads a replies page delivered under appendContinuationItemsCommand")
         function _()
             payload = m.Parse(`{

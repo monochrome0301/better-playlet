@@ -2,7 +2,7 @@
     <interface>
         <field id="itemContent" type="node" onChange="OnContentSet" />
         <field id="index" type="integer" onChange="OnIndexSet" />
-        <field id="title" type="string" alias="titleLabel.text" />
+        <field id="title" type="string" />
         <field id="thumbnailUri" type="uri" alias="thumbnailPoster.uri" />
         <field id="thumbnailBlendColor" type="color" alias="thumbnailPoster.blendColor" />
         <field id="highlightVisible" type="boolean" alias="highlightPoster.visible" />
@@ -39,10 +39,11 @@
             uri="pkg:/images/queue-highlight.$$RES$$.9.png"
             width="164"
             height="94" />
-        <Label
+        <EmojiLabel
             id="titleLabel"
             width="260"
-            font="font:SmallestBoldSystemFont"
+            baseFont="font:SmallestBoldSystemFont"
+            baseSize="18"
             maxLines="3"
             wrap="true"
             translation="[172,2]" />

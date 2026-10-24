@@ -9,9 +9,8 @@ function Init()
 end function
 
 function OnFocusChange() as void
-    if m.top.focus
-        NodeSetFocus(m.list, true)
-    end if
+    ' true hands the remote to the list; false releases it, so the player can take focus back.
+    NodeSetFocus(m.list, m.top.focus)
 end function
 
 function OnRowsSet() as void

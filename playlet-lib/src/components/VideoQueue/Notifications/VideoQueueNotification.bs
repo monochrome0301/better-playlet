@@ -27,6 +27,10 @@ function OnContentSet() as void
     m.top.line1 = content.title
 end function
 
+function OnLine1Set() as void
+    m.top.findNode("line1Label").rawText = m.top.line1
+end function
+
 function OnShow()
     AnimateIn()
 end function

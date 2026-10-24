@@ -14,9 +14,9 @@ function OnContentSet() as void
     meta.translation = [16 + indent, 34]
     text.translation = [16 + indent, 58]
     text.width = 920 - indent
-    author.text = ValidString(content.author)
+    author.rawText = ValidString(content.author)
     meta.text = ValidString(content.meta)
-    text.text = ValidString(content.text)
+    text.rawText = ValidString(content.text)
     Repaint()
 end function
 

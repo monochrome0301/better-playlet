@@ -2,6 +2,7 @@ import "pkg:/source/utils/StringUtils.bs"
 import "pkg:/source/utils/Types.bs"
 
 function Init()
+    m.titleLabel = m.top.FindNode("titleLabel")
     m.videoCountRect = m.top.FindNode("videoCountRect")
     m.videoCountLabel = m.top.FindNode("videoCountLabel")
 end function
@@ -14,6 +15,7 @@ function OnContentSet() as void
     end if
 
     m.top.title = content.title
+    m.titleLabel.rawText = ValidString(content.title)
     lines = content.lines
     ' NOTE: "_author" not "author". See PlaylistContentNode.xml for explanation.
     author = content._author

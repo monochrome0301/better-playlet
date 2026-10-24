@@ -2,7 +2,7 @@
     <interface>
         <field id="itemContent" type="node" onChange="OnContentSet" />
         <field id="type" type="string" value="video" />
-        <field id="title" type="string" alias="titleLabel.text" />
+        <field id="title" type="string" />
         <field id="author" type="string" alias="authorLabel.text" />
         <field id="viewCountDate" type="string" alias="viewCountDateLabel.text" />
         <field id="durationRectVisible" type="boolean" alias="durationRect.visible" />
@@ -46,10 +46,11 @@
                     scale="[0, 1]">
                 </Rectangle>
             </Poster>
-            <Label
+            <EmojiLabel
                 id="titleLabel"
                 width="350"
-                font="font:SmallestBoldSystemFont"
+                baseFont="font:SmallestBoldSystemFont"
+                baseSize="18"
                 maxLines="2"
                 wrap="true" />
             <Label

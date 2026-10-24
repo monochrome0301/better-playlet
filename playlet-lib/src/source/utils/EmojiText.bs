@@ -1,0 +1,94 @@
+import "pkg:/source/utils/EmojiTextRanges.bs"
+
+' MultiStyleLabel markup for the bundled monochrome emoji font.
+'
+' Roku's system fonts have no emoji, so a Label can only show them by mixing a
+' second font into the text with MultiStyleLabel tags. Only the codepoints the
+' font actually covers are wrapped; everything else (Latin, Greek, Cyrillic, CJK,
+' punctuation) stays in the system font exactly as before.
+namespace EmojiText
+
+    function Markup(text as string) as string
+        if text = ""
+            return ""
+        end if
+
+        out = ""
+        pending = ""
+        for each char in text.Split("")
+            if Skip(Asc(char))
+                continue for
+            end if
+            if Covered(Asc(char))
+                pending += char
+            else
+                out += Flush(pending) + Escape(char)
+                pending = ""
+            end if
+        end for
+
+        return out + Flush(pending)
+    end function
+
+    ' Emoji modifiers and selectors the bundled font does not have. Left in the
+    ' text they would show as a box next to an emoji that now renders.
+    function Skip(codePoint as integer) as boolean
+        if codePoint = &hFE0E or codePoint = &hFE0F or codePoint = &h20E3
+            return true
+        end if
+        if codePoint >= &h1F3FB and codePoint <= &h1F3FF
+            return true
+        end if
+        return codePoint >= &hE0020 and codePoint <= &hE007F
+    end function
+
+    function Flush(pending as string) as string
+        if pending = ""
+            return ""
+        end if
+        return "<emoji>" + pending + "</emoji>"
+    end function
+
+    ' MultiStyleLabel reads < and > as markup; swap them for lookalikes so a
+    ' title or comment never loses the text around them.
+    function Escape(char as string) as string
+        if char = "<"
+            return "‹"
+        end if
+        if char = ">"
+            return "›"
+        end if
+        return char
+    end function
+
+    function Covered(codePoint as integer) as boolean
+        ranges = RangeTable()
+        if codePoint < ranges[0][0]
+            return false
+        end if
+
+        low = 0
+        high = ranges.Count() - 1
+        while low <= high
+            mid = Int((low + high) / 2)
+            range = ranges[mid]
+            if codePoint < range[0]
+                high = mid - 1
+            else if codePoint > range[1]
+                low = mid + 1
+            else
+                return true
+            end if
+        end while
+
+        return false
+    end function
+
+    function RangeTable() as object
+        if m._emojiTextRanges = invalid
+            m._emojiTextRanges = GeneratedRanges()
+        end if
+        return m._emojiTextRanges
+    end function
+
+end namespace

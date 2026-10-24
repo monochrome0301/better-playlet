@@ -4,6 +4,7 @@ import "pkg:/source/utils/TimeUtils.bs"
 import "pkg:/source/utils/Types.bs"
 
 function Init()
+    m.titleLabel = m.top.FindNode("titleLabel")
     m.durationRect = m.top.FindNode("durationRect")
     m.durationLabel = m.top.FindNode("durationLabel")
     m.progressRect = m.top.FindNode("progressRect")
@@ -17,6 +18,7 @@ function OnContentSet() as void
     end if
 
     m.top.title = content.title
+    m.titleLabel.rawText = ValidString(content.title)
     ' NOTE: "_author" not "author". See PlaylistContentNode.xml for explanation.
     author = content._author
     if not StringUtils.IsNullOrEmpty(author)

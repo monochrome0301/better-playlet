@@ -7,11 +7,11 @@
         <field id="itemHasFocus" type="boolean" onChange="Repaint" />
     </interface>
     <children>
-        <Label id="authorLabel" translation="[16,6]" width="760" height="30"
-            font="font:SmallestBoldSystemFont" color="0xFEFEFEFF" />
+        <EmojiLabel id="authorLabel" translation="[16,6]" width="760" height="30"
+            baseFont="font:SmallestBoldSystemFont" baseSize="18" color="0xFEFEFEFF" />
         <Label id="metaLabel" translation="[16,34]" width="760" height="24"
             font="font:SmallestSystemFont" color="0xAAAAAAFF" />
-        <Label id="textLabel" translation="[16,58]" width="920" height="50"
-            font="font:SmallestSystemFont" color="0xDDDDDDFF" wrap="true" maxLines="3" />
+        <EmojiLabel id="textLabel" translation="[16,58]" width="920" height="50"
+            baseFont="font:SmallestSystemFont" baseSize="18" color="0xDDDDDDFF" wrap="true" maxLines="3" />
     </children>
 </component>

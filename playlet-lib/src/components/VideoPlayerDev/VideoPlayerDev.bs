@@ -634,6 +634,14 @@ end function
 ' comments shortcut. The overlay is a two-level list: the main level shows the current values, a selection
 ' opens one level (Back walks back to main), or applies a track / reloads at the picked quality.
 '===============================================================================
+' The player takes the remote back from an overlay. The overlay releases its inner list first: setting focus on
+' the player while that list still holds it leaves the remote on the hidden list — keys make the click sound and
+' nothing else.
+function TakeFocusBackFrom(overlay as object) as void
+    NodeSetFocus(overlay, false)
+    NodeSetFocus(m.top, true)
+end function
+
 function OpenMenu() as void
     if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.videoDetails.visible
         return
@@ -668,7 +676,7 @@ function CloseMenu() as void
     m.menuLevel = PlayerOverlayLogic.Level.None
     ' focus leaves the overlay before it is hidden: hiding the focused node can strand the scene's focus.
     if not m.commentsOpen
-        NodeSetFocus(m.top, true)
+        TakeFocusBackFrom(m.playerMenu)
     end if
     m.playerMenu.visible = false
     ArmAutoHide()
@@ -952,6 +960,7 @@ function CommentRowData(comment as object) as object
         likes: ValidString(comment.likes)
         publishedTime: ValidString(comment.publishedTime)
         hearted: ValidBool(comment.hearted)
+        replies: ValidString(comment.replies)
         replyToken: ValidString(comment.replyContinuation)
         replyRows: []
         expanded: false
@@ -1038,7 +1047,7 @@ function OnCommentsClosed() as void
         m.commentsJob = invalid
     end if
     ' focus leaves the overlay before it is hidden: hiding the focused node can strand the scene's focus.
-    NodeSetFocus(m.top, true)
+    TakeFocusBackFrom(m.commentsList)
     m.commentsList.visible = false
     ArmAutoHide()
 end function
@@ -1071,7 +1080,7 @@ end function
 
 function CloseDetails() as void
     ' focus leaves the overlay before it is hidden: hiding the focused node can strand the scene's focus.
-    NodeSetFocus(m.top, true)
+    TakeFocusBackFrom(m.videoDetails)
     m.videoDetails.visible = false
     ArmAutoHide()
 end function
@@ -1934,8 +1943,8 @@ function UpdateOverlayMeta() as void
     end if
     title = ValidString(content.title)
     secondaryTitle = ValidString(content.secondaryTitle)
-    m.titleLabel.text = title
-    m.secondaryTitleLabel.text = secondaryTitle
+    m.titleLabel.rawText = title
+    m.secondaryTitleLabel.rawText = secondaryTitle
     ' the loading overlay shows the same title + secondary title while loading.
     m.spinner.title = title
     m.spinner.secondaryTitle = secondaryTitle

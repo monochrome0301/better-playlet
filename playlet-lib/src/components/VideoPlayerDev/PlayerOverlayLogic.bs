@@ -165,9 +165,12 @@ namespace PlayerOverlayLogic
         return ValidString(track.Language) = ValidString(selectedTrack.Language)
     end function
 
-    function MainRows(qualityLabel as string, hasQuality as boolean, subtitleLabel as string, hasSubtitles as boolean, audioLabel as string, hasAudio as boolean) as object
+    ' NOTE: the quality flag is NOT named hasQuality: case-insensitively that collides with the HasQuality function
+    ' above, and the compiler then mangles the reference to the function instead of the parameter (if <function>
+    ' throws at runtime, killing BuildMainMenuRows and silently keeping the menu closed).
+    function MainRows(qualityLabel as string, showQuality as boolean, subtitleLabel as string, hasSubtitles as boolean, audioLabel as string, hasAudio as boolean) as object
         rows = []
-        if hasQuality
+        if showQuality
             rows.Push({ title: Tr(Locale.PlaybackMenu.Quality) + ": " + qualityLabel, value: Level.Quality })
         end if
         if hasSubtitles
@@ -283,15 +286,21 @@ namespace PlayerOverlayLogic
         return rows
     end function
 
-    ' One projected row. A comment that has replies says so in its meta line, so OK on it is discoverable.
+    ' One projected row. A comment that has replies says so, with their count, in its meta line, so OK on it is
+    ' discoverable.
     function CommentRow(kind as string, commentIndex as integer, comment as object, indent as integer) as object
         meta = CommentMeta(comment)
         if kind = "comment" and ValidString(comment.replyToken) <> ""
             if ValidBool(comment.expanded)
-                meta = MetaWith(meta, Tr(Locale.PlaybackMenu.HideReplies))
+                hint = Tr(Locale.PlaybackMenu.HideReplies)
             else
-                meta = MetaWith(meta, Tr(Locale.PlaybackMenu.ViewReplies))
+                hint = Tr(Locale.PlaybackMenu.ViewReplies)
             end if
+            replies = ValidString(comment.replies)
+            if replies <> ""
+                hint = hint + " (" + replies + ")"
+            end if
+            meta = MetaWith(meta, hint)
         end if
         return {
             kind: kind

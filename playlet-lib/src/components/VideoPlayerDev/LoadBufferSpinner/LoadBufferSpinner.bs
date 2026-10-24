@@ -22,6 +22,14 @@ function Init()
     OnMode()
 end function
 
+function OnTitleSet() as void
+    m.top.findNode("loadingTitleLabel").rawText = m.top.title
+end function
+
+function OnSecondaryTitleSet() as void
+    m.top.findNode("loadingSecondaryTitleLabel").rawText = m.top.secondaryTitle
+end function
+
 function OnMode() as void
     mode = m.top.mode
     if mode = SpinnerMode.Loading

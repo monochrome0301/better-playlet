@@ -141,6 +141,7 @@ namespace Tests
                 likes: "12"
                 publishedTime: "2 days ago"
                 hearted: false
+                replies: ""
                 replyToken: ""
                 replyRows: []
                 expanded: false
@@ -184,6 +185,15 @@ namespace Tests
 
             rows = PlayerOverlayLogic.CommentRows([m.Comment({ replyToken: "t1" })], false)
             m.assertTrue(rows[0].meta.InStr(Tr(Locale.PlaybackMenu.ViewReplies)) > 0)
+        end function
+
+        @it("shows the reply count next to the replies hint")
+        function _()
+            rows = PlayerOverlayLogic.CommentRows([m.Comment({ replyToken: "t1", replies: "3" })], false)
+            m.assertEqual(rows[0].meta, "12 · 2 days ago · " + Tr(Locale.PlaybackMenu.ViewReplies) + " (3)")
+
+            rows = PlayerOverlayLogic.CommentRows([m.Comment({ replyToken: "t1", replies: "3", expanded: true })], false)
+            m.assertEqual(rows[0].meta, "12 · 2 days ago · " + Tr(Locale.PlaybackMenu.HideReplies) + " (3)")
         end function
 
     end class

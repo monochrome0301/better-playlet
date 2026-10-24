@@ -1,7 +1,7 @@
 <component name="PlaylistViewCell" extends="Group">
     <interface>
         <field id="itemContent" type="node" onChange="OnContentSet" />
-        <field id="title" type="string" alias="titleLabel.text" />
+        <field id="title" type="string" />
         <field id="author" type="string" alias="authorLabel.text" />
         <field id="thumbnailUri" type="uri" alias="thumbnailPoster.uri" />
         <field id="duration" type="string" alias="durationLabel.text" />
@@ -44,10 +44,11 @@
         <LayoutGroup
             itemSpacings="[5,5]"
             translation="[200,0]">
-            <Label
+            <EmojiLabel
                 id="titleLabel"
                 width="350"
-                font="font:SmallestBoldSystemFont"
+                baseFont="font:SmallestBoldSystemFont"
+                baseSize="18"
                 maxLines="2"
                 wrap="true" />
             <Label

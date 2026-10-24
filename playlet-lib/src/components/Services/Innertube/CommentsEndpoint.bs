@@ -85,17 +85,23 @@ namespace Innertube
     function FindRepliesContinuation(thread as object) as string
         replies = ObjectUtils.Dig(thread, ["replies"])
         if IsAssociativeArray(replies)
-            for each key in ["contents", "subThreads"]
-                token = FindContinuationToken(replies[key])
+            ' The reply container sits on `replies` itself or under commentRepliesRenderer, depending on the client.
+            for each container in [replies, ObjectUtils.Dig(replies, ["commentRepliesRenderer"])]
+                if not IsAssociativeArray(container)
+                    continue for
+                end if
+                for each key in ["contents", "subThreads", "moreReplies"]
+                    token = FindContinuationToken(container[key])
+                    if token <> ""
+                        return token
+                    end if
+                end for
+                ' "View replies" carries its own button.
+                token = ValidString(ObjectUtils.Dig(container, ["viewReplies", "buttonRenderer", "command", "continuationCommand", "token"]))
                 if token <> ""
                     return token
                 end if
             end for
-            ' "View replies" carries its own button.
-            token = ValidString(ObjectUtils.Dig(replies, ["viewReplies", "buttonRenderer", "command", "continuationCommand", "token"]))
-            if token <> ""
-                return token
-            end if
         end if
         ' classic renderer: commentRenderer.moreReplies holds the same continuation item shape.
         return FindContinuationToken(ObjectUtils.Dig(thread, ["comment", "commentRenderer", "moreReplies"]))
