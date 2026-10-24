@@ -5,7 +5,7 @@
   <a href="https://github.com/iBicha/playlet/actions/workflows/release.yml?query=branch%3Amain">
     <img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/iBicha/playlet/release.yml.svg?branch=main"/>
   </a>
-  <a href="https://github.com/iBicha/playlet/releases">
+  <a href="https://github.com/monochrome0301/better-playlet/releases">
     <img alt="Current Release" src="https://img.shields.io/github/release/iBicha/playlet.svg"/>
     <img alt="Total Downloads" src="https://img.shields.io/github/downloads/iBicha/playlet/latest/playlet-lib.squashfs.pkg.svg"/>
   </a>
