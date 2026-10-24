@@ -42,7 +42,8 @@ function GetPlayletLibUrls() as object
         githubSquashFs = { type: "github-squashfs", link: Manifest.ReadValue("playlet_lib_squashfs_remote_url") }
         githubZip = { type: "github-zip", link: Manifest.ReadValue("playlet_lib_zip_remote_url") }
         embedded = { type: "embedded-zip", link: Manifest.ReadValue("playlet_lib_zip_embedded_url") }
-        return [githubSquashFs, githubZip, embedded]
+        ' Sideloaded builds must show the lib they were built with; downloading upstream would replace the UI.
+        return [embedded, githubSquashFs, githubZip]
     #end if
 end function
 
@@ -101,6 +102,8 @@ function LoadComponentLibrary(uri as string)
     m.timer.mark()
 
     m.lib = m.scene.createChild("ComponentLibrary")
+    ' bs-engine only loads the library when both id and uri are set; unique per attempt so retries are not skipped
+    m.lib.id = `playlet_${m.playletLibUrlIndex}`
     ' bs:disable-next-line NO_OBSERVE_STRING_CALLBACK
     m.lib.observeField("loadStatus", "OnLoadStatusChanged")
 
