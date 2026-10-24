@@ -53,6 +53,7 @@ Can't install from the store? See [How to install Playlet as a sideloaded/dev ap
 - 🛡️ Privacy driven (supports [Invidious](https://invidious.io/) backend)
 - 🙋 User accounts (supports YouTube and Invidious accounts)
 - ⚔️ [SponsorBlock](https://sponsor.ajay.app/) integration (skips undesirable sections in videos)
+- 👎 View Dislikes in a video with Return Youtube Dislike
 - 📱 Browse, search, and cast from phone using the YouTube app or the browser
 - 🔮 Picture-in-picture mode
 - ⚡ Fast! [Check out how we compare with the official YouTube app](https://youtu.be/qmSvA-QQW20)
