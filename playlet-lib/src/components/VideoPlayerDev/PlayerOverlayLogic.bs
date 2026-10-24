@@ -1,5 +1,7 @@
 import "pkg:/source/utils/CodecCapabilities.bs"
 import "pkg:/source/utils/Locale.bs"
+import "pkg:/source/utils/LocaleUtils.bs"
+import "pkg:/source/utils/MathUtils.bs"
 import "pkg:/source/utils/Types.bs"
 
 ' Pure menu data for the player's settings overlay: what each level lists and which row is selected.
@@ -174,8 +176,68 @@ namespace PlayerOverlayLogic
         if hasAudio
             rows.Push({ title: Tr(Locale.PlaybackMenu.Audio) + ": " + audioLabel, value: Level.Audio })
         end if
+        rows.Push({ title: Tr(Locale.PlaybackMenu.VideoDescription), value: "details" })
         rows.Push({ title: Tr(Locale.PlaybackMenu.Comments), value: "comments" })
         return rows
+    end function
+
+    ' --- Video details overlay ---
+
+    ' Author · views · likes, as far as the backend provided them (YouTube hides likes on some videos),
+    ' plus Return YouTube Dislike's estimate when it arrived.
+    function DetailsStats(metadata as object, votes = invalid as dynamic) as string
+        parts = []
+        if not IsAssociativeArray(metadata)
+            return ""
+        end if
+
+        author = ValidString(metadata.author)
+        if author <> ""
+            parts.Push(author)
+        end if
+
+        viewCount = ValidInt(metadata.viewCount)
+        if viewCount > 0
+            parts.Push(LocaleUtils.GetFormattedPluralString(viewCount, Locale.RowCell.ZeroViews, Locale.RowCell.OneView, Locale.RowCell.NViews))
+        end if
+
+        ' YouTube's watch page gives a compact, already-formatted like count ("1.2K"); Invidious gives the number.
+        likeCountText = ValidString(metadata.likeCountText)
+        likeCount = ValidInt(metadata.likeCount)
+        if likeCountText <> ""
+            parts.Push(Tr(Locale.PlaybackMenu.Likes) + ": " + likeCountText)
+        else if likeCount > 0
+            parts.Push(LocaleUtils.GetFormattedPluralString(likeCount, Locale.RowCell.ZeroLikes, Locale.RowCell.OneLike, Locale.RowCell.NLikes))
+        end if
+
+        if IsAssociativeArray(votes)
+            parts.Push(LocaleUtils.GetFormattedPluralString(ValidInt(votes.dislikes), Locale.RowCell.ZeroDislikes, Locale.RowCell.OneDislike, Locale.RowCell.NDislikes))
+            rating = ValidFloat(votes.rating)
+            if rating > 0
+                parts.Push(Tr(Locale.PlaybackMenu.VideoRating) + ": " + MathUtils.FormatFloat(rating).ToStr() + "/5")
+            end if
+        end if
+
+        return parts.Join(" · ")
+    end function
+
+    ' RYD asks for clear attribution where its estimates are shown.
+    function DetailsAttribution(votes as object) as string
+        if not IsAssociativeArray(votes)
+            return ""
+        end if
+        return Tr(Locale.PlaybackMenu.DislikesBy)
+    end function
+
+    function DetailsDescription(metadata as object) as string
+        if not IsAssociativeArray(metadata)
+            return Tr(Locale.PlaybackMenu.NoDescription)
+        end if
+        description = ValidString(metadata.description).Trim()
+        if description = ""
+            return Tr(Locale.PlaybackMenu.NoDescription)
+        end if
+        return description
     end function
 
     ' --- Comments overlay rows ---

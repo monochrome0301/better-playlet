@@ -525,6 +525,30 @@
         <translation>^n views</translation>
     </message>
     <message>
+        <source>0 likes</source>
+        <translation>0 likes</translation>
+    </message>
+    <message>
+        <source>1 like</source>
+        <translation>1 like</translation>
+    </message>
+    <message>
+        <source>^n likes</source>
+        <translation>^n likes</translation>
+    </message>
+    <message>
+        <source>0 dislikes</source>
+        <translation>0 dislikes</translation>
+    </message>
+    <message>
+        <source>1 dislike</source>
+        <translation>1 dislike</translation>
+    </message>
+    <message>
+        <source>^n dislikes</source>
+        <translation>^n dislikes</translation>
+    </message>
+    <message>
         <source>Updated 1 minute ago</source>
         <translation>Updated 1 minute ago</translation>
     </message>
@@ -913,6 +937,22 @@
         <translation>Search history cleared.</translation>
     </message>
     <message>
+        <source>Privacy</source>
+        <translation>Privacy</translation>
+    </message>
+    <message>
+        <source>Privacy preferences</source>
+        <translation>Privacy preferences</translation>
+    </message>
+    <message>
+        <source>Incognito mode</source>
+        <translation>Incognito mode</translation>
+    </message>
+    <message>
+        <source>Watch and search without adding to your watch history, recommendations or search history.</source>
+        <translation>Watch and search without adding to your watch history, recommendations or search history.</translation>
+    </message>
+    <message>
         <source>Miscellaneous</source>
         <translation>Miscellaneous</translation>
     </message>
@@ -1003,6 +1043,30 @@
     <message>
         <source>Comments</source>
         <translation>Comments</translation>
+    </message>
+    <message>
+        <source>Video description</source>
+        <translation>Video description</translation>
+    </message>
+    <message>
+        <source>No description</source>
+        <translation>No description</translation>
+    </message>
+    <message>
+        <source>Likes</source>
+        <translation>Likes</translation>
+    </message>
+    <message>
+        <source>Dislikes</source>
+        <translation>Dislikes</translation>
+    </message>
+    <message>
+        <source>Video rating</source>
+        <translation>Video rating</translation>
+    </message>
+    <message>
+        <source>Dislikes from returnyoutubedislike.com</source>
+        <translation>Dislikes from returnyoutubedislike.com</translation>
     </message>
     <message>
         <source>Off</source>

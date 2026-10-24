@@ -1252,5 +1252,69 @@
         <source>Rewind live TV</source>
         <translation>Retroceder TV en vivo</translation>
     </message>
+    <message>
+        <source>Privacy</source>
+        <translation>Privacidad</translation>
+    </message>
+    <message>
+        <source>Privacy preferences</source>
+        <translation>Preferencias de privacidad</translation>
+    </message>
+    <message>
+        <source>Incognito mode</source>
+        <translation>Modo incógnito</translation>
+    </message>
+    <message>
+        <source>Watch and search without adding to your watch history, recommendations or search history.</source>
+        <translation>Reproduce y busca sin añadir nada a tu historial de reproducción, recomendaciones ni historial de búsqueda.</translation>
+    </message>
+    <message>
+        <source>Video description</source>
+        <translation>Descripción del video</translation>
+    </message>
+    <message>
+        <source>No description</source>
+        <translation>Sin descripción</translation>
+    </message>
+    <message>
+        <source>Likes</source>
+        <translation>Me gusta</translation>
+    </message>
+    <message>
+        <source>Dislikes</source>
+        <translation>No me gusta</translation>
+    </message>
+    <message>
+        <source>Video rating</source>
+        <translation>Valoración del video</translation>
+    </message>
+    <message>
+        <source>Dislikes from returnyoutubedislike.com</source>
+        <translation>Datos de returnyoutubedislike.com</translation>
+    </message>
+    <message>
+        <source>0 likes</source>
+        <translation>0 me gusta</translation>
+    </message>
+    <message>
+        <source>1 like</source>
+        <translation>1 me gusta</translation>
+    </message>
+    <message>
+        <source>^n likes</source>
+        <translation>^n me gusta</translation>
+    </message>
+    <message>
+        <source>0 dislikes</source>
+        <translation>0 no me gusta</translation>
+    </message>
+    <message>
+        <source>1 dislike</source>
+        <translation>1 no me gusta</translation>
+    </message>
+    <message>
+        <source>^n dislikes</source>
+        <translation>^n no me gusta</translation>
+    </message>
 </context>
 </TS>

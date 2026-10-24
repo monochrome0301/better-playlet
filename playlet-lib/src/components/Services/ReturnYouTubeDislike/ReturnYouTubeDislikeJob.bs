@@ -1,0 +1,15 @@
+import "pkg:/components/Services/ReturnYouTubeDislike/ReturnYouTubeDislikeService.bs"
+
+@job("ReturnYouTubeDislikeJob")
+function ExecuteJob() as void
+    input = JobGetInput()
+
+    service = new ReturnYouTubeDislike.Service()
+    votes = service.GetVotes(input.videoId, JobGetCancellation())
+
+    ' No data is not a failure: the details overlay simply omits the dislikes.
+    JobSuccessData({
+        videoId: input.videoId
+        votes: votes
+    })
+end function

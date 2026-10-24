@@ -58,8 +58,11 @@ function Initialize()
 
     m.videoContentJob = invalid
     m.sponsorBlockSegmentsJob = invalid
+    m.returnYouTubeDislikeJob = invalid
     m.markVideoWatchedJob = invalid
     m.commentsJob = invalid
+    ' the last Return YouTube Dislike estimate for the loaded video (invalid = none yet).
+    m.rydVotes = invalid
     m.watchTimeMarker = -1
     m.reportWatchTime = false
     m.onCloseCalled = false
@@ -122,6 +125,7 @@ function Initialize()
     m.fullScreenHint = m.top.findNode("fullScreenHint")
     m.playerMenu = m.top.findNode("playerMenu")
     m.commentsList = m.top.findNode("commentsList")
+    m.videoDetails = m.top.findNode("videoDetails")
 
     m.autoHide = m.top.findNode("autoHide")
     m.transportTimer = m.top.findNode("transportTimer")
@@ -203,6 +207,7 @@ function OnNodeReady()
     m.playerMenu.ObserveField("closed", FuncName(OnMenuClosed))
     m.commentsList.ObserveField("selected", FuncName(OnCommentsSelected))
     m.commentsList.ObserveField("closed", FuncName(OnCommentsClosed))
+    m.videoDetails.ObserveField("closed", FuncName(OnDetailsClosed))
 
     ' a player that starts minimized shows the PiP hint (1s after the shrink settles, auto-hides after 5s).
     m.showFullScreenHint = not m.container.fullscreen
@@ -365,6 +370,9 @@ function OnKeyEvent(key as string, press as boolean) as boolean
         return true
     end if
     if m.menuLevel <> PlayerOverlayLogic.Level.None and m.playerMenu.visible
+        return true
+    end if
+    if m.videoDetails.visible
         return true
     end if
     if m.commentsOpen
@@ -627,7 +635,7 @@ end function
 ' opens one level (Back walks back to main), or applies a track / reloads at the picked quality.
 '===============================================================================
 function OpenMenu() as void
-    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen
+    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.videoDetails.visible
         return
     end if
     SetMenuLevel(PlayerOverlayLogic.Level.Main)
@@ -685,6 +693,9 @@ function OnMenuSelected() as void
         if value = "comments"
             CloseMenu()
             OpenComments()
+        else if value = "details"
+            CloseMenu()
+            OpenDetails()
         else
             SetMenuLevel(value)
         end if
@@ -1030,6 +1041,43 @@ function OnCommentsClosed() as void
     NodeSetFocus(m.top, true)
     m.commentsList.visible = false
     ArmAutoHide()
+end function
+
+'===============================================================================
+' Video details overlay — description plus the stats the loaded metadata carries.
+'===============================================================================
+function OpenDetails() as void
+    metadata = ContentMetadata()
+    content = m.top.content
+    title = ValidString(ValidAssociativeArray(metadata).title)
+    if title = "" and content <> invalid and content.hasField("title")
+        title = ValidString(content.title)
+    end if
+    m.videoDetails.title = title
+    m.videoDetails.description = PlayerOverlayLogic.DetailsDescription(metadata)
+    m.videoDetails.visible = true
+    UpdateDetailsStats()
+    NodeSetFocus(m.videoDetails, true)
+end function
+
+' The stats line + RYD attribution track the estimate as it arrives; only while the overlay is on screen.
+function UpdateDetailsStats() as void
+    if not m.videoDetails.visible
+        return
+    end if
+    m.videoDetails.stats = PlayerOverlayLogic.DetailsStats(ContentMetadata(), m.rydVotes)
+    m.videoDetails.attribution = PlayerOverlayLogic.DetailsAttribution(m.rydVotes)
+end function
+
+function CloseDetails() as void
+    ' focus leaves the overlay before it is hidden: hiding the focused node can strand the scene's focus.
+    NodeSetFocus(m.top, true)
+    m.videoDetails.visible = false
+    ArmAutoHide()
+end function
+
+function OnDetailsClosed() as void
+    CloseDetails()
 end function
 
 '===============================================================================
@@ -1691,6 +1739,16 @@ function OnVideoContentJobDone(event as object) as void
         LogDebug("queued SponsorBlockSegmentsJob")
     end if
 
+    ' Return YouTube Dislike: the details overlay's dislike estimate. Same shape as SponsorBlock — the pref
+    ' gates it, live has no reliable data, and the job keeps the request off the render thread.
+    m.rydVotes = invalid
+    showDislikes = m.preferences <> invalid and m.preferences["playback.show_dislikes"] = true
+    if not isLive and showDislikes and IsAssociativeArray(metadata) and not StringUtils.IsNullOrEmpty(ValidString(metadata.videoId))
+        m.returnYouTubeDislikeJob = JobSystem.CreateCallback(OnReturnYouTubeDislikeJobDone)
+        JobSystem.QueueJob(m.jobQueue, Jobs.ReturnYouTubeDislikeJob, { videoId: metadata.videoId }, m.returnYouTubeDislikeJob)
+        LogDebug("queued ReturnYouTubeDislikeJob")
+    end if
+
     UpdateOverlayMeta()
     SeekToInitialPosition(content)
     PlayAfterPreviousPlayerHasStopped()
@@ -1718,9 +1776,32 @@ function OnSponsorBlockSegmentsJobDone(event as object) as void
     end if
 end function
 
+' Keep the last estimate for the open details overlay; a late reply for a replaced video is dropped.
+function OnReturnYouTubeDislikeJobDone(event as object) as void
+    JobSystem.UnobserveCallback(event.getRoSGNode())
+    m.returnYouTubeDislikeJob = invalid
+
+    info = event.getInfo()
+    if not info.success or info.cancel = true or m.onCloseCalled = true or not IsAssociativeArray(info.data)
+        return
+    end if
+    if ValidString(info.data.videoId) <> ValidString(ValidAssociativeArray(ContentMetadata()).videoId)
+        return
+    end if
+
+    m.rydVotes = info.data.votes
+    UpdateDetailsStats()
+end function
+
 ' Report the video as watched to the account: a one-shot history ping plus, for YouTube profiles, a watch-time
 ' position loop (reported in 20-second steps from OnPosition). No-op without a signed-in account or a videoId.
 function MarkVideoWatched(videoId as dynamic, playbackTrackingUrls as dynamic, cpn as dynamic) as void
+    ' incognito: no history ping, so the feed and resume positions stay as they were.
+    preferences = m.top.preferences
+    if preferences <> invalid and preferences["privacy.incognito"] = true
+        m.reportWatchTime = false
+        return
+    end if
     if StringUtils.IsNullOrEmpty(videoId)
         return
     end if
@@ -1995,6 +2076,7 @@ function OnClose() as void
     m.playerMenu.unobserveField("closed")
     m.commentsList.unobserveField("selected")
     m.commentsList.unobserveField("closed")
+    m.videoDetails.unobserveField("closed")
     m.autoHide.unobserveField("fire")
     m.transportTimer.unobserveField("fire")
     m.liveBadgeHold.unobserveField("fire")
@@ -2030,6 +2112,10 @@ function OnClose() as void
     if m.sponsorBlockSegmentsJob <> invalid
         m.sponsorBlockSegmentsJob.cancel = true
         m.sponsorBlockSegmentsJob = invalid
+    end if
+    if m.returnYouTubeDislikeJob <> invalid
+        m.returnYouTubeDislikeJob.cancel = true
+        m.returnYouTubeDislikeJob = invalid
     end if
     if m.sponsorblock <> invalid
         m.sponsorblock.Dispose()

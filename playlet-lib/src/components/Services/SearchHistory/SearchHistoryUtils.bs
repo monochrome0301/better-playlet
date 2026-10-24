@@ -5,7 +5,7 @@ import "pkg:/source/utils/StringUtils.bs"
 namespace SearchHistoryUtils
     function Save(preferencesNode as object, q as string, maxItems = 10 as integer) as void
         seachHistoryEnabled = preferencesNode["search_history.enabled"]
-        if not seachHistoryEnabled
+        if not seachHistoryEnabled or preferencesNode["privacy.incognito"] = true
             return
         end if
 

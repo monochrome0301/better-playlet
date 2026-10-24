@@ -119,5 +119,6 @@
         <LargePause id="largePause" />
         <PlayerMenu id="playerMenu" visible="false" />
         <CommentList id="commentsList" visible="false" />
+        <VideoDetails id="videoDetails" visible="false" />
     </children>
 </component>

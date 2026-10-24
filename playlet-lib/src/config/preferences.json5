@@ -34,6 +34,14 @@
         type: "boolean",
         defaultValue: false,
       },
+      {
+        displayText: "Show dislikes",
+        key: "playback.show_dislikes",
+        description: "Show the dislike count and rating from returnyoutubedislike.com in the video description. This sends the video id to that third-party service.",
+        type: "boolean",
+        defaultValue: true,
+        visibility: "tv",
+      },
     ],
   },
   {
@@ -231,6 +239,20 @@
           { displayText: "Português", value: "pt_BR" },
           { displayText: "Русский", value: "ru_RU" },
         ],
+      },
+    ],
+  },
+  {
+    displayText: "Privacy",
+    key: "privacy",
+    description: "Privacy preferences",
+    children: [
+      {
+        displayText: "Incognito mode",
+        key: "privacy.incognito",
+        description: "Watch and search without adding to your watch history, recommendations or search history.",
+        type: "boolean",
+        defaultValue: false,
       },
     ],
   },

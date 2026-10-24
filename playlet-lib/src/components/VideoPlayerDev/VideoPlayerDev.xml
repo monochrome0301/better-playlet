@@ -126,6 +126,7 @@
              until opened; the coordinator hands them real focus while open and routes their selections. -->
         <PlayerMenu id="playerMenu" visible="false" />
         <CommentList id="commentsList" visible="false" />
+        <VideoDetails id="videoDetails" visible="false" />
 
     </children>
 </component>

@@ -27,7 +27,7 @@ Better-Playlet is an unofficial YouTube client and fork for Roku 📺
 
 ## What is Better-Playlet
 
-Is a vibecoded (because i dont know how to code :C) fork from Playlet made with UI and comfort in mind, puting the youtube comments (compatibility with gifs in comments is a work in progress) and made from scratch the UI (the UI rework is a work in progress).
+Is a vibecoded (because i dont know how to code :C) fork from Playlet made with UI and comfort in mind, puting the youtube comments (compatibility with gifs in comments is a work in progress) and made from scratch the UI (the UI rework is a work in progress, but the Roku TV programming languages are a bit limited in a lot of thing so is going to take a long time), is made to have all the thing from and usual youtube client, descriptions, dislikes (Return Youtube Dislike), and a lot of other things that Playlet has a little difficult to enjoy in their massive esplendor.
 
 ## Screenshots
 
@@ -92,6 +92,10 @@ There's a cliché about how a lot of open source software is **`"Made with ♡"`
 By removing all the bloat, the ads, the tracking, we could end up with an even faster app than the official one.
 
 In any case, I hope you find **Better-Playlet** or **Playlet** useful, and pleasant to use.
+
+## AI models used
+
+DeepSeek 4.1-1017
 
 ## Disclaimer
 

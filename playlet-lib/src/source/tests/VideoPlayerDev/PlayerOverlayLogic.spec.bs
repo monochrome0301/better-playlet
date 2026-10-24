@@ -86,16 +86,50 @@ namespace Tests
 
         @describe("main rows")
 
-        @it("includes only the levels that have choices, and always the comments shortcut")
+        @it("includes only the levels that have choices, plus the description and comments shortcuts")
         function _()
             rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false)
-            m.assertEqual(rows.Count(), 2)
+            m.assertEqual(rows.Count(), 3)
             m.assertEqual(rows[0].value, PlayerOverlayLogic.Level.Quality)
-            m.assertEqual(rows[1].value, "comments")
+            m.assertEqual(rows[1].title, Tr(Locale.PlaybackMenu.VideoDescription))
+            m.assertEqual(rows[2].value, "comments")
 
             rows = PlayerOverlayLogic.MainRows("Auto", false, "Off", true, "English", true)
-            m.assertEqual(rows.Count(), 4)
+            m.assertEqual(rows.Count(), 5)
             m.assertTrue(rows[0].title.InStr(Tr(Locale.PlaybackMenu.Subtitles)) = 0)
+        end function
+
+        @describe("video details")
+
+        @it("shows author, views and likes from the backend metadata")
+        function _()
+            stats = PlayerOverlayLogic.DetailsStats({ author: "@a", viewCount: 1200, likeCount: 12 })
+            m.assertTrue(stats.InStr("@a") > -1, "author")
+            m.assertTrue(stats.InStr("1.2") > -1, "compact view count")
+            m.assertTrue(stats.InStr("12") > -1, "like count")
+        end function
+
+        @it("uses YouTube's compact like text when there is no numeric count")
+        function _()
+            stats = PlayerOverlayLogic.DetailsStats({ viewCount: 10, likeCountText: "1.2K" })
+            m.assertTrue(stats.InStr(Tr(Locale.PlaybackMenu.Likes) + ": 1.2K") > -1)
+        end function
+
+        @it("adds the Return YouTube Dislike estimate and its attribution")
+        function _()
+            stats = PlayerOverlayLogic.DetailsStats({ viewCount: 10 }, { dislikes: 521581, rating: 4.5 })
+            m.assertTrue(stats.InStr("521") > -1, "compact dislike count")
+            m.assertTrue(stats.InStr(Tr(Locale.PlaybackMenu.VideoRating) + ": 4.5/5") > -1, "rating")
+            m.assertEqual(PlayerOverlayLogic.DetailsAttribution({ dislikes: 1 }), Tr(Locale.PlaybackMenu.DislikesBy))
+            m.assertEqual(PlayerOverlayLogic.DetailsAttribution(invalid), "")
+            m.assertFalse(PlayerOverlayLogic.DetailsStats({ viewCount: 10 }).InStr(Tr(Locale.PlaybackMenu.Dislikes)) > -1, "no dislikes without votes")
+        end function
+
+        @it("falls back to a no-description message")
+        function _()
+            m.assertEqual(PlayerOverlayLogic.DetailsDescription(invalid), Tr(Locale.PlaybackMenu.NoDescription))
+            m.assertEqual(PlayerOverlayLogic.DetailsDescription({ description: "  " }), Tr(Locale.PlaybackMenu.NoDescription))
+            m.assertEqual(PlayerOverlayLogic.DetailsDescription({ description: "Hello" }), "Hello")
         end function
 
         @describe("comment rows")

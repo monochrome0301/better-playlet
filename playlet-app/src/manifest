@@ -2,8 +2,8 @@ title=Playlet
 
 # Do not update version manually, it is auto updated from package.json
 major_version=0
-minor_version=48
-build_version=00010
+minor_version=49
+build_version=00000
 
 rsg_version=1.3
 

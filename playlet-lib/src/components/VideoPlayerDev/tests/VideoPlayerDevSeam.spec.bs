@@ -1094,6 +1094,29 @@ namespace Tests
             m.top.findNode("autoHide").control = "stop"
         end function
 
+        @it("the video details overlay shows the description and stats, and closes on Back")
+        function _()
+            content = CreateObject("roSGNode", "Node")
+            content.addFields({ title: "A video" })
+            content.addField("metadata", "assocarray")
+            content.metadata = { title: "A video", author: "@a", viewCount: 1200, likeCount: 12, description: "Hello there" }
+            m.top.content = content
+
+            m.top.callFunc("TestOpenDetails")
+            details = m.top.findNode("videoDetails")
+            m.assertTrue(details.visible, "details opened")
+            m.assertEqual(details.title, "A video")
+            m.assertTrue(details.stats.InStr("@a") > -1, "author in the stats line")
+            m.assertTrue(details.stats.InStr("12") > -1, "likes in the stats line")
+            m.assertEqual(details.description, "Hello there")
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Back, true), "the open details overlay owns Back")
+
+            details.closed = true
+            m.assertFalse(details.visible, "closed on Back")
+            m.top.findNode("autoHide").control = "stop"
+            m.top.content = invalid
+        end function
+
         ' An overlay state that says open with nothing on screen must not own the remote: swallowing Back there
         ' is an app with no way out, and it is what "the settings button gets the app stuck" looks like.
         @it("a half-finished overlay open cannot own the remote")
@@ -1122,11 +1145,11 @@ namespace Tests
                 classified[name] = "controller"
             end for
             ' cached child nodes / timers / animations / reusable helpers (structure, not state).
-            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime", "playerMenu", "commentsList"]
+            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime", "playerMenu", "commentsList", "videoDetails"]
                 classified[name] = "node"
             end for
             ' in-flight job handles.
-            for each name in ["videoContentJob", "sponsorBlockSegmentsJob", "markVideoWatchedJob", "commentsJob"]
+            for each name in ["videoContentJob", "sponsorBlockSegmentsJob", "returnYouTubeDislikeJob", "markVideoWatchedJob", "commentsJob"]
                 classified[name] = "job"
             end for
             ' STATE AXES — discrete coordinator state; each needs its transitions covered by a seam test.
@@ -1134,7 +1157,7 @@ namespace Tests
                 classified[name] = "axis"
             end for
             ' flags / scratch — one-shot latches and counters with a single consuming path.
-            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsRows", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId", "commentsJobKind", "commentsJobIndex"]
+            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsRows", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId", "commentsJobKind", "commentsJobIndex", "rydVotes"]
                 classified[name] = "flag"
             end for
             ' NOT coordinator state — node-scope + test-environment entries, pinned EXPLICITLY (no hidden

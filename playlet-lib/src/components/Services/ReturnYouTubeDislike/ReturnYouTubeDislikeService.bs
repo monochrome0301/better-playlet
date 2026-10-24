@@ -1,0 +1,59 @@
+import "pkg:/source/services/HttpClient.bs"
+import "pkg:/source/utils/Logging.bs"
+import "pkg:/source/utils/Types.bs"
+
+' Return YouTube Dislike's public vote estimate for a video. The video id leaves the device in the clear to a
+' third party (unlike SponsorBlock's hashed prefix), so the player only asks when the pref is on.
+namespace ReturnYouTubeDislike
+
+    const DEFAULT_SERVER = "https://returnyoutubedislikeapi.com"
+
+    class Service
+
+        ' A server address is only passed by tests; the real app uses the public API.
+        function new(serverAddress = ReturnYouTubeDislike.DEFAULT_SERVER as string)
+            m.serverAddress = serverAddress
+        end function
+
+        ' { dislikes: integer, rating: float (1-5) }, or invalid when RYD has no data for the video.
+        function GetVotes(videoId as string, cancellation = invalid as dynamic) as object
+            if StringUtils.IsNullOrEmpty(videoId)
+                return invalid
+            end if
+
+            url = `${m.serverAddress}/votes?videoId=${videoId.EncodeUriComponent()}`
+            response = HttpClient.Get(url).Cancellation(cancellation).Await()
+            if not response.IsSuccess()
+                ' A 404 is normal (no archived data for the video); only a server failure is worth a log line.
+                if not response.IsCancelled() and response.StatusCode() >= 500
+                    LogErrorNoTelemetry("Return YouTube Dislike server error:", response.StatusCode())
+                end if
+                return invalid
+            end if
+
+            return ParseVotes(response.Json())
+        end function
+
+    end class
+
+    function ParseVotes(json as dynamic) as object
+        if not IsAssociativeArray(json) or ValidBool(json.deleted)
+            return invalid
+        end if
+        return {
+            dislikes: ValidInt(json.dislikes)
+            rating: NumberToFloat(json.rating)
+        }
+    end function
+
+    ' JSON whole numbers parse as integers, so a 5.0 rating can arrive as an int.
+    function NumberToFloat(value as dynamic) as float
+        if IsFloat(value)
+            return value
+        else if IsDouble(value)
+            return value
+        end if
+        return ValidInt(value)
+    end function
+
+end namespace

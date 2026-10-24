@@ -5,10 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.49.0] - 2026-10-23
 
 ### Added
 
+- Video details in the player menu: the description plus author, views and likes
+- Return YouTube Dislike estimates (dislikes and rating) in the player's video description
+- Incognito mode in Settings: watch and search without adding to your watch history, recommendations or search history
 - Player settings menu to change quality (resumes at the same position), subtitles and audio track without leaving playback
 - Comments overlay in the player, with pagination, reply threads and creator-hearted markers
 - Settings and comments buttons in the player control row

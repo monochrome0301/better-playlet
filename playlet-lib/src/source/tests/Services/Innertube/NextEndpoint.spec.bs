@@ -1,0 +1,87 @@
+import "pkg:/components/Services/Innertube/NextEndpoint.bs"
+
+namespace Tests
+
+    @suite
+    class NextEndpointTests extends Rooibos.BaseTestSuite
+
+        function Payload(primary as object, secondary as object) as object
+            return {
+                contents: {
+                    twoColumnWatchNextResults: {
+                        results: {
+                            results: {
+                                contents: [
+                                    { videoPrimaryInfoRenderer: primary }
+                                    { videoSecondaryInfoRenderer: secondary }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        end function
+
+        @describe("video details from the next response")
+
+        @it("reads the like count from the segmented like button")
+        function _()
+            primary = {
+                videoActions: {
+                    menuRenderer: {
+                        topLevelButtons: [{
+                            segmentedLikeDislikeButtonViewModel: {
+                                likeButtonViewModel: {
+                                    likeButtonViewModel: {
+                                        toggleButtonViewModel: {
+                                            toggleButtonViewModel: {
+                                                defaultButtonViewModel: {
+                                                    buttonViewModel: {
+                                                        iconName: "LIKE"
+                                                        title: "1.2K"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }]
+                    }
+                }
+            }
+
+            parsed = {}
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(primary, invalid), parsed)
+            m.assertEqual(parsed.likeCountText, "1.2K")
+        end function
+
+        @it("reads the description, but keeps the player response's when it has one")
+        function _()
+            secondary = { description: { attributedDescription: { content: "From next" } } }
+
+            parsed = {}
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, secondary), parsed)
+            m.assertEqual(parsed.description, "From next")
+
+            fromPlayer = { description: "From player" }
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, secondary), fromPlayer)
+            m.assertEqual(fromPlayer.description, "From player")
+        end function
+
+        @it("reads a legacy toggle button's numeric like label and ignores a plain sentence")
+        function _()
+            numeric = { videoActions: { menuRenderer: { topLevelButtons: [{ toggleButtonRenderer: { defaultText: { simpleText: "1,234" } } }] } } }
+            parsed = {}
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(numeric, invalid), parsed)
+            m.assertEqual(parsed.likeCountText, "1,234")
+
+            sentence = { videoActions: { menuRenderer: { topLevelButtons: [{ toggleButtonRenderer: { defaultText: { simpleText: "like this video" } } }] } } }
+            parsed = {}
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(sentence, invalid), parsed)
+            m.assertEqual(parsed.likeCountText, invalid)
+        end function
+
+    end class
+
+end namespace

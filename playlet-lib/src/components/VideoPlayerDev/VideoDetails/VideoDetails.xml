@@ -1,0 +1,23 @@
+<component name="VideoDetails" extends="Group" includes="Focus">
+    <!-- The player's video-details overlay: title, the stats line (author/views/likes plus RYD's estimate) and
+         the scrollable description, with the RYD attribution under it. The coordinator owns the data; this
+         component only projects it and reports Back. -->
+    <interface>
+        <field id="title" type="string" alias="titleLabel.text" />
+        <field id="stats" type="string" alias="statsLabel.text" />
+        <field id="description" type="string" alias="descriptionText.text" />
+        <field id="attribution" type="string" alias="attributionLabel.text" />
+        <field id="closed" type="boolean" alwaysNotify="true" />
+    </interface>
+    <children>
+        <Rectangle id="scrim" width="1280" height="720" color="0x000000" opacity="0.9" />
+        <Label id="titleLabel" translation="[160,70]" width="960" height="44"
+            font="font:MediumBoldSystemFont" color="0xFEFEFEFF" wrap="false" />
+        <Label id="statsLabel" translation="[160,116]" width="960" height="32"
+            font="font:SmallestSystemFont" color="0xBBBBBBFF" />
+        <ScrollableText id="descriptionText" translation="[160,166]" width="960" height="480"
+            font="font:SmallestSystemFont" color="0xDDDDDDFF" wrap="true" numLines="15" focusable="true" />
+        <Label id="attributionLabel" translation="[160,660]" width="960" height="26"
+            font="font:SmallestSystemFont" color="0x888888FF" wrap="false" />
+    </children>
+</component>

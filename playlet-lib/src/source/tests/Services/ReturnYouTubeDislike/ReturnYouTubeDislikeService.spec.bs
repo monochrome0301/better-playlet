@@ -1,0 +1,57 @@
+import "pkg:/components/Services/ReturnYouTubeDislike/ReturnYouTubeDislikeService.bs"
+import "pkg:/source/tests/HttpTestServer.bs"
+import "pkg:/source/tests/LoggingGlobals.bs"
+
+namespace Tests
+
+    @suite
+    class ReturnYouTubeDislikeServiceTests extends Rooibos.BaseTestSuite
+
+        protected override function setup()
+            m.server = Tests.StartHttpTestServer()
+        end function
+
+        protected override function tearDown()
+            Tests.StopHttpTestServer(m.server)
+            m.server = invalid
+        end function
+
+        protected override function beforeEach()
+            Tests.SetUpLoggingGlobals()
+            m.service = new ReturnYouTubeDislike.Service(Tests.HttpTestServerUrl("/ryd"))
+        end function
+
+        function RouteVotes(route as object)
+            m.server.routes = { "/ryd/votes": route }
+        end function
+
+        @describe("ReturnYouTubeDislike.Service")
+
+        @it("reads the dislike estimate and the rating")
+        function _()
+            m.RouteVotes({ status: 200, body: `{"id":"video1","dislikes":521581,"rating":4.5}` })
+            votes = m.service.GetVotes("video1")
+            m.assertEqual(votes.dislikes, 521581)
+            m.assertEqual(votes.rating, 4.5)
+            m.assertEqual(Tests.HttpTestServerHits(m.server, "/ryd/votes?videoId=video1"), 1)
+        end function
+
+        @it("has no votes when RYD has no data for the video or the call fails")
+        function _()
+            m.RouteVotes({ status: 404 })
+            m.assertInvalid(m.service.GetVotes("video2"))
+
+            m.RouteVotes({ status: 200, body: `{"id":"video3","deleted":true,"dislikes":3,"rating":4.5}` })
+            m.assertInvalid(m.service.GetVotes("video3"))
+        end function
+
+        @it("asks for nothing without a video id")
+        function _()
+            m.RouteVotes({ status: 200, body: `{"dislikes":1,"rating":5}` })
+            m.assertInvalid(m.service.GetVotes(""))
+            m.assertEqual(Tests.HttpTestServerHits(m.server, "/ryd/votes"), 0)
+        end function
+
+    end class
+
+end namespace

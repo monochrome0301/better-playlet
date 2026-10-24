@@ -75,6 +75,15 @@ that a section of a video has been skipped. This event does not have any
 tracking information attached to it, and it is anonymous. It is merely to
 indicate to contributors how much their contributions are being used in the wild.
 
+## Return YouTube Dislike
+
+Better-Playlet may request a video's dislike estimate from
+[Return YouTube Dislike](https://returnyoutubedislike.com/), to show it in the
+player's video description. The request contains the video id, which (unlike
+SponsorBlock's hashed prefix) identifies the video being watched to that third
+party, along with the device's IP address as with any request. No account or
+other user data is sent. This feature can be disabled in Settings.
+
 ## LeanBack
 
 LeanBack, also known as Lounge API, also known as "cast from phone". Is a feature that Better-Playlet implmements as a convenience to allow users to use a separate device to browse and cast videos.

@@ -40,6 +40,8 @@ namespace Innertube
             return parsedResponse
         end if
 
+        AddVideoDetailsFromNextResponse(payload, parsedResponse)
+
         playerOverlayRenderer = ObjectUtils.Dig(payload, ["playerOverlays", "playerOverlayRenderer"])
         if not IsAssociativeArray(playerOverlayRenderer)
             LogWarn("Invalid playerOverlayRenderer", playerOverlayRenderer)
@@ -78,6 +80,78 @@ namespace Innertube
         end if
 
         return parsedResponse
+    end function
+
+    ' The watch page's stats live outside the player response: the like button and the description panel.
+    function AddVideoDetailsFromNextResponse(payload as object, parsedResponse as object) as void
+        contents = ObjectUtils.Dig(payload, ["contents", "twoColumnWatchNextResults", "results", "results", "contents"])
+        if not IsArray(contents)
+            return
+        end if
+
+        for each node in contents
+            if not IsAssociativeArray(node)
+                continue for
+            end if
+
+            primary = node["videoPrimaryInfoRenderer"]
+            if IsAssociativeArray(primary)
+                likeCountText = ParseLikeCountText(primary)
+                if likeCountText <> ""
+                    parsedResponse["likeCountText"] = likeCountText
+                end if
+            end if
+
+            secondary = node["videoSecondaryInfoRenderer"]
+            if IsAssociativeArray(secondary)
+                description = ParseVideoDescription(secondary)
+                if description <> "" and StringUtils.IsNullOrEmpty(parsedResponse.description)
+                    parsedResponse["description"] = description
+                end if
+            end if
+        end for
+    end function
+
+    ' Current shape is the segmented like/dislike view; older responses carry a toggle button.
+    function ParseLikeCountText(primary as object) as string
+        buttons = ObjectUtils.Dig(primary, ["videoActions", "menuRenderer", "topLevelButtons"])
+        if not IsArray(buttons)
+            return ""
+        end if
+
+        for each button in buttons
+            if not IsAssociativeArray(button)
+                continue for
+            end if
+
+            title = ObjectUtils.Dig(button, ["segmentedLikeDislikeButtonViewModel", "likeButtonViewModel", "likeButtonViewModel", "toggleButtonViewModel", "toggleButtonViewModel", "defaultButtonViewModel", "buttonViewModel", "title"])
+            if IsString(title) and title <> ""
+                return title
+            end if
+
+            text = ParseText(ObjectUtils.Dig(button, ["toggleButtonRenderer", "defaultText"]))
+            if StartsWithDigit(text)
+                return text
+            end if
+        end for
+        return ""
+    end function
+
+    function ParseVideoDescription(secondary as object) as string
+        content = ObjectUtils.Dig(secondary, ["description", "attributedDescription", "content"])
+        if IsString(content) and content <> ""
+            return content
+        end if
+        return ParseText(secondary["description"])
+    end function
+
+    ' A like label such as "1.2K" or "1,234"; rejects accessibility sentences ("like this video along with...").
+    function StartsWithDigit(text as string) as boolean
+        if text = ""
+            return false
+        end if
+        code = Asc(text.Left(1))
+        return code >= 48 and code <= 57
     end function
 
 end namespace

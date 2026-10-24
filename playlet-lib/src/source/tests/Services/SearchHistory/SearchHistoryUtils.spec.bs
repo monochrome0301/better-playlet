@@ -1,0 +1,48 @@
+import "pkg:/components/Services/SearchHistory/SearchHistoryUtils.bs"
+import "pkg:/source/utils/RegistryUtils.bs"
+
+namespace Tests
+
+    @suite
+    class SearchHistoryUtilsTests extends Rooibos.BaseTestSuite
+
+        protected override function setup()
+            ' Save writes the real registry key: put back whatever this device had.
+            m.savedHistory = RegistryUtils.Read(RegistryUtils.SEARCH_HISTORY)
+        end function
+
+        protected override function tearDown()
+            if m.savedHistory = invalid
+                RegistryUtils.Delete(RegistryUtils.SEARCH_HISTORY)
+            else
+                RegistryUtils.Write(RegistryUtils.SEARCH_HISTORY, m.savedHistory)
+            end if
+        end function
+
+        @describe("SearchHistoryUtils.Save")
+
+        @it("saves the query when incognito is off")
+        function _()
+            SearchHistoryUtils.Clear()
+            preferences = { "search_history.enabled": true, "privacy.incognito": false }
+
+            SearchHistoryUtils.Save(preferences, "playlet")
+
+            saved = SearchHistoryUtils.GetAllSaved(preferences)
+            m.assertEqual(saved.Count(), 1)
+            m.assertEqual(saved[0], "playlet")
+        end function
+
+        @it("leaves the saved history untouched in incognito")
+        function _()
+            SearchHistoryUtils.Clear()
+            preferences = { "search_history.enabled": true, "privacy.incognito": true }
+
+            SearchHistoryUtils.Save(preferences, "private query")
+
+            m.assertEqual(SearchHistoryUtils.GetAllSaved(preferences).Count(), 0)
+        end function
+
+    end class
+
+end namespace

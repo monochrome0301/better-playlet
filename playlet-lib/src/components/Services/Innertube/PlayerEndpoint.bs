@@ -171,6 +171,10 @@ namespace Innertube
             parsedResponse["author"] = videoDetails["author"]
         end if
 
+        if not StringUtils.IsNullOrEmpty(videoDetails["shortDescription"])
+            parsedResponse["description"] = videoDetails["shortDescription"]
+        end if
+
         if videoDetails.DoesExist("viewCount")
             parsedResponse["viewCount"] = videoDetails["viewCount"].ToInt()
         end if
