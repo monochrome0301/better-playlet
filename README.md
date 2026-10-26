@@ -80,7 +80,7 @@ play•let /ˈplālət/
 : a short play
 ```
 
-**[Better-Playlet](https://github.com/monochrome0301/better-playlet)** and **[Playlet](https://github.com/iBicha/playlet)** are about keeping the time you spend on [YouTube](https://www.youtube.com/) short and useful. They value your time, so they don't show you ads and let you skip sponsored sections and other irrelevant information designed to monetize you and/or make you waste your time.
+**[Better-Playlet](https://github.com/monochrome0301/better-playlet)** and **[Playlet](https://github.com/iBicha/playlet)** are about keeping the time you spend on YouTube short and useful. They value your time, so they don't show you ads and let you skip sponsored sections and other irrelevant information designed to monetize you and/or make you waste your time.
 
 There is a cliché about how much open-source software is **"Made with ♡"**. This particular project is **not**.<br/>
 **[Better-Playlet](https://github.com/monochrome0301/better-playlet)** and **[Playlet](https://github.com/iBicha/playlet)** were created out of **spite**, because I think I've already seen enough consecutive and unavoidable YouTube ads for a lifetime.
