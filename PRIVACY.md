@@ -93,3 +93,16 @@ Better-Playlet tries to preserve user privacy, to the best of its ability, by im
 Additionally, Better-Playlet does not join a session/lounge, until a device is attempting to connect using DIAL (**DI**scovery **A**nd **L**aunch spec) also known as "Connect with Wi-Fi", or when a `Link with TV code` is generated, by visiting the appropriate settings page.
 
 If you have privacy concerns and do not wish to use this functionality, simply do not connect from a local network using the YouTube app or the browser, and do not visit the `Link with TV code` tab.
+
+## AiSList
+
+When the "Hide AI slop channels" setting is enabled, Better-Playlet downloads the
+[AiSList](https://github.com/Override92/AiSList) blocklist (and optionally its warnlist)
+from GitHub, and caches it for a day. The request contains no user data, only the
+device's IP address as with any request.
+
+To recognise a channel that the list identifies by handle, Better-Playlet may ask
+YouTube for a channel's handle once, from its channel id. Those lookups are cached
+on the device for 30 days, and the feature can be disabled in Settings at any time.
+
+AiSList data is licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).

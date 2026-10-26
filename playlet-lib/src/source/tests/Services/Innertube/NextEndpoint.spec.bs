@@ -56,16 +56,20 @@ namespace Tests
             m.assertEqual(parsed.likeCountText, "1.2K")
         end function
 
-        @it("reads the description, but keeps the player response's when it has one")
+        @it("reads the description from the current watch page shape and the older one")
         function _()
-            secondary = { description: { attributedDescription: { content: "From next" } } }
-
+            current = { attributedDescription: { content: "From current next" } }
             parsed = {}
-            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, secondary), parsed)
-            m.assertEqual(parsed.description, "From next")
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, current), parsed)
+            m.assertEqual(parsed.description, "From current next")
+
+            legacy = { description: { attributedDescription: { content: "From legacy next" } } }
+            parsed = {}
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, legacy), parsed)
+            m.assertEqual(parsed.description, "From legacy next")
 
             fromPlayer = { description: "From player" }
-            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, secondary), fromPlayer)
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, current), fromPlayer)
             m.assertEqual(fromPlayer.description, "From player")
         end function
 
@@ -80,6 +84,159 @@ namespace Tests
             parsed = {}
             Innertube.AddVideoDetailsFromNextResponse(m.Payload(sentence, invalid), parsed)
             m.assertEqual(parsed.likeCountText, invalid)
+        end function
+
+        @it("reads the channel owner's id and avatar from the secondary info")
+        function _()
+            secondary = {
+                owner: {
+                    videoOwnerRenderer: {
+                        navigationEndpoint: { browseEndpoint: { browseId: "UCowner" } }
+                        thumbnail: { thumbnails: [{ url: "https://small" }, { url: "https://big" }] }
+                    }
+                }
+            }
+            parsed = {}
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, secondary), parsed)
+            m.assertEqual(parsed.authorId, "UCowner")
+            m.assertEqual(parsed.authorThumbnail, "https://big")
+
+            ' a player response that already knows the channel keeps its id
+            fromPlayer = { authorId: "UCplayer" }
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, secondary), fromPlayer)
+            m.assertEqual(fromPlayer.authorId, "UCplayer")
+            m.assertEqual(fromPlayer.authorThumbnail, "https://big")
+        end function
+
+        @it("reads the description's video and channel links, skipping chapters and playlists")
+        function _()
+            content = "video link UCabc"
+            secondary = {
+                attributedDescription: {
+                    content: content
+                    commandRuns: [
+                        { startIndex: 0, length: 10, onTap: { innertubeCommand: { watchEndpoint: { videoId: "vid1" } } } }
+                        { startIndex: 11, length: 5, onTap: { innertubeCommand: { browseEndpoint: { browseId: "UCabc" } } } }
+                        ' a chapter of the same video
+                        { startIndex: 0, length: 5, onTap: { innertubeCommand: { watchEndpoint: { videoId: "same", continuePlayback: true } } } }
+                        ' a playlist, not a channel
+                        { startIndex: 0, length: 5, onTap: { innertubeCommand: { browseEndpoint: { browseId: "PLxyz" } } } }
+                        ' the same video again, deduped
+                        { startIndex: 0, length: 10, onTap: { innertubeCommand: { watchEndpoint: { videoId: "vid1" } } } }
+                    ]
+                }
+            }
+
+            links = Innertube.ParseDescriptionLinks(secondary)
+
+            m.assertEqual(links.Count(), 2)
+            m.assertEqual(links[0].kind, "video")
+            m.assertEqual(links[0].id, "vid1")
+            m.assertEqual(links[0].label, "video link")
+            m.assertEqual(links[1].kind, "channel")
+            m.assertEqual(links[1].id, "UCabc")
+            m.assertEqual(links[1].label, "UCabc")
+        end function
+
+        @it("reads the game the video is about from the structured description")
+        function _()
+            payload = m.Payload(invalid, invalid)
+            payload["engagementPanels"] = [{
+                engagementPanelSectionListRenderer: {
+                    content: {
+                        structuredDescriptionContentRenderer: {
+                            items: [{
+                                videoAttributesSectionViewModel: {
+                                    headerTitle: "Games"
+                                    videoAttributeViewModels: [{
+                                        videoAttributeViewModel: {
+                                            title: "Super Mario World"
+                                            subtitle: "1990"
+                                            image: { sources: [{ url: "https://small" }, { url: "https://big" }] }
+                                        }
+                                    }]
+                                }
+                            }]
+                        }
+                    }
+                }
+            }]
+
+            parsed = {}
+            Innertube.AddVideoDetailsFromNextResponse(payload, parsed)
+            m.assertEqual(parsed.game.title, "Super Mario World")
+            m.assertEqual(parsed.game.year, "1990")
+            m.assertEqual(parsed.game.image, "https://big")
+
+            parsed = {}
+            Innertube.AddVideoDetailsFromNextResponse(m.Payload(invalid, invalid), parsed)
+            m.assertEqual(parsed.game, invalid)
+        end function
+
+        @it("reads the watch page's recommendations and keeps only playable videos")
+        function _()
+            payload = m.Payload(invalid, invalid)
+            payload.contents.twoColumnWatchNextResults["secondaryResults"] = {
+                secondaryResults: {
+                    results: [
+                        {
+                            compactVideoRenderer: {
+                                videoId: "rec1"
+                                title: { simpleText: "One" }
+                                shortBylineText: {
+                                    runs: [{
+                                        text: "@a"
+                                        navigationEndpoint: { browseEndpoint: { browseId: "UCa" } }
+                                    }]
+                                }
+                            }
+                        }
+                        {
+                            lockupViewModel: {
+                                contentType: "LOCKUP_CONTENT_TYPE_PLAYLIST"
+                                contentId: "PLlist"
+                            }
+                        }
+                        { continuationItemRenderer: {} }
+                    ]
+                }
+            }
+
+            videos = Innertube.ParseRecommendedVideos(payload, invalid)
+            m.assertEqual(videos.Count(), 1, "the playlist and the continuation are not videos")
+            m.assertEqual(videos[0].videoId, "rec1")
+            m.assertEqual(videos[0].title, "One")
+        end function
+
+        @it("reads the recommendations' continuation token, on the endpoint or on a button")
+        function _()
+            result = Innertube.ParseRecommendationItems([
+                { compactVideoRenderer: { videoId: "rec1", title: { simpleText: "One" } } }
+                { continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: "token1" } } } }
+            ], invalid)
+            m.assertEqual(result.videos.Count(), 1, "the continuation is not a video")
+            m.assertEqual(result.continuation, "token1")
+
+            fromButton = Innertube.ParseRecommendationItems([
+                { continuationItemRenderer: { button: { buttonRenderer: { command: { continuationCommand: { token: "token2" } } } } } }
+            ], invalid)
+            m.assertEqual(fromButton.continuation, "token2")
+        end function
+
+        @it("the next response carries the recommendation continuation to the player")
+        function _()
+            payload = m.Payload(invalid, invalid)
+            payload.contents.twoColumnWatchNextResults["secondaryResults"] = {
+                secondaryResults: {
+                    results: [
+                        { compactVideoRenderer: { videoId: "rec1", title: { simpleText: "One" } } }
+                        { continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: "next-page" } } } }
+                    ]
+                }
+            }
+
+            parsed = Innertube.ParseInnertubeNextResponse(payload, {}, invalid)
+            m.assertEqual(parsed.recommendedVideosContinuation, "next-page", "the feed can ask for more")
         end function
 
     end class

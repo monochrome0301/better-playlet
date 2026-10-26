@@ -93,6 +93,9 @@ namespace Locale
         WhosWatching = "Who's watching?"
         NoValidAccountsFound = "No valid accounts found for YouTube login."
         SelectKeyboardLanguage = "Select keyboard language"
+        NoInvidiousInstance = "No Invidious Instance"
+        NoInvidiousInstanceMessage1 = "Playlet built-in backend does not support Invidious login."
+        NoInvidiousInstanceMessage2 = "Can only login with Invidious if an Invidious instance is set in the settings."
     end enum
 
     @locale
@@ -106,6 +109,8 @@ namespace Locale
         SignUp = "signup"
         Location = "location"
         Health = "health"
+        EditInstance = "Edit Instance"
+        EnterInstanceUrl = "Enter the instance url (e.g. %1)"
     end enum
 
     @locale
@@ -262,6 +267,13 @@ namespace Locale
         DisableAutoDubbedAudio = "Disable auto-dubbed audio"
         DisableAutoDubbedAudioDescription = "Remove AI-generated dubbed audio tracks."
 
+        SubtitleTextColor = "Subtitle text color"
+        SubtitleTextColorDescription = "Color of the subtitle text. Default follows the Roku caption settings."
+        SubtitleBackgroundColor = "Subtitle background color"
+        SubtitleBackgroundColorDescription = "Color of the subtitle background. Default follows the Roku caption settings."
+        SubtitleBackgroundOpacity = "Subtitle background opacity"
+        SubtitleBackgroundOpacityDescription = "Opacity of the subtitle background. Default follows the Roku caption settings."
+
         Backend = "Backend"
         BackendPreferences = "Backend preferences"
         SelectedBackend = "Selected backend"
@@ -271,6 +283,10 @@ namespace Locale
         ContentPreferences = "Feed preferences"
         DisableShorts = "Disable Shorts"
         DisableShortsDescription = "Disable short videos."
+        HideAISlopChannels = "Hide AI slop channels"
+        HideAISlopChannelsDescription = "Hide channels from the AiSList community blocklist. The list is downloaded from GitHub. Data: AiSList (CC BY-NC 4.0)."
+        AlsoHideLikelyAIChannels = "Also hide likely AI channels"
+        AlsoHideLikelyAIChannelsDescription = "Also hide channels from the AiSList warnlist (medium confidence). Only applies while 'Hide AI slop channels' is enabled."
 
         ' "Invidious" is used as node id, so we can't use it before refactoring node ids.
         ' Either way, Invidious doesn't translate, so it's fine to skip it here
@@ -346,14 +362,30 @@ namespace Locale
         Quality = "Quality"
         Subtitles = "Subtitles"
         Audio = "Audio"
+        Speed = "Speed"
+        NormalSpeed = "Normal"
         Comments = "Comments"
         VideoDescription = "Video description"
+        Links = "Links"
+        Games = "Games"
         NoDescription = "No description"
         Likes = "Likes"
         Dislikes = "Dislikes"
         VideoRating = "Video rating"
         DislikesBy = "Dislikes from returnyoutubedislike.com"
         Off = "Off"
+        TextColor = "Text color"
+        BackgroundColor = "Background color"
+        BackgroundOpacity = "Background opacity"
+        Default = "Default"
+        White = "White"
+        Black = "Black"
+        Red = "Red"
+        Green = "Green"
+        Blue = "Blue"
+        Yellow = "Yellow"
+        Magenta = "Magenta"
+        Cyan = "Cyan"
         NoComments = "No comments yet"
         LoadingComments = "Loading comments..."
         CommentsLoadError = "Failed to load comments"
@@ -361,6 +393,9 @@ namespace Locale
         ViewReplies = "View replies"
         HideReplies = "Hide replies"
         HeartedByCreator = "Hearted by creator"
+        RelatedVideos = "Related videos"
+        LoadMoreVideos = "Load more videos"
+        RelatedVideosLoadError = "Failed to load more videos"
     end enum
 
     @locale
@@ -414,6 +449,7 @@ namespace Locale
     @locale
     enum VideoQueue
         Queue = "Queue"
+        VideoNotAvailable = "Video not available"
     end enum
 
     ' Translations specific to the web app
@@ -439,6 +475,19 @@ namespace Locale
         OpenInInvidious = "Open in Invidious"
         OpenInYouTube = "Open in YouTube"
         StartAt = "Start at"
+        RemoteNotWorking = "Remote not working?"
+        RemoteNotWorkingHelp = "If the remote control is not working, check your device settings: Settings → System → Advanced System Settings → Control by mobile apps → Network access, and set it to Enabled."
+        NoInvidiousConfigured = "No Invidious instance configured. Please set one in settings."
+        UseRokuToLogin = "Please use your Roku device to login to YouTube."
+        EnterRokuCode = "Enter the code you see on your Roku device"
+        DebugKey = "Key"
+        DebugValue = "Value"
+        DebugAppInternalState = "App internal state"
+        DebugRegistry = "Registry"
+        DebugFullState = "Full state"
+        DebugLink = "link"
+        DebugExportRegistry = "Export registry"
+        DebugExportFullState = "Export full state"
     end enum
 
     @locale

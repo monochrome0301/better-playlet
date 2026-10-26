@@ -161,6 +161,18 @@
         <translation>Le gustó al creador</translation>
     </message>
     <message>
+        <source>Related videos</source>
+        <translation>Videos relacionados</translation>
+    </message>
+    <message>
+        <source>Load more videos</source>
+        <translation>Cargar más videos</translation>
+    </message>
+    <message>
+        <source>Failed to load more videos</source>
+        <translation>No se pudieron cargar más videos</translation>
+    </message>
+    <message>
         <source>Search history preferences</source>
         <translation>Preferencias de historial de búsqueda</translation>
     </message>
@@ -761,6 +773,22 @@
         <translation>Por favor, ten en cuenta que Favoritos es una característica experimental.</translation>
     </message>
     <message>
+        <source>Hide AI slop channels</source>
+        <translation>Ocultar canales de IA basura</translation>
+    </message>
+    <message>
+        <source>Hide channels from the AiSList community blocklist. The list is downloaded from GitHub. Data: AiSList (CC BY-NC 4.0).</source>
+        <translation>Oculta los canales de la lista de bloqueo comunitaria AiSList. La lista se descarga de GitHub. Datos: AiSList (CC BY-NC 4.0).</translation>
+    </message>
+    <message>
+        <source>Also hide likely AI channels</source>
+        <translation>Ocultar también los canales que probablemente sean de IA</translation>
+    </message>
+    <message>
+        <source>Also hide channels from the AiSList warnlist (medium confidence). Only applies while 'Hide AI slop channels' is enabled.</source>
+        <translation>Oculta también los canales de la lista de advertencias de AiSList (confianza media). Solo se aplica mientras 'Ocultar canales de IA basura' esté activado.</translation>
+    </message>
+    <message>
         <source>Invidious preferences</source>
         <translation>Preferencias de Invidious</translation>
     </message>
@@ -1273,6 +1301,14 @@
         <translation>Descripción del video</translation>
     </message>
     <message>
+        <source>Links</source>
+        <translation>Enlaces</translation>
+    </message>
+    <message>
+        <source>Games</source>
+        <translation>Juegos</translation>
+    </message>
+    <message>
         <source>No description</source>
         <translation>Sin descripción</translation>
     </message>
@@ -1315,6 +1351,294 @@
     <message>
         <source>^n dislikes</source>
         <translation>^n no me gusta</translation>
+    </message>
+    <message>
+        <source>Recommended</source>
+        <translation>Recomendados</translation>
+    </message>
+    <message>
+        <source>Session expired</source>
+        <translation>Sesión expirada</translation>
+    </message>
+    <message>
+        <source>The session has expired. Please sign in again with this profile, or switch to another profile.</source>
+        <translation>Tu sesión ha expirado. Vuelve a iniciar sesión con este perfil o cambia a otro perfil.</translation>
+    </message>
+    <message>
+        <source>The session has expired.</source>
+        <translation>La sesión ha expirado.</translation>
+    </message>
+    <message>
+        <source>Please sign in again with this profile, or switch to another profile.</source>
+        <translation>Vuelve a iniciar sesión con este perfil o cambia a otro perfil.</translation>
+    </message>
+    <message>
+        <source>Backend changed</source>
+        <translation>Backend cambiado</translation>
+    </message>
+    <message>
+        <source>Backend changed to Playlet, because no Invidious instance is set.</source>
+        <translation>Se cambió a Backend de Playlet porque no hay una instancia de Invidious configurada.</translation>
+    </message>
+    <message>
+        <source>Select a service to login</source>
+        <translation>Selecciona un servicio para iniciar sesión</translation>
+    </message>
+    <message>
+        <source>Login to YouTube</source>
+        <translation>Iniciar sesión en YouTube</translation>
+    </message>
+    <message>
+        <source>Open the link %1 and enter the following code:</source>
+        <translation>Abre el enlace %1 e ingresa el siguiente código:</translation>
+    </message>
+    <message>
+        <source>Disclaimer</source>
+        <translation>Aviso legal</translation>
+    </message>
+    <message>
+        <source>Playlet is a third-party app and is not affiliated with, endorsed by, or sponsored by YouTube or Google. All trademarks and registered trademarks mentioned are the property of their respective owners and are used only for identification purposes.</source>
+        <translation>Playlet es una aplicación de terceros y no está afiliada, respaldada ni patrocinada por YouTube ni Google. Todas las marcas comerciales y marcas registradas mencionadas son propiedad de sus respectivos dueños y se usan únicamente con fines de identificación.</translation>
+    </message>
+    <message>
+        <source>By using Playlet and signing in with your YouTube account, you acknowledge that you do so at your own risk. The developers of Playlet are not liable for any harm, including but not limited to data loss, account suspension or ban, hacking, or loss of content.</source>
+        <translation>Al usar Playlet e iniciar sesión con tu cuenta de YouTube, aceptas hacerlo bajo tu propio riesgo. Los desarrolladores de Playlet no se hacen responsables de ningún daño, incluidos, entre otros, la pérdida de datos, la suspensión o el cierre de la cuenta, el hackeo o la pérdida de contenido.</translation>
+    </message>
+    <message>
+        <source>Use responsibly, especially if your YouTube account is tied to business or monetization.</source>
+        <translation>Úsalo con responsabilidad, especialmente si tu cuenta de YouTube está vinculada a un negocio o a la monetización.</translation>
+    </message>
+    <message>
+        <source>Who&#39;s watching?</source>
+        <translation>¿Quién está viendo?</translation>
+    </message>
+    <message>
+        <source>No valid accounts found for YouTube login.</source>
+        <translation>No se encontraron cuentas válidas para iniciar sesión en YouTube.</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation>Error</translation>
+    </message>
+    <message>
+        <source>Backend</source>
+        <translation>Backend</translation>
+    </message>
+    <message>
+        <source>Backend preferences</source>
+        <translation>Preferencias del backend</translation>
+    </message>
+    <message>
+        <source>Selected backend</source>
+        <translation>Backend seleccionado</translation>
+    </message>
+    <message>
+        <source>The backend used for browsing and playing videos.</source>
+        <translation>El backend que se usa para explorar y reproducir videos.</translation>
+    </message>
+    <message>
+        <source>Content Feed</source>
+        <translation>Contenido del feed</translation>
+    </message>
+    <message>
+        <source>Feed preferences</source>
+        <translation>Preferencias del feed</translation>
+    </message>
+    <message>
+        <source>Disable auto-dubbed audio</source>
+        <translation>Desactivar el audio doblado automáticamente</translation>
+    </message>
+    <message>
+        <source>Remove AI-generated dubbed audio tracks.</source>
+        <translation>Elimina las pistas de audio dobladas generadas por IA.</translation>
+    </message>
+    <message>
+        <source>Disable Shorts</source>
+        <translation>Desactivar Shorts</translation>
+    </message>
+    <message>
+        <source>Disable short videos.</source>
+        <translation>Desactiva los videos cortos.</translation>
+    </message>
+    <message>
+        <source>Categories</source>
+        <translation>Categorías</translation>
+    </message>
+    <message>
+        <source>Configure which segments to skip</source>
+        <translation>Configura qué segmentos saltar</translation>
+    </message>
+    <message>
+        <source>Select option for %1</source>
+        <translation>Selecciona la opción para %1</translation>
+    </message>
+    <message>
+        <source>Playback settings</source>
+        <translation>Ajustes de reproducción</translation>
+    </message>
+    <message>
+        <source>Quality</source>
+        <translation>Calidad</translation>
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation>Subtítulos</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>Velocidad</translation>
+    </message>
+    <message>
+        <source>Normal</source>
+        <translation>Normal</translation>
+    </message>
+    <message>
+        <source>Comments</source>
+        <translation>Comentarios</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Desactivado</translation>
+    </message>
+    <message>
+        <source>No comments yet</source>
+        <translation>Aún no hay comentarios</translation>
+    </message>
+    <message>
+        <source>Loading comments...</source>
+        <translation>Cargando comentarios...</translation>
+    </message>
+    <message>
+        <source>Failed to load comments</source>
+        <translation>No se pudieron cargar los comentarios</translation>
+    </message>
+    <message>
+        <source>Comments are disabled</source>
+        <translation>Los comentarios están deshabilitados</translation>
+    </message>
+    <message>
+        <source>Press OK to skip</source>
+        <translation>Presiona OK para saltar</translation>
+    </message>
+    <message>
+        <source>Disable</source>
+        <translation>Desactivar</translation>
+    </message>
+    <message>
+        <source>Auto Skip</source>
+        <translation>Saltar automáticamente</translation>
+    </message>
+    <message>
+        <source>Manual Skip</source>
+        <translation>Saltar manualmente</translation>
+    </message>
+    <message>
+        <source>Show in Seekbar</source>
+        <translation>Mostrar en la barra de progreso</translation>
+    </message>
+    <message>
+        <source>Open in YouTube</source>
+        <translation>Abrir en YouTube</translation>
+    </message>
+    <message>
+        <source>Clear PoTokens</source>
+        <translation>Borrar PoTokens</translation>
+    </message>
+    <message>
+        <source>Clear all stored PoTokens.</source>
+        <translation>Borra todos los PoTokens almacenados.</translation>
+    </message>
+    <message>
+        <source>PoTokens cleared.</source>
+        <translation>PoTokens borrados.</translation>
+    </message>
+    <message>
+        <source>Enable Diagnostics</source>
+        <translation>Activar diagnósticos</translation>
+    </message>
+    <message>
+        <source>Help improve Playlet by enabling diagnostics. This will send anonymous diagnotics data to the developer.</source>
+        <translation>Ayuda a mejorar Playlet activando los diagnósticos. Esto enviará datos de diagnóstico anónimos al desarrollador.</translation>
+    </message>
+    <message>
+        <source>No Invidious Instance</source>
+        <translation>No hay instancia de Invidious</translation>
+    </message>
+    <message>
+        <source>Playlet built-in backend does not support Invidious login.</source>
+        <translation>El backend integrado de Playlet no admite el inicio de sesión de Invidious.</translation>
+    </message>
+    <message>
+        <source>Can only login with Invidious if an Invidious instance is set in the settings.</source>
+        <translation>Solo puedes iniciar sesión con Invidious si configuras una instancia de Invidious en los ajustes.</translation>
+    </message>
+    <message>
+        <source>Edit Instance</source>
+        <translation>Editar instancia</translation>
+    </message>
+    <message>
+        <source>Enter the instance url (e.g. %1)</source>
+        <translation>Ingresa la URL de la instancia (ej. %1)</translation>
+    </message>
+    <message>
+        <source>Video not available</source>
+        <translation>Video no disponible</translation>
+    </message>
+    <message>
+        <source>Remote not working?</source>
+        <translation>¿El control remoto no funciona?</translation>
+    </message>
+    <message>
+        <source>If the remote control is not working, check your device settings: Settings → System → Advanced System Settings → Control by mobile apps → Network access, and set it to Enabled.</source>
+        <translation>Si el control remoto no funciona, revisa los ajustes de tu dispositivo: Ajustes → Sistema → Configuración avanzada del sistema → Control con apps móviles → Acceso por red, y actívalo.</translation>
+    </message>
+    <message>
+        <source>No Invidious instance configured. Please set one in settings.</source>
+        <translation>No hay una instancia de Invidious configurada. Configúrala en los ajustes.</translation>
+    </message>
+    <message>
+        <source>Please use your Roku device to login to YouTube.</source>
+        <translation>Inicia sesión en YouTube desde tu dispositivo Roku.</translation>
+    </message>
+    <message>
+        <source>Enter the code you see on your Roku device</source>
+        <translation>Ingresa el código que aparece en tu dispositivo Roku</translation>
+    </message>
+    <message>
+        <source>Key</source>
+        <translation>Clave</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Valor</translation>
+    </message>
+    <message>
+        <source>App internal state</source>
+        <translation>Estado interno de la app</translation>
+    </message>
+    <message>
+        <source>Registry</source>
+        <translation>Registro</translation>
+    </message>
+    <message>
+        <source>Full state</source>
+        <translation>Estado completo</translation>
+    </message>
+    <message>
+        <source>link</source>
+        <translation>enlace</translation>
+    </message>
+    <message>
+        <source>Export registry</source>
+        <translation>Exportar registro</translation>
+    </message>
+    <message>
+        <source>Export full state</source>
+        <translation>Exportar estado completo</translation>
     </message>
 </context>
 </TS>

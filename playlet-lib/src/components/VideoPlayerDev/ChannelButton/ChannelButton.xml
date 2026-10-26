@@ -1,0 +1,26 @@
+<component name="ChannelButton" extends="Group">
+    <!-- The video's channel logo in the player's button row. Same virtual focus as VideoPlayerButton: the
+         coordinator sets `focused`/`nudge`, this only projects them. The avatar is circle-masked, inset so the
+         focus tint still reads as a ring around it. -->
+    <interface>
+        <field id="avatarUri" type="uri" value="pkg:/images/icons/user-200.png" alias="avatar.uri" />
+        <field id="backgroundColor" type="color" value="#3C3C3C" />
+        <field id="focusedBackgroundColor" type="color" value="#DDDDDD" />
+        <field id="focused" type="boolean" value="false" />
+        <field id="nudge" type="boolean" alwaysNotify="true" />
+    </interface>
+    <children>
+        <Group id="anchor">
+            <Poster id="background" uri="pkg:/images/icons/player/white-circle.png" width="42" height="42">
+                <CirclePoster id="avatar" width="36" height="36" translation="[3,3]"
+                    failedBitmapUri="pkg:/images/icons/user-200.png" />
+            </Poster>
+        </Group>
+        <Animation id="nudgeAnim" optional="true" duration="0.15">
+            <Vector2DFieldInterpolator id="nudgeScale"
+                key="[ 0.0, 0.5, 1.0 ]"
+                keyValue="[ [ 1.0, 1.0 ], [ 1.05, 1.05 ], [ 1.0, 1.0 ] ]"
+                fieldToInterp="anchor.scale" />
+        </Animation>
+    </children>
+</component>

@@ -66,7 +66,7 @@
 
   function loginToInvidious() {
     if (!currentInstance) {
-      alert("No Invidious instance configured. Please set one in settings.");
+      alert(get(translate)("No Invidious instance configured. Please set one in settings."));
       return;
     }
 
@@ -83,7 +83,7 @@
   }
 
   function loginToYoutube() {
-    alert("Please use your Roku device to login to YouTube.");
+    alert(get(translate)("Please use your Roku device to login to YouTube."));
   }
 </script>
 

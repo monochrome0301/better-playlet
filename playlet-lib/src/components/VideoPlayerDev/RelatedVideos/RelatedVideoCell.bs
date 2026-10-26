@@ -1,0 +1,71 @@
+import "pkg:/source/utils/Types.bs"
+
+function Init()
+    m.thumbnail = m.top.findNode("thumbnail")
+    m.titleLabel = m.top.findNode("titleLabel")
+    m.metaLabel = m.top.findNode("metaLabel")
+    m.durationRect = m.top.findNode("durationRect")
+    m.durationLabel = m.top.findNode("durationLabel")
+    m.loadMoreRect = m.top.findNode("loadMoreRect")
+    m.loadMoreLabel = m.top.findNode("loadMoreLabel")
+end function
+
+function OnContentSet() as void
+    content = m.top.itemContent
+    if content = invalid
+        return
+    end if
+
+    ' The last tile is not a video: it asks the feed for the next page.
+    loadMore = content.hasField("loadMore") and content.loadMore = true
+    m.loadMoreRect.visible = loadMore
+    m.loadMoreLabel.text = ""
+    if loadMore
+        m.loadMoreLabel.text = ValidString(content.title)
+    end if
+    m.thumbnail.visible = not loadMore
+    m.titleLabel.visible = not loadMore
+    m.metaLabel.visible = not loadMore
+    if loadMore
+        return
+    end if
+
+    m.titleLabel.rawText = ValidString(content.title)
+    m.thumbnail.uri = ValidString(content.thumbnail)
+    m.metaLabel.text = MetaText(content)
+    duration = ValidString(content.lengthText)
+    m.durationRect.visible = duration <> ""
+    m.durationLabel.text = duration
+end function
+
+' The one-line meta under the title, as far as the recommendation carries each part. Lockup recommendations
+' carry both the author and the "views · age" line only in `lines`; compact ones carry the named fields.
+function MetaText(content as object) as string
+    parts = []
+    author = ValidString(content._author)
+    lines = content.lines
+    if IsArray(lines) and lines.Count() > 0
+        if author = ""
+            author = ValidString(lines[0])
+        end if
+    end if
+    if author <> ""
+        parts.Push(author)
+    end if
+
+    viewCount = ValidString(content.viewCountText)
+    if viewCount <> ""
+        parts.Push(viewCount)
+    end if
+    published = ValidString(content.publishedText)
+    if published <> ""
+        parts.Push(published)
+    end if
+    if viewCount = "" and published = "" and IsArray(lines) and lines.Count() > 1
+        details = ValidString(lines[1])
+        if details <> ""
+            parts.Push(details)
+        end if
+    end if
+    return parts.Join(" · ")
+end function

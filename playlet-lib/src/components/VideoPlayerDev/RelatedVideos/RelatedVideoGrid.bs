@@ -1,0 +1,9 @@
+import "pkg:/source/utils/RemoteKeys.bs"
+
+function OnKeyEvent(key as string, press as boolean) as boolean
+    if press and key = RemoteKeys.Up and m.top.itemFocused < m.top.numColumns
+        m.top.upAtTop = true
+        return true
+    end if
+    return false
+end function

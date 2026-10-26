@@ -1,11 +1,14 @@
 <component name="VideoDetails" extends="Group" includes="Focus">
-    <!-- The player's video-details overlay: title, the stats line (author/views/likes plus RYD's estimate) and
-         the scrollable description, with the RYD attribution under it. The coordinator owns the data; this
-         component only projects it and reports Back. -->
+    <!-- The player's video-details overlay: title, the stats line (author/views/likes plus RYD's estimate), the
+         scrollable description and, when YouTube reports one, the game the video is about, with the RYD
+         attribution under it. The coordinator owns the data; this component only projects it and reports Back. -->
     <interface>
         <field id="title" type="string" onChange="OnTitleSet" />
         <field id="stats" type="string" alias="statsLabel.text" />
         <field id="description" type="string" alias="descriptionText.text" />
+        <field id="links" type="array" onChange="OnLinksSet" />
+        <field id="game" type="assocarray" onChange="OnGameSet" />
+        <field id="selected" type="assocarray" alwaysNotify="true" />
         <field id="attribution" type="string" alias="attributionLabel.text" />
         <field id="closed" type="boolean" alwaysNotify="true" />
     </interface>
@@ -15,8 +18,23 @@
             baseFont="font:MediumBoldSystemFont" baseSize="24" color="0xFEFEFEFF" wrap="false" />
         <Label id="statsLabel" translation="[160,116]" width="960" height="32"
             font="font:SmallestSystemFont" color="0xBBBBBBFF" />
-        <ScrollableText id="descriptionText" translation="[160,166]" width="960" height="480"
+        <ScrollableText id="descriptionText" translation="[160,166]" width="600" height="480"
             font="font:SmallestSystemFont" color="0xDDDDDDFF" wrap="true" numLines="15" focusable="true" />
+        <!-- The description's video/channel links, beside it: Right/Left move focus between the two columns. -->
+        <Label id="linksLabel" translation="[800,166]" width="320" height="28"
+            font="font:SmallestBoldSystemFont" color="0xBBBBBBFF" visible="false" />
+        <MarkupList id="linksList" translation="[792,198]" itemSize="[340,54]"
+            itemComponentName="DetailsLinkRow" numRows="7" vertFocusAnimationStyle="floatingFocus" visible="false" />
+        <!-- The game the video is about, as YouTube's structured description reports it. -->
+        <Group id="gameGroup" visible="false">
+            <Label id="gameLabel" translation="[160,496]" width="600" height="28"
+                font="font:SmallestBoldSystemFont" color="0xFEFEFEFF" />
+            <Poster id="gamePoster" translation="[160,530]" width="80" height="112" loadDisplayMode="scaleToFill" />
+            <Label id="gameTitle" translation="[252,530]" width="500" height="32"
+                font="font:SmallBoldSystemFont" color="0xFEFEFEFF" wrap="false" />
+            <Label id="gameYear" translation="[252,566]" width="500" height="28"
+                font="font:SmallestSystemFont" color="0xBBBBBBFF" />
+        </Group>
         <Label id="attributionLabel" translation="[160,660]" width="960" height="26"
             font="font:SmallestSystemFont" color="0x888888FF" wrap="false" />
     </children>

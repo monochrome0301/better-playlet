@@ -545,6 +545,18 @@
         <translation>Le gustó al creador</translation>
     </message>
     <message>
+        <source>Related videos</source>
+        <translation>Videos relacionados</translation>
+    </message>
+    <message>
+        <source>Load more videos</source>
+        <translation>Cargar más videos</translation>
+    </message>
+    <message>
+        <source>Failed to load more videos</source>
+        <translation>No se pudieron cargar más videos</translation>
+    </message>
+    <message>
         <source>No Bookmarks</source>
         <translation>No hay Marcadores</translation>
     </message>
@@ -1341,12 +1353,52 @@
         <translation>Elimina el doblaje generado por AI.</translation>
     </message>
     <message>
+        <source>Subtitle text color</source>
+        <translation>Color del texto de los subtítulos</translation>
+    </message>
+    <message>
+        <source>Color of the subtitle text. Default follows the Roku caption settings.</source>
+        <translation>Color del texto de los subtítulos. Predeterminado usa la configuración de subtítulos de Roku.</translation>
+    </message>
+    <message>
+        <source>Subtitle background color</source>
+        <translation>Color del fondo de los subtítulos</translation>
+    </message>
+    <message>
+        <source>Color of the subtitle background. Default follows the Roku caption settings.</source>
+        <translation>Color del fondo de los subtítulos. Predeterminado usa la configuración de subtítulos de Roku.</translation>
+    </message>
+    <message>
+        <source>Subtitle background opacity</source>
+        <translation>Opacidad del fondo de los subtítulos</translation>
+    </message>
+    <message>
+        <source>Opacity of the subtitle background. Default follows the Roku caption settings.</source>
+        <translation>Opacidad del fondo de los subtítulos. Predeterminado usa la configuración de subtítulos de Roku.</translation>
+    </message>
+    <message>
         <source>Disable Shorts</source>
         <translation>Desactivar Shorts</translation>
     </message>
     <message>
         <source>Disable short videos.</source>
         <translation>Desactivar videos shorts.</translation>
+    </message>
+    <message>
+        <source>Hide AI slop channels</source>
+        <translation>Ocultar canales de IA basura</translation>
+    </message>
+    <message>
+        <source>Hide channels from the AiSList community blocklist. The list is downloaded from GitHub. Data: AiSList (CC BY-NC 4.0).</source>
+        <translation>Oculta los canales de la lista de bloqueo comunitaria AiSList. La lista se descarga de GitHub. Datos: AiSList (CC BY-NC 4.0).</translation>
+    </message>
+    <message>
+        <source>Also hide likely AI channels</source>
+        <translation>Ocultar también los canales que probablemente sean de IA</translation>
+    </message>
+    <message>
+        <source>Also hide channels from the AiSList warnlist (medium confidence). Only applies while 'Hide AI slop channels' is enabled.</source>
+        <translation>Oculta también los canales de la lista de advertencias de AiSList (confianza media). Solo se aplica mientras 'Ocultar canales de IA basura' esté activado.</translation>
     </message>
     <message>
         <source>Playlet built-in backend</source>
@@ -1429,6 +1481,14 @@
         <translation>Descripción del video</translation>
     </message>
     <message>
+        <source>Links</source>
+        <translation>Enlaces</translation>
+    </message>
+    <message>
+        <source>Games</source>
+        <translation>Juegos</translation>
+    </message>
+    <message>
         <source>No description</source>
         <translation>Sin descripción</translation>
     </message>
@@ -1471,6 +1531,186 @@
     <message>
         <source>^n dislikes</source>
         <translation>^n no me gusta</translation>
+    </message>
+    <message>
+        <source>Backend changed</source>
+        <translation>Servidor cambiado</translation>
+    </message>
+    <message>
+        <source>Backend changed to Playlet, because no Invidious instance is set.</source>
+        <translation>Se ha cambiado a Playlet porque no hay ninguna instancia de Invidious configurada.</translation>
+    </message>
+    <message>
+        <source>Playback settings</source>
+        <translation>Ajustes de reproducción</translation>
+    </message>
+    <message>
+        <source>Quality</source>
+        <translation>Calidad</translation>
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation>Subtítulos</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>Velocidad</translation>
+    </message>
+    <message>
+        <source>Normal</source>
+        <translation>Normal</translation>
+    </message>
+    <message>
+        <source>Comments</source>
+        <translation>Comentarios</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Desactivado</translation>
+    </message>
+    <message>
+        <source>Text color</source>
+        <translation>Color del texto</translation>
+    </message>
+    <message>
+        <source>Background color</source>
+        <translation>Color del fondo</translation>
+    </message>
+    <message>
+        <source>Background opacity</source>
+        <translation>Opacidad del fondo</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Predeterminado</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>Blanco</translation>
+    </message>
+    <message>
+        <source>Black</source>
+        <translation>Negro</translation>
+    </message>
+    <message>
+        <source>Red</source>
+        <translation>Rojo</translation>
+    </message>
+    <message>
+        <source>Green</source>
+        <translation>Verde</translation>
+    </message>
+    <message>
+        <source>Blue</source>
+        <translation>Azul</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>Amarillo</translation>
+    </message>
+    <message>
+        <source>Magenta</source>
+        <translation>Magenta</translation>
+    </message>
+    <message>
+        <source>Cyan</source>
+        <translation>Cian</translation>
+    </message>
+    <message>
+        <source>No comments yet</source>
+        <translation>Aún no hay comentarios</translation>
+    </message>
+    <message>
+        <source>Loading comments...</source>
+        <translation>Cargando comentarios...</translation>
+    </message>
+    <message>
+        <source>Failed to load comments</source>
+        <translation>Error al cargar los comentarios</translation>
+    </message>
+    <message>
+        <source>Comments are disabled</source>
+        <translation>Los comentarios están deshabilitados</translation>
+    </message>
+    <message>
+        <source>No Invidious Instance</source>
+        <translation>No hay instancia de Invidious</translation>
+    </message>
+    <message>
+        <source>Playlet built-in backend does not support Invidious login.</source>
+        <translation>El servidor integrado de Playlet no admite el inicio de sesión de Invidious.</translation>
+    </message>
+    <message>
+        <source>Can only login with Invidious if an Invidious instance is set in the settings.</source>
+        <translation>Solo puedes iniciar sesión con Invidious si configuras una instancia de Invidious en los ajustes.</translation>
+    </message>
+    <message>
+        <source>Edit Instance</source>
+        <translation>Editar instancia</translation>
+    </message>
+    <message>
+        <source>Enter the instance url (e.g. %1)</source>
+        <translation>Introduce la URL de la instancia (p. ej. %1)</translation>
+    </message>
+    <message>
+        <source>Video not available</source>
+        <translation>Vídeo no disponible</translation>
+    </message>
+    <message>
+        <source>Remote not working?</source>
+        <translation>¿El control remoto no funciona?</translation>
+    </message>
+    <message>
+        <source>If the remote control is not working, check your device settings: Settings → System → Advanced System Settings → Control by mobile apps → Network access, and set it to Enabled.</source>
+        <translation>Si el control remoto no funciona, revisa los ajustes de tu dispositivo: Ajustes → Sistema → Configuración avanzada del sistema → Control mediante aplicaciones móviles → Acceso por red, y actívalo.</translation>
+    </message>
+    <message>
+        <source>No Invidious instance configured. Please set one in settings.</source>
+        <translation>No hay ninguna instancia de Invidious configurada. Configúrala en los ajustes.</translation>
+    </message>
+    <message>
+        <source>Please use your Roku device to login to YouTube.</source>
+        <translation>Inicia sesión en YouTube desde tu dispositivo Roku.</translation>
+    </message>
+    <message>
+        <source>Enter the code you see on your Roku device</source>
+        <translation>Introduce el código que aparece en tu dispositivo Roku</translation>
+    </message>
+    <message>
+        <source>Key</source>
+        <translation>Clave</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Valor</translation>
+    </message>
+    <message>
+        <source>App internal state</source>
+        <translation>Estado interno de la aplicación</translation>
+    </message>
+    <message>
+        <source>Registry</source>
+        <translation>Registro</translation>
+    </message>
+    <message>
+        <source>Full state</source>
+        <translation>Estado completo</translation>
+    </message>
+    <message>
+        <source>link</source>
+        <translation>enlace</translation>
+    </message>
+    <message>
+        <source>Export registry</source>
+        <translation>Exportar registro</translation>
+    </message>
+    <message>
+        <source>Export full state</source>
+        <translation>Exportar estado completo</translation>
     </message>
 </context>
 </TS>

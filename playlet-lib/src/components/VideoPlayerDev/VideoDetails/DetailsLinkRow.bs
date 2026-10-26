@@ -1,0 +1,20 @@
+import "pkg:/source/utils/Types.bs"
+
+function OnContentSet() as void
+    content = m.top.itemContent
+    if content = invalid
+        return
+    end if
+    m.top.findNode("linkLabel").text = ValidString(content.title)
+    Repaint()
+end function
+
+' The focused row sits on the list's light focus highlight, so the label flips to dark to stay readable.
+function Repaint() as void
+    label = m.top.findNode("linkLabel")
+    if m.top.itemHasFocus
+        label.color = "#1A1A1AFF"
+    else
+        label.color = "#DDDDDDFF"
+    end if
+end function

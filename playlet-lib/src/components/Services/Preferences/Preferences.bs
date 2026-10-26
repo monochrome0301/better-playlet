@@ -74,9 +74,36 @@ function LoadUserPreferencesFromRegistry()
     end for
 
     ' Step 5: Save user preferences (if needed)
+    m.aislistFilterState = AISListFilterState()
     if isDirty
         SaveUserPreferencesToRegistry()
     end if
+end function
+
+function AISListFilterState() as string
+    return `${ValidBool(m.top["content_feed.aislist"])}/${ValidBool(m.top["content_feed.aislist.warnlist"])}`
+end function
+
+' Cached feed responses would keep showing the channels the user just hid, or hiding the ones they
+' just unhid, until they expire.
+function ClearHttpCacheOnFilterChange() as void
+    filterState = AISListFilterState()
+    if m.aislistFilterState = invalid or filterState = m.aislistFilterState
+        m.aislistFilterState = filterState
+        return
+    end if
+    m.aislistFilterState = filterState
+
+    fileSystem = CreateObject("roFileSystem")
+    if fileSystem = invalid
+        return
+    end if
+
+    for each item in fileSystem.GetDirectoryListing("cachefs:/")
+        if item.StartsWith("request_v3_")
+            fileSystem.Delete("cachefs:/" + item)
+        end if
+    end for
 end function
 
 function SaveUserPreferencesToRegistry() as void
@@ -90,6 +117,7 @@ function SaveUserPreferencesToRegistry() as void
     end for
     userPrefs.__version = m.top.__version
     RegistryUtils.Write(RegistryUtils.USER_PREFERENCES, FormatJson(userPrefs))
+    ClearHttpCacheOnFilterChange()
 end function
 
 function MigrateExistingPreferences(userPrefs as object) as boolean

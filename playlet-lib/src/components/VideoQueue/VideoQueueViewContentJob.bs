@@ -86,7 +86,7 @@ function LoadVideoDetail(videoNode as object, service as object, instance as str
 
     if metadata.error <> invalid
         LogError("Failed to load video metadata", metadata.error)
-        videoNode.title = "Video not available"
+        videoNode.title = Tr(Locale.VideoQueue.VideoNotAvailable)
         return false
     end if
 

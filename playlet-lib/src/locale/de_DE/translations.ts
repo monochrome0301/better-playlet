@@ -1241,6 +1241,22 @@
         <translation>Kurze Videos ausblenden.</translation>
     </message>
     <message>
+        <source>Hide AI slop channels</source>
+        <translation>KI-Müll-Kanäle ausblenden</translation>
+    </message>
+    <message>
+        <source>Hide channels from the AiSList community blocklist. The list is downloaded from GitHub. Data: AiSList (CC BY-NC 4.0).</source>
+        <translation>Blendet Kanäle aus der AiSList-Community-Blockliste aus. Die Liste wird von GitHub heruntergeladen. Daten: AiSList (CC BY-NC 4.0).</translation>
+    </message>
+    <message>
+        <source>Also hide likely AI channels</source>
+        <translation>Auch wahrscheinliche KI-Kanäle ausblenden</translation>
+    </message>
+    <message>
+        <source>Also hide channels from the AiSList warnlist (medium confidence). Only applies while 'Hide AI slop channels' is enabled.</source>
+        <translation>Blendet auch Kanäle aus der AiSList-Warnliste aus (mittlere Sicherheit). Gilt nur, solange „KI-Müll-Kanäle ausblenden“ aktiviert ist.</translation>
+    </message>
+    <message>
         <source>Disable Shorts</source>
         <translation>Shorts ausblenden</translation>
     </message>
@@ -1367,6 +1383,262 @@
     <message>
         <source>The session has expired.</source>
         <translation>Die Sitzung ist abgelaufen.</translation>
+    </message>
+    <message>
+        <source>The session has expired. Please sign in again with this profile, or switch to another profile.</source>
+        <translation>Die Sitzung ist abgelaufen. Bitte melden Sie sich erneut mit diesem Profil an oder wechseln Sie zu einem anderen Profil.</translation>
+    </message>
+    <message>
+        <source>Please sign in again with this profile, or switch to another profile.</source>
+        <translation>Bitte melden Sie sich erneut mit diesem Profil an oder wechseln Sie zu einem anderen Profil.</translation>
+    </message>
+    <message>
+        <source>Backend changed</source>
+        <translation>Backend geändert</translation>
+    </message>
+    <message>
+        <source>Backend changed to Playlet, because no Invidious instance is set.</source>
+        <translation>Backend auf Playlet umgestellt, da keine Invidious-Instanz eingerichtet ist.</translation>
+    </message>
+    <message>
+        <source>0 likes</source>
+        <translation>0 Gefällt mir</translation>
+    </message>
+    <message>
+        <source>1 like</source>
+        <translation>1 Gefällt mir</translation>
+    </message>
+    <message>
+        <source>^n likes</source>
+        <translation>^n Gefällt mir</translation>
+    </message>
+    <message>
+        <source>0 dislikes</source>
+        <translation>0 Gefällt mir nicht</translation>
+    </message>
+    <message>
+        <source>1 dislike</source>
+        <translation>1 Gefällt mir nicht</translation>
+    </message>
+    <message>
+        <source>^n dislikes</source>
+        <translation>^n Gefällt mir nicht</translation>
+    </message>
+    <message>
+        <source>Disable auto-dubbed audio</source>
+        <translation>Automatisch synchronisierte Tonspur deaktivieren</translation>
+    </message>
+    <message>
+        <source>Remove AI-generated dubbed audio tracks.</source>
+        <translation>Von KI erzeugte synchronisierte Tonspuren entfernen.</translation>
+    </message>
+    <message>
+        <source>Privacy</source>
+        <translation>Datenschutz</translation>
+    </message>
+    <message>
+        <source>Privacy preferences</source>
+        <translation>Datenschutzeinstellungen</translation>
+    </message>
+    <message>
+        <source>Incognito mode</source>
+        <translation>Inkognito-Modus</translation>
+    </message>
+    <message>
+        <source>Watch and search without adding to your watch history, recommendations or search history.</source>
+        <translation>Ansehen und suchen, ohne den Verlauf, die Empfehlungen oder den Suchverlauf zu ergänzen.</translation>
+    </message>
+    <message>
+        <source>Playback settings</source>
+        <translation>Wiedergabeeinstellungen</translation>
+    </message>
+    <message>
+        <source>Quality</source>
+        <translation>Qualität</translation>
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation>Untertitel</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>Geschwindigkeit</translation>
+    </message>
+    <message>
+        <source>Normal</source>
+        <translation>Normal</translation>
+    </message>
+    <message>
+        <source>Comments</source>
+        <translation>Kommentare</translation>
+    </message>
+    <message>
+        <source>Video description</source>
+        <translation>Videobeschreibung</translation>
+    </message>
+    <message>
+        <source>Links</source>
+        <translation>Links</translation>
+    </message>
+    <message>
+        <source>Games</source>
+        <translation>Spiele</translation>
+    </message>
+    <message>
+        <source>No description</source>
+        <translation>Keine Beschreibung</translation>
+    </message>
+    <message>
+        <source>Likes</source>
+        <translation>Gefällt mir</translation>
+    </message>
+    <message>
+        <source>Dislikes</source>
+        <translation>Gefällt mir nicht</translation>
+    </message>
+    <message>
+        <source>Video rating</source>
+        <translation>Videobewertung</translation>
+    </message>
+    <message>
+        <source>Dislikes from returnyoutubedislike.com</source>
+        <translation>Bewertungen von returnyoutubedislike.com</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Aus</translation>
+    </message>
+    <message>
+        <source>No comments yet</source>
+        <translation>Noch keine Kommentare</translation>
+    </message>
+    <message>
+        <source>Loading comments...</source>
+        <translation>Kommentare werden geladen...</translation>
+    </message>
+    <message>
+        <source>Failed to load comments</source>
+        <translation>Kommentare konnten nicht geladen werden</translation>
+    </message>
+    <message>
+        <source>Comments are disabled</source>
+        <translation>Kommentare sind deaktiviert</translation>
+    </message>
+    <message>
+        <source>View replies</source>
+        <translation>Antworten anzeigen</translation>
+    </message>
+    <message>
+        <source>Hide replies</source>
+        <translation>Antworten ausblenden</translation>
+    </message>
+    <message>
+        <source>Hearted by creator</source>
+        <translation>Vom Ersteller mit Herz markiert</translation>
+    </message>
+    <message>
+        <source>Related videos</source>
+        <translation>Ähnliche Videos</translation>
+    </message>
+    <message>
+        <source>Load more videos</source>
+        <translation>Mehr Videos laden</translation>
+    </message>
+    <message>
+        <source>Failed to load more videos</source>
+        <translation>Weitere Videos konnten nicht geladen werden</translation>
+    </message>
+    <message>
+        <source>Clear PoTokens</source>
+        <translation>PoTokens löschen</translation>
+    </message>
+    <message>
+        <source>Clear all stored PoTokens.</source>
+        <translation>Alle gespeicherten PoTokens löschen.</translation>
+    </message>
+    <message>
+        <source>PoTokens cleared.</source>
+        <translation>PoTokens gelöscht.</translation>
+    </message>
+    <message>
+        <source>No Invidious Instance</source>
+        <translation>Keine Invidious-Instanz</translation>
+    </message>
+    <message>
+        <source>Playlet built-in backend does not support Invidious login.</source>
+        <translation>Das integrierte Backend von Playlet unterstützt die Anmeldung bei Invidious nicht.</translation>
+    </message>
+    <message>
+        <source>Can only login with Invidious if an Invidious instance is set in the settings.</source>
+        <translation>Die Anmeldung bei Invidious ist nur möglich, wenn in den Einstellungen eine Invidious-Instanz eingerichtet ist.</translation>
+    </message>
+    <message>
+        <source>Edit Instance</source>
+        <translation>Instanz bearbeiten</translation>
+    </message>
+    <message>
+        <source>Enter the instance url (e.g. %1)</source>
+        <translation>URL der Instanz eingeben (z. B. %1)</translation>
+    </message>
+    <message>
+        <source>Video not available</source>
+        <translation>Video nicht verfügbar</translation>
+    </message>
+    <message>
+        <source>Remote not working?</source>
+        <translation>Fernbedienung funktioniert nicht?</translation>
+    </message>
+    <message>
+        <source>If the remote control is not working, check your device settings: Settings → System → Advanced System Settings → Control by mobile apps → Network access, and set it to Enabled.</source>
+        <translation>Wenn die Fernbedienung nicht funktioniert, prüfen Sie die Einstellungen Ihres Geräts: Einstellungen → System → Erweiterte Systemeinstellungen → Steuerung durch mobile Apps → Netzwerkzugriff, und stellen Sie sie auf „Aktiviert“.</translation>
+    </message>
+    <message>
+        <source>No Invidious instance configured. Please set one in settings.</source>
+        <translation>Keine Invidious-Instanz eingerichtet. Richten Sie eine in den Einstellungen ein.</translation>
+    </message>
+    <message>
+        <source>Please use your Roku device to login to YouTube.</source>
+        <translation>Bitte melden Sie sich auf Ihrem Roku-Gerät bei YouTube an.</translation>
+    </message>
+    <message>
+        <source>Enter the code you see on your Roku device</source>
+        <translation>Geben Sie den Code ein, der auf Ihrem Roku-Gerät angezeigt wird</translation>
+    </message>
+    <message>
+        <source>Key</source>
+        <translation>Schlüssel</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Wert</translation>
+    </message>
+    <message>
+        <source>App internal state</source>
+        <translation>Interner App-Zustand</translation>
+    </message>
+    <message>
+        <source>Registry</source>
+        <translation>Registrierung</translation>
+    </message>
+    <message>
+        <source>Full state</source>
+        <translation>Vollständiger Zustand</translation>
+    </message>
+    <message>
+        <source>link</source>
+        <translation>Link</translation>
+    </message>
+    <message>
+        <source>Export registry</source>
+        <translation>Registrierung exportieren</translation>
+    </message>
+    <message>
+        <source>Export full state</source>
+        <translation>Vollständigen Zustand exportieren</translation>
     </message>
 </context>
 </TS>

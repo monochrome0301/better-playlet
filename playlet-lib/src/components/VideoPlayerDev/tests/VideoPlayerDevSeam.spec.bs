@@ -608,7 +608,7 @@ namespace Tests
             m.top.callFunc("TestKey", RemoteKeys.Up, true) ' reveal -> bar tier
             m.top.callFunc("TestKey", RemoteKeys.Up, true) ' bar -> buttons tier
             m.top.callFunc("TestKey", RemoteKeys.Right, true) ' highlight minimize
-            m.assertEqual(m.Snap().focusedButton, 1)
+            m.assertEqual(m.Snap().focusedButton, PlayerCoordinatorLogic.PlayerButton.Minimize)
 
             m.top.callFunc("TestKey", RemoteKeys.Ok, true)
             after = m.Snap()
@@ -893,13 +893,13 @@ namespace Tests
             m.top.callFunc("TestKey", RemoteKeys.Up, true) ' bar -> buttons tier, play/pause focused
             snap = m.Snap()
             m.assertTrue(snap.chromeShown)
-            m.assertEqual(snap.focusedButton, 0)
+            m.assertEqual(snap.focusedButton, PlayerCoordinatorLogic.PlayerButton.PlayPause)
             ' highlight minimize, drop to the bar, come back up: still minimize.
             m.top.callFunc("TestKey", RemoteKeys.Right, true)
-            m.assertEqual(m.Snap().focusedButton, 1)
+            m.assertEqual(m.Snap().focusedButton, PlayerCoordinatorLogic.PlayerButton.Minimize)
             m.top.callFunc("TestKey", RemoteKeys.Down, true)
             m.top.callFunc("TestKey", RemoteKeys.Up, true)
-            m.assertEqual(m.Snap().focusedButton, 1, "the highlight survives the round-trip")
+            m.assertEqual(m.Snap().focusedButton, PlayerCoordinatorLogic.PlayerButton.Minimize, "the highlight survives the round-trip")
             ' hide the chrome (scrub from the bar tier, then commit) -> the NEXT reveal starts at play/pause.
             m.top.callFunc("TestKey", RemoteKeys.Down, true)
             m.top.callFunc("TestKey", RemoteKeys.Left, true)
@@ -908,7 +908,7 @@ namespace Tests
             m.assertFalse(m.Snap().chromeShown)
             m.top.callFunc("TestKey", RemoteKeys.Up, true) ' fresh reveal -> bar tier
             m.top.callFunc("TestKey", RemoteKeys.Up, true) ' bar -> buttons tier
-            m.assertEqual(m.Snap().focusedButton, 0, "a fresh reveal resets the highlight")
+            m.assertEqual(m.Snap().focusedButton, PlayerCoordinatorLogic.PlayerButton.PlayPause, "a fresh reveal resets the highlight")
         end function
 
         ' Up at the top tier (the buttons) has nowhere to go; the press must still visibly land — it pulses
@@ -943,14 +943,18 @@ namespace Tests
         @it("Left/Right clamped at the row ends nudge the focused button")
         function _()
             m.top.callFunc("TestKey", RemoteKeys.Up, true) ' reveal -> bar tier (default)
-            m.top.callFunc("TestKey", RemoteKeys.Up, true) ' bar -> buttons tier, play/pause (leftmost)
+            m.top.callFunc("TestKey", RemoteKeys.Up, true) ' bar -> buttons tier, play/pause
+            m.top.callFunc("TestKey", RemoteKeys.Left, true) ' -> description
+            m.top.callFunc("TestKey", RemoteKeys.Left, true) ' -> channel (leftmost)
             m.top.callFunc("TestKey", RemoteKeys.Left, true) ' clamped at the left end
             m.assertEqual(m.Snap().nudgeCount, 1)
-            m.top.callFunc("TestKey", RemoteKeys.Right, true) ' -> minimize (rightmost)
+            for i = 1 to PlayerCoordinatorLogic.PlayerButton.Settings
+                m.top.callFunc("TestKey", RemoteKeys.Right, true) ' channel -> ... -> settings (rightmost)
+            end for
             m.top.callFunc("TestKey", RemoteKeys.Right, true) ' clamped at the right end
             snap = m.Snap()
             m.assertEqual(snap.nudgeCount, 2)
-            m.assertEqual(snap.focusedButton, 1, "the clamp held the highlight at the end")
+            m.assertEqual(snap.focusedButton, PlayerCoordinatorLogic.PlayerButton.Settings, "the clamp held the highlight at the end")
         end function
 
         ' Down at the bar tier (the bottom, and the default on reveal) is a no-op: consumed, no nudge.
@@ -1006,11 +1010,11 @@ namespace Tests
             m.top.callFunc("TestKey", RemoteKeys.Up, true) ' reveal -> bar tier (default)
             m.top.callFunc("TestKey", RemoteKeys.Up, true) ' bar -> buttons tier
             m.top.callFunc("TestKey", RemoteKeys.Right, true) ' highlight minimize
-            m.assertEqual(m.Snap().focusedButton, 1)
+            m.assertEqual(m.Snap().focusedButton, PlayerCoordinatorLogic.PlayerButton.Minimize)
             m.top.callFunc("TestKey", RemoteKeys.Play, true) ' must pause, not minimize
             snap = m.Snap()
             m.assertEqual(snap.control, VideoControl.Pause, "Play paused the (playing) video")
-            m.assertEqual(snap.focusedButton, 1, "the highlight is untouched")
+            m.assertEqual(snap.focusedButton, PlayerCoordinatorLogic.PlayerButton.Minimize, "the highlight is untouched")
         end function
 
         ' Each arm is asserted: a state that silently failed to arm makes every row that follows vacuous.
@@ -1098,12 +1102,75 @@ namespace Tests
             m.top.findNode("autoHide").control = "stop"
         end function
 
+        ' The media keys reach playback behind an open overlay: pause/resume without leaving the menu, the
+        ' description or the comments first (every other key stays swallowed).
+        @it("the media keys pause and resume behind an open overlay")
+        function _()
+            m.top.callFunc("TestSetState", VideoState.Playing)
+
+            m.top.callFunc("TestOpenMenu")
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Play, true), "Play is consumed while the menu is open")
+            m.assertEqual(m.Snap().control, VideoControl.Pause, "Play pauses behind the open menu")
+            m.top.callFunc("TestSetState", VideoState.Paused)
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.PlayOnly, true), "PlayOnly is consumed while the menu is open")
+            m.assertEqual(m.Snap().control, VideoControl.Resume, "PlayOnly resumes behind the open menu")
+            m.top.findNode("playerMenu").closed = true
+
+            m.top.callFunc("TestOpenDetails")
+            m.top.callFunc("TestSetState", VideoState.Playing)
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Pause, true), "Pause is consumed while the details overlay is open")
+            m.assertEqual(m.Snap().control, VideoControl.Pause, "Pause pauses behind the details overlay")
+            m.top.callFunc("TestSetState", VideoState.Paused)
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Pause, true), "Pause is consumed while paused")
+            m.assertEqual(m.Snap().control, VideoControl.Pause, "a dedicated Pause key does not resume")
+            m.top.findNode("videoDetails").closed = true
+
+            m.top.callFunc("TestShowComments")
+            m.top.callFunc("TestSetState", VideoState.Paused)
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Play, true), "Play is consumed while the comments overlay is open")
+            m.assertEqual(m.Snap().control, VideoControl.Resume, "Play resumes behind the comments overlay")
+            m.top.findNode("commentsList").closed = true
+            m.top.findNode("autoHide").control = "stop"
+        end function
+
+        ' The playback-speed level: the main row opens it, and picking a speed writes the device field around a
+        ' pause/resume (the device only applies a speed change on the next play).
+        @it("picks a playback speed and keeps the play state")
+        function _()
+            m.top.content = invalid
+            m.top.callFunc("TestOpenMenu")
+            menu = m.top.findNode("playerMenu")
+            m.assertEqual(menu.rows[0].value, PlayerOverlayLogic.Level.Speed, "speed is the first row without tracks")
+
+            menu.selected = { index: 0 }
+            m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.Speed)
+            m.assertEqual(menu.rows.Count(), 8, "YouTube's speed choices")
+            m.assertEqual(menu.title, Tr(Locale.PlaybackMenu.Speed))
+
+            m.top.callFunc("TestSetState", VideoState.Playing)
+            menu.selected = { index: 7 }
+            m.assertEqual(m.top.playbackSpeed, 2.0, "the picked speed is written")
+            m.assertEqual(m.top.control, VideoControl.Resume, "a playing video resumes at the new speed")
+            m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.Main, "back to the main level")
+
+            menu.closed = true
+            m.top.findNode("autoHide").control = "stop"
+        end function
+
         @it("the video details overlay shows the description and stats, and closes on Back")
         function _()
             content = CreateObject("roSGNode", "Node")
             content.addFields({ title: "A video" })
             content.addField("metadata", "assocarray")
-            content.metadata = { title: "A video", author: "@a", viewCount: 1200, likeCount: 12, description: "Hello there" }
+            content.metadata = {
+                title: "A video"
+                author: "@a"
+                viewCount: 1200
+                likeCount: 12
+                description: "Hello there"
+                descriptionLinks: [{ kind: "video", id: "vid2", label: "Other video" }]
+                game: { title: "Super Mario World", year: "1990", image: "https://img" }
+            }
             m.top.content = content
 
             m.top.callFunc("TestOpenDetails")
@@ -1113,10 +1180,176 @@ namespace Tests
             m.assertTrue(details.stats.InStr("@a") > -1, "author in the stats line")
             m.assertTrue(details.stats.InStr("12") > -1, "likes in the stats line")
             m.assertEqual(details.description, "Hello there")
+            m.assertEqual(details.links.Count(), 1, "the description link reaches the overlay")
+            m.assertEqual(details.links[0].id, "vid2")
+            m.assertEqual(details.game.title, "Super Mario World", "the game reaches the overlay")
+            m.assertEqual(details.game.year, "1990")
             m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Back, true), "the open details overlay owns Back")
 
             details.closed = true
             m.assertFalse(details.visible, "closed on Back")
+            m.top.findNode("autoHide").control = "stop"
+            m.top.content = invalid
+        end function
+
+        ' Down opens the watch page's recommendations as a feed: the current video is not offered again, the last
+        ' tile loads more, a pick replaces what plays, Up at the top row or Back closes the feed and lets go.
+        @it("Down opens the related-videos feed, a pick plays it, load-more queues, and Up/Back close it")
+        function _()
+            content = CreateObject("roSGNode", "Node")
+            content.addField("videoId", "string")
+            content.addFields({ title: "A video" })
+            content.addField("metadata", "assocarray")
+            content.videoId = "current"
+            content.metadata = {
+                recommendedVideos: [
+                    { videoId: "other1", title: "Other one", author: "@a" }
+                    { videoId: "current", title: "A video" }
+                ]
+                recommendedVideosContinuation: "more"
+            }
+            m.top.content = content
+
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Down, true), "Down is consumed")
+            related = m.top.findNode("relatedVideos")
+            m.assertTrue(related.visible, "the related feed opened")
+            m.assertTrue(related.focus, "the open feed holds the remote")
+            m.assertEqual(related.content.getChildCount(), 2, "the video playing now is not offered again; the last tile loads more")
+            marker = related.content.getChild(1)
+            m.assertTrue(marker.hasField("loadMore") and marker.loadMore, "the last tile is the load-more marker")
+
+            related.loadMore = true
+            m.assertTrue(related.visible, "loading more keeps the feed open")
+            m.assertTrue(related.status <> "", "the feed reports the load")
+
+            related.selected = { index: 0 }
+            m.assertFalse(related.visible, "picking a video closes the feed")
+            m.assertFalse(related.focus, "the closed feed releases the remote")
+            m.assertEqual(m.top.videoQueue.playVideo.videoId, "other1", "the picked video goes to the queue")
+
+            m.top.callFunc("TestKey", RemoteKeys.Down, true)
+            m.assertTrue(related.visible, "the feed reopens")
+            related.findNode("grid").upAtTop = true
+            m.assertFalse(related.visible, "Up on the first row closes the feed")
+            m.assertFalse(related.focus, "and releases the remote")
+
+            m.top.callFunc("TestKey", RemoteKeys.Down, true)
+            m.assertTrue(related.visible, "the feed reopens again")
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Back, true), "the open feed owns Back")
+            related.closed = true
+            m.assertFalse(related.visible, "closed on Back")
+            m.assertFalse(related.focus, "the closed feed releases the remote")
+
+            m.top.findNode("autoHide").control = "stop"
+            m.top.content = invalid
+            m.top.videoQueue.playVideo = invalid
+        end function
+
+        ' A load-more page keeps only videos the feed can actually show: not the one playing, not a repeat.
+        @it("a loaded page appends only playable, new recommendations")
+        function _()
+            content = CreateObject("roSGNode", "Node")
+            content.addField("videoId", "string")
+            content.addField("metadata", "assocarray")
+            content.videoId = "current"
+            content.metadata = {
+                recommendedVideos: [{ videoId: "first", title: "First" }]
+            }
+            m.top.content = content
+
+            m.top.callFunc("TestKey", RemoteKeys.Down, true)
+            result = m.top.callFunc("TestAppendRelatedVideos", [
+                { videoId: "second", title: "Second" }
+                { videoId: "first", title: "First" }
+                { videoId: "current", title: "A video" }
+                { title: "No id" }
+            ])
+            m.assertEqual(result.added, 1, "the repeat, the playing video and the empty id are skipped")
+            m.assertEqual(result.total, 2, "the new video joined the feed")
+
+            m.top.findNode("relatedVideos").closed = true
+            m.top.findNode("autoHide").control = "stop"
+            m.top.content = invalid
+        end function
+
+        ' The two left-cluster shortcuts: the channel logo opens the channel menu (open-channel only when no
+        ' profile can subscribe), and the description button opens the same details overlay the settings menu has.
+        @it("the description button opens the details overlay")
+        function _()
+            content = CreateObject("roSGNode", "Node")
+            content.addFields({ title: "A video" })
+            content.addField("metadata", "assocarray")
+            content.metadata = { title: "A video", author: "@a", description: "Hello there" }
+            m.top.content = content
+
+            m.top.callFunc("TestKey", RemoteKeys.Up, true) ' reveal -> bar tier (default)
+            m.top.callFunc("TestKey", RemoteKeys.Up, true) ' bar -> buttons tier, play/pause
+            m.top.callFunc("TestKey", RemoteKeys.Left, true) ' -> description shortcut
+            m.top.callFunc("TestKey", RemoteKeys.Ok, true)
+            details = m.top.findNode("videoDetails")
+            m.assertTrue(details.visible, "the description button opened the details overlay")
+            m.assertEqual(details.description, "Hello there")
+
+            details.closed = true
+            m.assertFalse(details.visible, "closed on Back")
+            m.top.findNode("autoHide").control = "stop"
+            m.top.content = invalid
+        end function
+
+        ' The subtitle shortcut opens the subtitle level directly (Off + tracks + the three appearance rows),
+        ' and an appearance choice repaints the Video node's captionStyle.
+        @it("the subtitle button opens the subtitle menu and applies a caption style")
+        function _()
+            content = CreateObject("roSGNode", "Node")
+            content.addFields({ title: "A video" })
+            content.addField("SubtitleTracks", "array")
+            content.SubtitleTracks = [{ Description: "English", TrackName: "en" }]
+            m.top.content = content
+
+            m.top.callFunc("TestKey", RemoteKeys.Up, true) ' reveal -> bar tier (default)
+            m.top.callFunc("TestKey", RemoteKeys.Up, true) ' bar -> buttons tier, play/pause
+            m.top.callFunc("TestKey", RemoteKeys.Right, true) ' -> minimize
+            m.top.callFunc("TestKey", RemoteKeys.Right, true) ' -> comments
+            m.top.callFunc("TestKey", RemoteKeys.Right, true) ' -> subtitles
+            m.top.callFunc("TestKey", RemoteKeys.Ok, true)
+
+            menu = m.top.findNode("playerMenu")
+            m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.Subtitles, "the subtitle menu opened")
+            m.assertEqual(menu.rows.Count(), 5, "Off + one track + three appearance rows")
+
+            menu.selected = { index: 3 } ' background color
+            m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.SubtitleBackgroundColor)
+            menu.selected = { index: 2 } ' Black
+            m.assertEqual(m.top.captionStyle["Background/Color"], "Black", "the picked color reaches the caption renderer")
+            m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.Subtitles, "back to the subtitle level")
+
+            m.top.findNode("autoHide").control = "stop"
+            m.top.content = invalid
+        end function
+
+        @it("the channel button opens the channel menu with the open-channel option")
+        function _()
+            content = CreateObject("roSGNode", "Node")
+            content.addFields({ title: "A video" })
+            content.addField("metadata", "assocarray")
+            content.metadata = { title: "A video", author: "@a", authorId: "UCabc" }
+            m.top.content = content
+
+            m.top.callFunc("TestKey", RemoteKeys.Up, true) ' reveal -> bar tier (default)
+            m.top.callFunc("TestKey", RemoteKeys.Up, true) ' bar -> buttons tier, play/pause
+            m.top.callFunc("TestKey", RemoteKeys.Left, true) ' -> description
+            m.top.callFunc("TestKey", RemoteKeys.Left, true) ' -> channel logo
+            m.top.callFunc("TestKey", RemoteKeys.Ok, true)
+            menu = m.top.findNode("playerMenu")
+            snap = m.Snap()
+            m.assertEqual(snap.menuLevel, PlayerOverlayLogic.Level.Channel, "the channel menu opened")
+            m.assertTrue(menu.visible)
+            m.assertEqual(menu.rows.Count(), 1, "no profile: no subscribe row")
+            m.assertEqual(menu.rows[0].value, "channel")
+
+            m.top.callFunc("TestKey", RemoteKeys.Back, true)
+            m.assertEqual(m.Snap().menuLevel, PlayerOverlayLogic.Level.None, "Back closes the channel menu")
+            m.assertFalse(menu.visible)
             m.top.findNode("autoHide").control = "stop"
             m.top.content = invalid
         end function
@@ -1130,6 +1363,8 @@ namespace Tests
             snap = m.Snap()
             m.assertFalse(snap.commentsOpen, "the stale comments overlay healed")
             m.assertEqual(snap.menuLevel, PlayerOverlayLogic.Level.None, "the stale menu healed")
+            m.assertFalse(m.top.findNode("relatedVideos").visible, "the stale related feed healed")
+            m.assertFalse(m.top.findNode("relatedVideos").focus, "and did not keep the remote")
             m.assertTrue(snap.chromeShown, "and Down revealed the controls")
             m.top.findNode("autoHide").control = "stop"
         end function
@@ -1149,19 +1384,19 @@ namespace Tests
                 classified[name] = "controller"
             end for
             ' cached child nodes / timers / animations / reusable helpers (structure, not state).
-            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime", "playerMenu", "commentsList", "videoDetails"]
+            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime", "playerMenu", "commentsList", "videoDetails", "relatedVideos", "channelStatusNode"]
                 classified[name] = "node"
             end for
             ' in-flight job handles.
-            for each name in ["videoContentJob", "sponsorBlockSegmentsJob", "returnYouTubeDislikeJob", "markVideoWatchedJob", "commentsJob"]
+            for each name in ["videoContentJob", "sponsorBlockSegmentsJob", "returnYouTubeDislikeJob", "markVideoWatchedJob", "commentsJob", "relatedJob", "channelStatusJob"]
                 classified[name] = "job"
             end for
             ' STATE AXES — discrete coordinator state; each needs its transitions covered by a seam test.
-            for each name in ["chromeMode", "focusTarget", "focusedButton", "armedTimerId", "menuLevel", "commentsOpen"]
+            for each name in ["chromeMode", "focusTarget", "focusedButton", "armedTimerId", "menuLevel", "commentsOpen", "relatedOpen"]
                 classified[name] = "axis"
             end for
             ' flags / scratch — one-shot latches and counters with a single consuming path.
-            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsRows", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId", "commentsJobKind", "commentsJobIndex", "rydVotes"]
+            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsRows", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId", "commentsJobKind", "commentsJobIndex", "relatedItems", "relatedContinuation", "relatedHasMore", "relatedLoading", "pendingChannel", "rydVotes", "channelSubscribed", "channelStatusAuthorId"]
                 classified[name] = "flag"
             end for
             ' NOT coordinator state — node-scope + test-environment entries, pinned EXPLICITLY (no hidden

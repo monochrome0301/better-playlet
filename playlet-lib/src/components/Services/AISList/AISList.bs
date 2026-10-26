@@ -1,0 +1,446 @@
+import "pkg:/components/Services/Innertube/Context.bs"
+import "pkg:/source/services/HttpClient.bs"
+import "pkg:/source/utils/Logging.bs"
+import "pkg:/source/utils/ObjectUtils.bs"
+import "pkg:/source/utils/StringUtils.bs"
+import "pkg:/source/utils/Types.bs"
+
+' AiSList publishes channel handles, but most YouTube feeds only expose channel ids.
+' Feeds are filtered with the handles we know, and unknown ids are resolved once and cached.
+namespace AISList
+
+    const BLOCKLIST_URL = "https://raw.githubusercontent.com/Override92/AiSList/main/AiSList/aislist_blocklist.txt"
+    const WARNLIST_URL = "https://raw.githubusercontent.com/Override92/AiSList/main/AiSList/aislist_warnlist.txt"
+    const LIST_CACHE_SECONDS = 86400
+    const LIST_RETRY_SECONDS = 300
+
+    const CHANNEL_CACHE_PATH = "cachefs:/aislist_channels.json"
+    const CHANNEL_RESOLVE_TTL_SECONDS = 2592000
+    const MAX_RESOLVE_PER_FEED = 25
+    const RESOLVE_BATCH_SIZE = 6
+    const RESOLVE_RETRY_SECONDS = 600
+
+    ' shortcut: undocumented innertube "fields" parameter. If YouTube drops it, ask for the whole
+    ' channel page and read metadata.channelMetadataRenderer.vanityChannelUrl instead.
+    const CHANNEL_FIELDS = "metadata.channelMetadataRenderer%28externalId%2CvanityChannelUrl%29"
+    const CHANNEL_RESOLVE_URL = `https://www.youtube.com/youtubei/v1/browse?prettyPrint=false&alt=json&fields=${CHANNEL_FIELDS}`
+
+    function NowSeconds() as integer
+        return CreateObject("roDateTime").AsSeconds()
+    end function
+
+    ' The list as two newline-delimited sets: handles (lowercase, with @) and channel ids.
+    function NormalizeList(text as string) as object
+        handles = []
+        ids = []
+
+        if not IsString(text)
+            return { handles: "", ids: "" }
+        end if
+
+        for each rawLine in text.Split(chr(10))
+            line = rawLine.Trim()
+            if line = "" or line.StartsWith("!")
+                continue for
+            end if
+            if line.StartsWith("@")
+                handles.Push(LCase(line))
+            else if line.StartsWith("UC")
+                ids.Push(line)
+            end if
+        end for
+
+        return {
+            handles: LineSet(handles)
+            ids: LineSet(ids)
+        }
+    end function
+
+    function LineSet(values as object) as string
+        if values.Count() = 0
+            return ""
+        end if
+        return chr(10) + values.Join(chr(10)) + chr(10)
+    end function
+
+    function Contains(set as dynamic, value as dynamic) as boolean
+        if not IsString(set) or set = "" or not IsString(value) or value = ""
+            return false
+        end if
+        return set.InStr(chr(10) + value + chr(10)) > -1
+    end function
+
+    ' The handle from a channel metadata response, "" when the channel has no handle,
+    ' and invalid when the response has no channel metadata at all.
+    function ParseVanityHandle(json as dynamic) as dynamic
+        if not IsAssociativeArray(json)
+            return invalid
+        end if
+
+        vanityUrl = ObjectUtils.Dig(json, ["metadata", "channelMetadataRenderer", "vanityChannelUrl"])
+        if not IsString(vanityUrl)
+            return invalid
+        end if
+
+        index = vanityUrl.InStr("/@")
+        if index < 0
+            return ""
+        end if
+
+        return LCase(vanityUrl.Mid(index + 1))
+    end function
+
+    class AISListService
+
+        private prefs as dynamic
+        private listsLoadedAt = 0 as integer
+        private listsFailedAt = 0 as integer
+        private blockHandles as dynamic
+        private blockIds as dynamic
+        private warnHandles as dynamic
+        private warnIds as dynamic
+        private channelCache as dynamic
+        private channelCacheDirty = false as boolean
+        private resolveBlockedUntil = 0 as integer
+
+        function new(prefs as dynamic)
+            m.prefs = prefs
+        end function
+
+        ' Replaces the downloaded lists. Tests use it to avoid the network.
+        function SetLists(blocklistText as string, warnlistText = invalid as dynamic) as void
+            m.ApplyBlocklist(blocklistText)
+            if IsString(warnlistText)
+                m.ApplyWarnlist(warnlistText)
+            end if
+            m.listsLoadedAt = AISList.NowSeconds()
+            m.listsFailedAt = 0
+        end function
+
+        function IsEnabled() as boolean
+            return m.prefs <> invalid and m.prefs["content_feed.aislist"] = true
+        end function
+
+        function IsWarnlistEnabled() as boolean
+            return m.IsEnabled() and m.prefs["content_feed.aislist.warnlist"] = true
+        end function
+
+        ' The items left after hiding blocked channels. Unknown channel ids are resolved first,
+        ' so a feed is filtered on its first load; resolve=false uses only what is cached.
+        function FilterItems(items as dynamic, resolve = true as boolean) as dynamic
+            if not m.IsEnabled() or not IsArray(items) or items.Count() = 0
+                return items
+            end if
+
+            ' The player's related list must not download lists or look up channels.
+            if resolve
+                m.EnsureLists()
+            else if m.blockHandles = invalid or (m.IsWarnlistEnabled() and m.warnHandles = invalid)
+                return items
+            end if
+
+            if not m.HasEntries()
+                return items
+            end if
+            m.LoadChannelCache()
+
+            if resolve
+                unknownIds = {}
+                for each item in items
+                    if m.NeedsResolution(item)
+                        unknownIds[m.GetItemAuthorId(item)] = true
+                    end if
+                end for
+                if unknownIds.Count() > 0
+                    m.ResolveChannels(unknownIds)
+                end if
+            end if
+
+            filtered = []
+            for each item in items
+                if not m.IsBlockedItem(item)
+                    filtered.Push(item)
+                end if
+            end for
+            return filtered
+        end function
+
+        private function HasEntries() as boolean
+            return (IsString(m.blockHandles) and m.blockHandles <> "") or (IsString(m.warnHandles) and m.warnHandles <> "")
+        end function
+
+        private function EnsureLists() as void
+            now = AISList.NowSeconds()
+            reloadBlocklist = m.blockHandles = invalid
+            if not reloadBlocklist and m.listsLoadedAt > 0 and now - m.listsLoadedAt >= AISList.LIST_CACHE_SECONDS
+                reloadBlocklist = true
+            end if
+
+            if reloadBlocklist
+                if m.listsFailedAt > 0 and now - m.listsFailedAt < AISList.LIST_RETRY_SECONDS
+                    return
+                end if
+
+                text = m.DownloadList(AISList.BLOCKLIST_URL)
+                if text = invalid
+                    m.listsFailedAt = now
+                    return
+                end if
+
+                m.ApplyBlocklist(text)
+                m.listsLoadedAt = now
+                m.listsFailedAt = 0
+                ' The warnlist is refreshed along with the blocklist.
+                m.warnHandles = invalid
+            end if
+
+            if m.IsWarnlistEnabled() and m.warnHandles = invalid
+                if m.listsFailedAt > 0 and now - m.listsFailedAt < AISList.LIST_RETRY_SECONDS
+                    return
+                end if
+
+                text = m.DownloadList(AISList.WARNLIST_URL)
+                if text = invalid
+                    m.listsFailedAt = now
+                else
+                    m.ApplyWarnlist(text)
+                end if
+            end if
+        end function
+
+        private function DownloadList(url as string) as dynamic
+            response = HttpClient.Get(url).CacheForSeconds(AISList.LIST_CACHE_SECONDS).RetryCount(0).NoTelemetry().Await()
+            if not response.IsSuccess()
+                LogWarnNoTelemetry("AISList: failed to download list", url, response.ErrorMessage())
+                return invalid
+            end if
+            return response.Text()
+        end function
+
+        private function ApplyBlocklist(text as string) as void
+            list = AISList.NormalizeList(text)
+            m.blockHandles = list.handles
+            m.blockIds = list.ids
+        end function
+
+        private function ApplyWarnlist(text as string) as void
+            list = AISList.NormalizeList(text)
+            m.warnHandles = list.handles
+            m.warnIds = list.ids
+        end function
+
+        private function IsBlockedItem(item as object) as boolean
+            if not IsAssociativeArray(item)
+                return false
+            end if
+
+            handle = m.GetItemHandle(item)
+            if handle <> "" and m.HandleMatches(handle)
+                return true
+            end if
+
+            id = m.GetItemAuthorId(item)
+            if id = ""
+                return false
+            end if
+            if m.IdMatches(id)
+                return true
+            end if
+
+            entry = m.GetChannelEntry(id)
+            if entry <> invalid
+                cachedHandle = ValidString(entry.handle)
+                if cachedHandle <> ""
+                    return m.HandleMatches(cachedHandle)
+                end if
+            end if
+
+            return false
+        end function
+
+        private function HandleMatches(handle as string) as boolean
+            normalized = LCase(handle.Trim())
+            if not normalized.StartsWith("@")
+                normalized = "@" + normalized
+            end if
+
+            if AISList.Contains(m.blockHandles, normalized)
+                return true
+            end if
+            if m.IsWarnlistEnabled() and AISList.Contains(m.warnHandles, normalized)
+                return true
+            end if
+            return false
+        end function
+
+        private function IdMatches(id as string) as boolean
+            if AISList.Contains(m.blockIds, id)
+                return true
+            end if
+            if m.IsWarnlistEnabled() and AISList.Contains(m.warnIds, id)
+                return true
+            end if
+            return false
+        end function
+
+        private function NeedsResolution(item as object) as boolean
+            if not IsAssociativeArray(item)
+                return false
+            end if
+            if m.GetItemHandle(item) <> ""
+                return false
+            end if
+
+            id = m.GetItemAuthorId(item)
+            if id = "" or not id.StartsWith("UC")
+                return false
+            end if
+            if m.IdMatches(id)
+                return false
+            end if
+            return not m.HasFreshChannel(id)
+        end function
+
+        private function HasFreshChannel(id as string) as boolean
+            entry = m.GetChannelEntry(id)
+            if entry = invalid
+                return false
+            end if
+
+            checkedAt = ValidInt(entry.checkedAt)
+            return checkedAt > 0 and AISList.NowSeconds() - checkedAt < AISList.CHANNEL_RESOLVE_TTL_SECONDS
+        end function
+
+        private function ResolveChannels(unknownIds as object) as void
+            if m.resolveBlockedUntil > AISList.NowSeconds()
+                return
+            end if
+
+            ids = []
+            for each id in unknownIds
+                if ids.Count() >= AISList.MAX_RESOLVE_PER_FEED
+                    exit for
+                end if
+                ids.Push(id)
+            end for
+            if ids.Count() = 0
+                return
+            end if
+
+            deviceInfo = CreateObject("roDeviceInfo")
+            index = 0
+            while index < ids.Count()
+                last = index + AISList.RESOLVE_BATCH_SIZE - 1
+                if last > ids.Count() - 1
+                    last = ids.Count() - 1
+                end if
+
+                pending = []
+                for i = index to last
+                    request = HttpClient.Post(AISList.CHANNEL_RESOLVE_URL).RetryCount(0).NoTelemetry().JsonBody({
+                        context: Innertube.CreateContext(Innertube.ClientType.Web, deviceInfo)
+                        browseId: ids[i]
+                    })
+                    request.Headers(Innertube.CreateHeaders(Innertube.ClientType.Web))
+                    pending.Push({
+                        id: ids[i]
+                        pending: request.Send()
+                    })
+                end for
+
+                resolved = 0
+                failures = 0
+                for each entry in pending
+                    response = entry.pending.Await()
+                    if not response.IsSuccess()
+                        if response.StatusCode() = 404
+                            ' The channel is gone: remember it so it is not asked for again.
+                            m.channelCache[entry.id] = { handle: "", checkedAt: AISList.NowSeconds() }
+                            m.channelCacheDirty = true
+                        else
+                            failures += 1
+                        end if
+                        continue for
+                    end if
+
+                    handle = AISList.ParseVanityHandle(response.Json())
+                    if handle = invalid
+                        ' A 2xx response with no channel metadata: cache it so it is not retried every feed.
+                        handle = ""
+                    end if
+
+                    m.channelCache[entry.id] = {
+                        handle: handle
+                        checkedAt: AISList.NowSeconds()
+                    }
+                    m.channelCacheDirty = true
+                    resolved += 1
+                end for
+
+                ' If the endpoint starts refusing us, stop asking for a while: feeds stay fail-open.
+                if resolved = 0 and failures >= 3
+                    m.resolveBlockedUntil = AISList.NowSeconds() + AISList.RESOLVE_RETRY_SECONDS
+                    LogWarnNoTelemetry("AISList: channel lookups failed, retrying later")
+                    exit while
+                end if
+
+                index = last + 1
+            end while
+
+            if m.channelCacheDirty
+                m.SaveChannelCache()
+                m.channelCacheDirty = false
+            end if
+        end function
+
+        private function LoadChannelCache() as void
+            if m.channelCache <> invalid
+                return
+            end if
+            m.channelCache = {}
+
+            fileSystem = CreateObject("roFileSystem")
+            if fileSystem = invalid or not fileSystem.Exists(AISList.CHANNEL_CACHE_PATH)
+                return
+            end if
+
+            parsed = StringUtils.ParseJsonSafe(ReadAsciiFile(AISList.CHANNEL_CACHE_PATH))
+            if IsAssociativeArray(parsed)
+                m.channelCache = parsed
+            end if
+        end function
+
+        private function SaveChannelCache() as void
+            WriteAsciiFile(AISList.CHANNEL_CACHE_PATH, FormatJson(m.channelCache))
+        end function
+
+        private function GetChannelEntry(id as string) as dynamic
+            if id = ""
+                return invalid
+            end if
+            m.LoadChannelCache()
+            if not m.channelCache.DoesExist(id)
+                return invalid
+            end if
+            return m.channelCache[id]
+        end function
+
+        private function GetItemHandle(item as object) as string
+            handle = ValidString(item.channelHandle)
+            if handle = ""
+                handle = ValidString(item.authorHandle)
+            end if
+            return handle
+        end function
+
+        private function GetItemAuthorId(item as object) as string
+            id = ValidString(item.authorId)
+            if id = ""
+                id = ValidString(item.channelId)
+            end if
+            return id
+        end function
+
+    end class
+
+end namespace

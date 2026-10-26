@@ -1,0 +1,12 @@
+<component name="DetailsLinkRow" extends="Group">
+    <!-- One description link of the details overlay. Pure projection of itemContent.title. The MarkupList draws
+         the focus highlight behind the focused row, so the label goes dark in Repaint to stay readable on it. -->
+    <interface>
+        <field id="itemContent" type="node" onChange="OnContentSet" />
+        <field id="itemHasFocus" type="boolean" onChange="Repaint" />
+    </interface>
+    <children>
+        <Label id="linkLabel" translation="[16,6]" width="308" height="42"
+            font="font:SmallestSystemFont" color="0xDDDDDDFF" wrap="true" maxLines="2" />
+    </children>
+</component>

@@ -34,6 +34,7 @@ function Main(args as object) as void
     SetScenePalette(scene)
     scene.ObserveField("exitChannel", port)
     scene.launchArgs = args
+    scene@.CreateMainScene()
 
     if false
         ' These vars are needed to pass certification.

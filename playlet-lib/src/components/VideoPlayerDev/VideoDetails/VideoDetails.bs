@@ -1,19 +1,76 @@
 import "pkg:/source/utils/FocusManagement.bs"
+import "pkg:/source/utils/Locale.bs"
 import "pkg:/source/utils/RemoteKeys.bs"
 import "pkg:/source/utils/Types.bs"
 
 function Init()
     m.top.focusable = true
+    m.descriptionText = m.top.findNode("descriptionText")
+    m.linksLabel = m.top.findNode("linksLabel")
+    m.linksList = m.top.findNode("linksList")
+    m.gameGroup = m.top.findNode("gameGroup")
+    m.gameLabel = m.top.findNode("gameLabel")
+    m.gamePoster = m.top.findNode("gamePoster")
+    m.gameTitle = m.top.findNode("gameTitle")
+    m.gameYear = m.top.findNode("gameYear")
+    m.linksList.ObserveField("itemSelected", FuncName(OnLinkSelected))
     OnTitleSet()
+    OnLinksSet()
 end function
 
 function OnTitleSet() as void
     m.top.findNode("titleLabel").rawText = ValidString(m.top.title)
 end function
 
+function OnLinksSet() as void
+    content = CreateObject("roSGNode", "ContentNode")
+    links = m.top.links
+    if IsArray(links)
+        for each link in links
+            if not IsAssociativeArray(link)
+                continue for
+            end if
+            item = content.createChild("ContentNode")
+            item.title = ValidString(link.text)
+        end for
+    end if
+    hasLinks = content.getChildCount() > 0
+    m.linksList.content = content
+    m.linksList.visible = hasLinks
+    m.linksLabel.visible = hasLinks
+    m.linksLabel.text = Tr(Locale.PlaybackMenu.Links)
+    ' the description takes the full width when there is nothing to list beside it.
+    if hasLinks
+        m.descriptionText.width = 600
+    else
+        m.descriptionText.width = 960
+    end if
+end function
+
+' The game card sits under the description, which gives up the height it needs.
+function OnGameSet() as void
+    game = m.top.game
+    hasGame = IsAssociativeArray(game) and ValidString(game.title) <> ""
+    m.gameGroup.visible = hasGame
+    if hasGame
+        m.descriptionText.height = 320
+        m.gameLabel.text = Tr(Locale.PlaybackMenu.Games)
+        m.gameTitle.text = ValidString(game.title)
+        m.gameYear.text = ValidString(game.year)
+        m.gameYear.visible = m.gameYear.text <> ""
+        m.gamePoster.uri = ValidString(game.image)
+    else
+        m.descriptionText.height = 480
+    end if
+end function
+
 function OnFocusChange() as void
     ' true hands the remote to the description; false releases it, so the player can take focus back.
-    NodeSetFocus(m.top.findNode("descriptionText"), m.top.focus)
+    NodeSetFocus(m.descriptionText, m.top.focus)
+end function
+
+function OnLinkSelected(event as object) as void
+    m.top.selected = { index: event.getData() }
 end function
 
 function OnKeyEvent(key as string, press as boolean) as boolean
@@ -23,6 +80,16 @@ function OnKeyEvent(key as string, press as boolean) as boolean
     if key = RemoteKeys.Back
         m.top.closed = true
         return true
+    end if
+    if m.linksList.visible
+        if key = RemoteKeys.Right and m.descriptionText.hasFocus()
+            NodeSetFocus(m.linksList, true)
+            return true
+        end if
+        if key = RemoteKeys.Left and m.linksList.hasFocus()
+            NodeSetFocus(m.descriptionText, true)
+            return true
+        end if
     end if
     return false
 end function

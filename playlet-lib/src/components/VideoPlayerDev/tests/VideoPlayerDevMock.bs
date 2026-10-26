@@ -45,12 +45,19 @@ function TestSetup() as void
     m.top.jobQueue = jobQueue
     m.top.notifications = createObject("roSGNode", "Node")
     m.top.preferences = createObject("roSGNode", "Node")
+    ' the subtitle style preferences the player reads on ready and writes when the menu changes one.
+    m.top.preferences.addFields({
+        "playback.subtitle_text_color": "Default"
+        "playback.subtitle_background_color": "Default"
+        "playback.subtitle_background_opacity": "Default"
+    })
     m.top.invidious = createObject("roSGNode", "Node")
     ' the queue stub carries the fields the finish/close paths touch (VideoQueueUtils.PlayNext reads hasNext;
     ' ClosePlayer writes closePlayer — the spec asserts it).
     videoQueue = createObject("roSGNode", "Node")
     videoQueue.addField("hasNext", "boolean", false)
     videoQueue.addField("closePlayer", "boolean", false)
+    videoQueue.addField("playVideo", "node", false)
     m.top.videoQueue = videoQueue
     m.top.loungeService = createObject("roSGNode", "Node")
     m.top.appController = createObject("roSGNode", "Node")
@@ -79,9 +86,10 @@ function TestSetup() as void
 
     ' the overlay components survive across tests; their field observers would stack per TestSetup (one handler run
     ' per prior setup on every selection). Drop them before OnNodeReady re-registers exactly one.
-    for each overlayField in ["selected", "closed"]
+    for each overlayField in ["selected", "closed", "loadMore"]
         m.playerMenu.unobserveField(overlayField)
         m.commentsList.unobserveField(overlayField)
+        m.relatedVideos.unobserveField(overlayField)
     end for
     m.videoDetails.unobserveField("closed")
 
@@ -109,6 +117,15 @@ function TestSetup() as void
     m.commentsList.status = ""
     m.commentsList.comments = []
     m.videoDetails.visible = false
+    m.relatedVideos.visible = false
+    m.relatedVideos.content = invalid
+    m.relatedVideos.status = ""
+    m.relatedOpen = false
+    m.relatedItems = []
+    m.relatedContinuation = ""
+    m.relatedHasMore = false
+    m.relatedLoading = false
+    m.relatedJob = invalid
     m.commentsRows = []
     m.top.availableAudioTracks = []
     m.top.availableSubtitleTracks = []
@@ -292,6 +309,17 @@ function TestStaleOverlay() as void
     m.commentsList.visible = false
     m.menuLevel = "main"
     m.playerMenu.visible = false
+    m.relatedOpen = true
+    m.relatedVideos.visible = false
+end function
+
+' TestAppendRelatedVideos — one load-more page's append/dedupe, minus the job.
+function TestAppendRelatedVideos(items as object) as object
+    added = AppendRelatedItems(items)
+    return {
+        added: added
+        total: m.relatedItems.Count()
+    }
 end function
 
 ' TestCoordinatorFields — every non-function key on the coordinator's m, for the unmodeled-axis meta-test

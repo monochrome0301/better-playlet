@@ -199,6 +199,30 @@ namespace Tests
             m.assertEqual(result.comments[0].replyContinuation, "more-replies")
         end function
 
+        @it("reads a replies page delivered under appendContinuationItemsAction, as bare view models")
+        function _()
+            payload = m.Parse(`{
+                "frameworkUpdates": {"entityBatchUpdate": {"mutations": [
+                    {"payload": {"commentEntityPayload": {
+                        "key": "r1",
+                        "properties": {"content": {"content": "a reply"}, "publishedTime": "1 hour ago"},
+                        "author": {"displayName": "@rep"},
+                        "toolbar": {"likeCountNotliked": "1"}
+                    }}}
+                ]}},
+                "onResponseReceivedEndpoints": [{"appendContinuationItemsAction": {"continuationItems": [
+                    {"commentViewModel": {"commentKey": "r1"}},
+                    {"continuationItemRenderer": {"button": {"buttonRenderer": {"command": {"continuationCommand": {"token": "more-replies"}}}}}}
+                ]}}]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.comments.Count(), 1)
+            m.assertEqual(result.comments[0].author, "@rep")
+            m.assertEqual(result.comments[0].text, "a reply")
+        end function
+
         @it("reads the classic creator heart and its moreReplies continuation")
         function _()
             payload = m.Parse(`{

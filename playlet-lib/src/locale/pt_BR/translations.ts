@@ -645,6 +645,22 @@
         <translation>Qualidade preferida</translation>
     </message>
     <message>
+        <source>Hide AI slop channels</source>
+        <translation>Ocultar canais de IA de baixa qualidade</translation>
+    </message>
+    <message>
+        <source>Hide channels from the AiSList community blocklist. The list is downloaded from GitHub. Data: AiSList (CC BY-NC 4.0).</source>
+        <translation>Oculta os canais da lista de bloqueio da comunidade AiSList. A lista é baixada do GitHub. Dados: AiSList (CC BY-NC 4.0).</translation>
+    </message>
+    <message>
+        <source>Also hide likely AI channels</source>
+        <translation>Ocultar também canais provavelmente de IA</translation>
+    </message>
+    <message>
+        <source>Also hide channels from the AiSList warnlist (medium confidence). Only applies while 'Hide AI slop channels' is enabled.</source>
+        <translation>Oculta também os canais da lista de avisos da AiSList (confiança média). Aplica-se apenas enquanto 'Ocultar canais de IA de baixa qualidade' estiver ativado.</translation>
+    </message>
+    <message>
         <source>Invidious preferences</source>
         <translation>Preferências do Invidious</translation>
     </message>
@@ -1239,6 +1255,390 @@
     <message>
         <source>Rewind live TV</source>
         <translation>Retroceder TV ao vivo</translation>
+    </message>
+    <message>
+        <source>Recommended</source>
+        <translation>Recomendado</translation>
+    </message>
+    <message>
+        <source>Session expired</source>
+        <translation>Sessão expirada</translation>
+    </message>
+    <message>
+        <source>The session has expired. Please sign in again with this profile, or switch to another profile.</source>
+        <translation>A sessão expirou. Entre novamente com este perfil ou mude para outro perfil.</translation>
+    </message>
+    <message>
+        <source>The session has expired.</source>
+        <translation>A sessão expirou.</translation>
+    </message>
+    <message>
+        <source>Please sign in again with this profile, or switch to another profile.</source>
+        <translation>Entre novamente com este perfil ou mude para outro perfil.</translation>
+    </message>
+    <message>
+        <source>Backend changed</source>
+        <translation>Backend alterado</translation>
+    </message>
+    <message>
+        <source>Backend changed to Playlet, because no Invidious instance is set.</source>
+        <translation>Alterado para o backend do Playlet porque nenhuma instância do Invidious está definida.</translation>
+    </message>
+    <message>
+        <source>Select a service to login</source>
+        <translation>Selecione um serviço para entrar</translation>
+    </message>
+    <message>
+        <source>Login to YouTube</source>
+        <translation>Entrar no YouTube</translation>
+    </message>
+    <message>
+        <source>Open the link %1 and enter the following code:</source>
+        <translation>Abra o link %1 e digite o seguinte código:</translation>
+    </message>
+    <message>
+        <source>Disclaimer</source>
+        <translation>Aviso legal</translation>
+    </message>
+    <message>
+        <source>Playlet is a third-party app and is not affiliated with, endorsed by, or sponsored by YouTube or Google. All trademarks and registered trademarks mentioned are the property of their respective owners and are used only for identification purposes.</source>
+        <translation>O Playlet é um aplicativo de terceiros e não é afiliado, endossado ou patrocinado pelo YouTube ou pelo Google. Todas as marcas comerciais e marcas registradas mencionadas pertencem aos seus respectivos proprietários e são usadas apenas para fins de identificação.</translation>
+    </message>
+    <message>
+        <source>By using Playlet and signing in with your YouTube account, you acknowledge that you do so at your own risk. The developers of Playlet are not liable for any harm, including but not limited to data loss, account suspension or ban, hacking, or loss of content.</source>
+        <translation>Ao usar o Playlet e entrar com sua conta do YouTube, você reconhece que o faz por sua conta e risco. Os desenvolvedores do Playlet não se responsabilizam por qualquer dano, incluindo, entre outros, perda de dados, suspensão ou banimento da conta, invasão ou perda de conteúdo.</translation>
+    </message>
+    <message>
+        <source>Use responsibly, especially if your YouTube account is tied to business or monetization.</source>
+        <translation>Use com responsabilidade, especialmente se sua conta do YouTube estiver vinculada a negócios ou monetização.</translation>
+    </message>
+    <message>
+        <source>Who&#39;s watching?</source>
+        <translation>Quem está assistindo?</translation>
+    </message>
+    <message>
+        <source>No valid accounts found for YouTube login.</source>
+        <translation>Nenhuma conta válida encontrada para entrar no YouTube.</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation>Erro</translation>
+    </message>
+    <message>
+        <source>0 likes</source>
+        <translation>0 curtidas</translation>
+    </message>
+    <message>
+        <source>1 like</source>
+        <translation>1 curtida</translation>
+    </message>
+    <message>
+        <source>^n likes</source>
+        <translation>^n curtidas</translation>
+    </message>
+    <message>
+        <source>0 dislikes</source>
+        <translation>0 não gostei</translation>
+    </message>
+    <message>
+        <source>1 dislike</source>
+        <translation>1 não gostei</translation>
+    </message>
+    <message>
+        <source>^n dislikes</source>
+        <translation>^n não gostei</translation>
+    </message>
+    <message>
+        <source>Backend</source>
+        <translation>Backend</translation>
+    </message>
+    <message>
+        <source>Backend preferences</source>
+        <translation>Preferências do backend</translation>
+    </message>
+    <message>
+        <source>Selected backend</source>
+        <translation>Backend selecionado</translation>
+    </message>
+    <message>
+        <source>The backend used for browsing and playing videos.</source>
+        <translation>O backend usado para navegar e reproduzir vídeos.</translation>
+    </message>
+    <message>
+        <source>Content Feed</source>
+        <translation>Feed de conteúdo</translation>
+    </message>
+    <message>
+        <source>Feed preferences</source>
+        <translation>Preferências do feed</translation>
+    </message>
+    <message>
+        <source>Disable auto-dubbed audio</source>
+        <translation>Desativar áudio dublado automaticamente</translation>
+    </message>
+    <message>
+        <source>Remove AI-generated dubbed audio tracks.</source>
+        <translation>Remover as faixas de áudio dubladas geradas por IA.</translation>
+    </message>
+    <message>
+        <source>Disable Shorts</source>
+        <translation>Desativar Shorts</translation>
+    </message>
+    <message>
+        <source>Disable short videos.</source>
+        <translation>Desativar vídeos curtos.</translation>
+    </message>
+    <message>
+        <source>Categories</source>
+        <translation>Categorias</translation>
+    </message>
+    <message>
+        <source>Configure which segments to skip</source>
+        <translation>Configurar quais segmentos pular</translation>
+    </message>
+    <message>
+        <source>Select option for %1</source>
+        <translation>Selecione a opção para %1</translation>
+    </message>
+    <message>
+        <source>Privacy</source>
+        <translation>Privacidade</translation>
+    </message>
+    <message>
+        <source>Privacy preferences</source>
+        <translation>Preferências de privacidade</translation>
+    </message>
+    <message>
+        <source>Incognito mode</source>
+        <translation>Modo anônimo</translation>
+    </message>
+    <message>
+        <source>Watch and search without adding to your watch history, recommendations or search history.</source>
+        <translation>Assista e pesquise sem adicionar ao histórico, às recomendações ou ao histórico de pesquisa.</translation>
+    </message>
+    <message>
+        <source>Playback settings</source>
+        <translation>Configurações de reprodução</translation>
+    </message>
+    <message>
+        <source>Quality</source>
+        <translation>Qualidade</translation>
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation>Legendas</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>Áudio</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>Velocidade</translation>
+    </message>
+    <message>
+        <source>Normal</source>
+        <translation>Normal</translation>
+    </message>
+    <message>
+        <source>Comments</source>
+        <translation>Comentários</translation>
+    </message>
+    <message>
+        <source>Video description</source>
+        <translation>Descrição do vídeo</translation>
+    </message>
+    <message>
+        <source>Links</source>
+        <translation>Links</translation>
+    </message>
+    <message>
+        <source>Games</source>
+        <translation>Jogos</translation>
+    </message>
+    <message>
+        <source>No description</source>
+        <translation>Sem descrição</translation>
+    </message>
+    <message>
+        <source>Likes</source>
+        <translation>Curtidas</translation>
+    </message>
+    <message>
+        <source>Dislikes</source>
+        <translation>Não gostei</translation>
+    </message>
+    <message>
+        <source>Video rating</source>
+        <translation>Avaliação do vídeo</translation>
+    </message>
+    <message>
+        <source>Dislikes from returnyoutubedislike.com</source>
+        <translation>Não gostei do returnyoutubedislike.com</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Desativado</translation>
+    </message>
+    <message>
+        <source>No comments yet</source>
+        <translation>Nenhum comentário ainda</translation>
+    </message>
+    <message>
+        <source>Loading comments...</source>
+        <translation>Carregando comentários...</translation>
+    </message>
+    <message>
+        <source>Failed to load comments</source>
+        <translation>Falha ao carregar comentários</translation>
+    </message>
+    <message>
+        <source>Comments are disabled</source>
+        <translation>Os comentários estão desativados</translation>
+    </message>
+    <message>
+        <source>View replies</source>
+        <translation>Ver respostas</translation>
+    </message>
+    <message>
+        <source>Hide replies</source>
+        <translation>Ocultar respostas</translation>
+    </message>
+    <message>
+        <source>Hearted by creator</source>
+        <translation>Curtido pelo criador</translation>
+    </message>
+    <message>
+        <source>Related videos</source>
+        <translation>Vídeos relacionados</translation>
+    </message>
+    <message>
+        <source>Load more videos</source>
+        <translation>Carregar mais vídeos</translation>
+    </message>
+    <message>
+        <source>Failed to load more videos</source>
+        <translation>Não foi possível carregar mais vídeos</translation>
+    </message>
+    <message>
+        <source>Press OK to skip</source>
+        <translation>Pressione OK para pular</translation>
+    </message>
+    <message>
+        <source>Disable</source>
+        <translation>Desativar</translation>
+    </message>
+    <message>
+        <source>Auto Skip</source>
+        <translation>Pular automaticamente</translation>
+    </message>
+    <message>
+        <source>Manual Skip</source>
+        <translation>Pular manualmente</translation>
+    </message>
+    <message>
+        <source>Show in Seekbar</source>
+        <translation>Mostrar na barra de progresso</translation>
+    </message>
+    <message>
+        <source>Open in YouTube</source>
+        <translation>Abrir no YouTube</translation>
+    </message>
+    <message>
+        <source>Clear PoTokens</source>
+        <translation>Limpar PoTokens</translation>
+    </message>
+    <message>
+        <source>Clear all stored PoTokens.</source>
+        <translation>Limpar todos os PoTokens armazenados.</translation>
+    </message>
+    <message>
+        <source>PoTokens cleared.</source>
+        <translation>PoTokens limpos.</translation>
+    </message>
+    <message>
+        <source>Enable Diagnostics</source>
+        <translation>Ativar diagnósticos</translation>
+    </message>
+    <message>
+        <source>Help improve Playlet by enabling diagnostics. This will send anonymous diagnotics data to the developer.</source>
+        <translation>Ajude a melhorar o Playlet ativando os diagnósticos. Isso enviará dados de diagnóstico anônimos ao desenvolvedor.</translation>
+    </message>
+    <message>
+        <source>No Invidious Instance</source>
+        <translation>Nenhuma instância do Invidious</translation>
+    </message>
+    <message>
+        <source>Playlet built-in backend does not support Invidious login.</source>
+        <translation>O backend integrado do Playlet não oferece suporte ao login no Invidious.</translation>
+    </message>
+    <message>
+        <source>Can only login with Invidious if an Invidious instance is set in the settings.</source>
+        <translation>Só é possível entrar no Invidious se uma instância do Invidious estiver definida nas configurações.</translation>
+    </message>
+    <message>
+        <source>Edit Instance</source>
+        <translation>Editar instância</translation>
+    </message>
+    <message>
+        <source>Enter the instance url (e.g. %1)</source>
+        <translation>Digite a URL da instância (ex. %1)</translation>
+    </message>
+    <message>
+        <source>Video not available</source>
+        <translation>Vídeo indisponível</translation>
+    </message>
+    <message>
+        <source>Remote not working?</source>
+        <translation>O controle remoto não está funcionando?</translation>
+    </message>
+    <message>
+        <source>If the remote control is not working, check your device settings: Settings → System → Advanced System Settings → Control by mobile apps → Network access, and set it to Enabled.</source>
+        <translation>Se o controle remoto não funcionar, verifique as configurações do seu dispositivo: Configurações → Sistema → Configurações avançadas do sistema → Controle por aplicativos móveis → Acesso à rede, e defina como «Ativado».</translation>
+    </message>
+    <message>
+        <source>No Invidious instance configured. Please set one in settings.</source>
+        <translation>Nenhuma instância do Invidious configurada. Configure uma nas configurações.</translation>
+    </message>
+    <message>
+        <source>Please use your Roku device to login to YouTube.</source>
+        <translation>Use seu dispositivo Roku para entrar no YouTube.</translation>
+    </message>
+    <message>
+        <source>Enter the code you see on your Roku device</source>
+        <translation>Digite o código exibido no seu dispositivo Roku</translation>
+    </message>
+    <message>
+        <source>Key</source>
+        <translation>Chave</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Valor</translation>
+    </message>
+    <message>
+        <source>App internal state</source>
+        <translation>Estado interno do aplicativo</translation>
+    </message>
+    <message>
+        <source>Registry</source>
+        <translation>Registro</translation>
+    </message>
+    <message>
+        <source>Full state</source>
+        <translation>Estado completo</translation>
+    </message>
+    <message>
+        <source>link</source>
+        <translation>link</translation>
+    </message>
+    <message>
+        <source>Export registry</source>
+        <translation>Exportar registro</translation>
+    </message>
+    <message>
+        <source>Export full state</source>
+        <translation>Exportar estado completo</translation>
     </message>
 </context>
 </TS>

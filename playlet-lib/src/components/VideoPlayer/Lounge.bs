@@ -33,4 +33,13 @@ namespace Lounge
         m.loungeService.outgoingMessages = [loungeStateMsg]
     end function
 
+    ' A speed picked on the TV keeps a connected phone's speed display in sync.
+    function SendPlaybackSpeedChanged(speed as float) as void
+        if m.onCloseCalled = true or StringUtils.IsNullOrEmpty(m.loungeService.loungeToken)
+            return
+        end if
+
+        m.loungeService.outgoingMessages = [LoungeMessages.OnPlaybackSpeedChanged(speed)]
+    end function
+
 end namespace

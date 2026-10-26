@@ -3,6 +3,7 @@
   import { getHost } from "lib/Api/Host";
   import { PlayletApi } from "lib/Api/PlayletApi";
   import { playletStateStore, translate } from "lib/Stores";
+  import { get } from "svelte/store";
 
   export let visibility: boolean;
 
@@ -170,7 +171,7 @@ ${JSON.stringify(profilesInfo, null, 2)}
   async function exportRegistry() {
     try {
       await PlayletApi.showExportRegistryCode();
-      const code = prompt("Enter the code you see on your Roku device");
+      const code = prompt(get(translate)("Enter the code you see on your Roku device"));
       if (!code) {
         return;
       }
@@ -207,7 +208,7 @@ ${JSON.stringify(profilesInfo, null, 2)}
       zip.file("app_logs_previous.txt", appLogsPrevious);
 
       await PlayletApi.showExportRegistryCode();
-      const code = prompt("Enter the code you see on your Roku device");
+      const code = prompt(get(translate)("Enter the code you see on your Roku device"));
       if (!code) {
         return;
       }
@@ -265,8 +266,8 @@ ${JSON.stringify(profilesInfo, null, 2)}
     <table class="table">
       <thead>
         <tr>
-          <th>Key</th>
-          <th>Value</th>
+          <th>{$translate("Key")}</th>
+          <th>{$translate("Value")}</th>
         </tr>
       </thead>
       <tbody>
@@ -290,7 +291,7 @@ ${JSON.stringify(profilesInfo, null, 2)}
         {/each}
 
         <tr>
-          <th>App internal state</th>
+          <th>{$translate("App internal state")}</th>
         </tr>
 
         {#each internalStateLinks as item}
@@ -301,26 +302,26 @@ ${JSON.stringify(profilesInfo, null, 2)}
                 class="link"
                 href={item.link}
                 target="_blank"
-                rel="noopener noreferrer">link</a
+                rel="noopener noreferrer">{$translate("link")}</a
               ></td
             >
           </tr>
         {/each}
 
         <tr>
-          <td>{"Registry"}</td>
+          <td>{$translate("Registry")}</td>
           <td
             ><button class="btn btn-outline btn-sm" on:click={exportRegistry}
-              >Export registry</button
+              >{$translate("Export registry")}</button
             ></td
           >
         </tr>
 
         <tr>
-          <td>{"Full state"}</td>
+          <td>{$translate("Full state")}</td>
           <td
             ><button class="btn btn-outline btn-sm" on:click={exportFullState}
-              >Export full state</button
+              >{$translate("Export full state")}</button
             ></td
           >
         </tr>

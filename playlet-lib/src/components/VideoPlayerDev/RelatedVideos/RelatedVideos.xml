@@ -1,0 +1,27 @@
+<component name="RelatedVideos" extends="Group" includes="Focus">
+    <!-- The player's related-videos feed: the watch page's recommendations as a 3-column grid over a scrim.
+         Opened by Down from the player; OK replaces what plays, OK on the last tile loads more, Up on the first
+         row or Back closes the feed. The video keeps playing behind. -->
+    <interface>
+        <field id="title" type="string" alias="titleLabel.text" />
+        <field id="content" type="node" alias="grid.content" />
+        <field id="status" type="string" onChange="OnStatusSet" />
+        <field id="focusIndex" type="integer" onChange="OnFocusIndexSet" />
+        <field id="selected" type="assocarray" alwaysNotify="true" />
+        <field id="loadMore" type="boolean" alwaysNotify="true" />
+        <field id="closed" type="boolean" alwaysNotify="true" />
+    </interface>
+    <children>
+        <Rectangle id="scrim" width="1280" height="720" color="0x000000" opacity="0.92" />
+        <Label id="titleLabel" translation="[95,30]" width="1090" height="36"
+            font="font:MediumBoldSystemFont" color="0xFEFEFEFF" wrap="false" />
+        <RelatedVideoGrid id="grid" translation="[95,78]"
+            itemComponentName="RelatedVideoCell"
+            itemSize="[350,276]" itemSpacing="[20,20]"
+            numColumns="3" numRows="2"
+            vertFocusAnimationStyle="floatingFocus"
+            focusBitmapUri="pkg:/images/focus-glow-padding-30.$$RES$$.9.png" />
+        <Label id="statusLabel" translation="[95,664]" width="1090" height="30"
+            font="font:SmallestSystemFont" color="0xBBBBBBFF" wrap="false" visible="false" />
+    </children>
+</component>

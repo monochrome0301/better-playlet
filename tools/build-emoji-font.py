@@ -3,13 +3,15 @@
 Run from the repo root:  python tools/build-emoji-font.py
 
 Roku has no emoji in its system fonts and cannot render color emoji, so the
-app ships a ready-made monochrome font: OpenSansEmoji (Apache 2.0, ~550 KB),
-the same one Roku's MultiStyleLabel sample uses. The font is copied as-is; the
-codepoint table below is read from its cmap, so the BrightScript converter only
-routes characters the font can actually draw.
+app ships a ready-made monochrome font: Noto Emoji (OFL 1.1, ~865 KB), which
+covers current emoji plus symbols such as ✔ and ❌. Google ships it as a
+variable font; the script pins the default weight into a static TTF because
+Roku's font loader is not expected to handle variable fonts. The codepoint
+table below is read from its cmap, so the BrightScript converter only routes
+characters the font can actually draw.
 
-Swapping fonts later (for example to Noto Emoji for newer emoji) is just a
-matter of changing FONT_URL and rerunning this script.
+Swapping fonts later is just a matter of changing FONT_URL and rerunning this
+script.
 """
 
 import os
@@ -17,16 +19,17 @@ import tempfile
 import urllib.request
 
 from fontTools.ttLib import TTFont
+from fontTools.varLib.instancer import instantiateVariableFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FONTS_DIR = os.path.join(ROOT, "playlet-lib", "src", "fonts")
 RANGES_BS = os.path.join(ROOT, "playlet-lib", "src", "source", "utils", "EmojiTextRanges.bs")
 CACHE_DIR = os.path.join(tempfile.gettempdir(), "playlet-emoji-fonts")
 
-FONT_URL = "https://raw.githubusercontent.com/MorbZ/OpenSansEmoji/master/OpenSansEmoji.ttf"
-LICENSE_URL = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/notoemoji/NotoEmoji%5Bwght%5D.ttf"
+LICENSE_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/notoemoji/OFL.txt"
 FONT_NAME = "emoji.ttf"
-LICENSE_NAME = "LICENSE-OpenSansEmoji.txt"
+LICENSE_NAME = "LICENSE-NotoEmoji.txt"
 
 # Codepoints the system font already handles; keep them out of the fallback so
 # Latin, Greek, Cyrillic, punctuation and currency keep their current look.
@@ -62,10 +65,12 @@ def main():
     os.makedirs(FONTS_DIR, exist_ok=True)
     os.makedirs(CACHE_DIR, exist_ok=True)
 
-    source = download(FONT_URL, os.path.join(CACHE_DIR, FONT_NAME))
+    source = download(FONT_URL, os.path.join(CACHE_DIR, "NotoEmoji[wght].ttf"))
     font_path = os.path.join(FONTS_DIR, FONT_NAME)
-    with open(source, "rb") as src, open(font_path, "wb") as dst:
-        dst.write(src.read())
+    font = TTFont(source)
+    if "fvar" in font:
+        font = instantiateVariableFont(font, {"wght": 400})
+    font.save(font_path)
 
     license_path = os.path.join(FONTS_DIR, LICENSE_NAME)
     with open(download(LICENSE_URL, os.path.join(CACHE_DIR, LICENSE_NAME)), "rb") as src, \

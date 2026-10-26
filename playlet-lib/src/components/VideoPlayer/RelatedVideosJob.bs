@@ -1,0 +1,18 @@
+import "pkg:/components/Services/Innertube/InnertubeService.bs"
+
+' One more page of the watch page's recommendations, for the player's related-videos feed.
+@job("RelatedVideosJob")
+function ExecuteJob() as void
+    input = JobGetInput()
+
+    result = InnertubeService.GetRelatedVideos(input.continuation, {
+        cancellation: JobGetCancellation()
+    })
+
+    if result.error <> invalid
+        JobError(result.error)
+        return
+    end if
+
+    JobSuccessData(result)
+end function

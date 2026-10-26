@@ -13,7 +13,12 @@ namespace PlayerOverlayLogic
         Main = "main"
         Quality = "quality"
         Subtitles = "subtitles"
+        SubtitleTextColor = "subtitleTextColor"
+        SubtitleBackgroundColor = "subtitleBackgroundColor"
+        SubtitleBackgroundOpacity = "subtitleBackgroundOpacity"
         Audio = "audio"
+        Speed = "speed"
+        Channel = "channel"
     end enum
 
     ' [x] marks the active option; fixed width so the labels line up in a LabelList.
@@ -127,6 +132,52 @@ namespace PlayerOverlayLogic
         return options
     end function
 
+    ' The Roku caption renderer's color values (same list as the OS captions settings).
+    function CaptionColors() as object
+        return ["Default", "White", "Black", "Red", "Green", "Blue", "Yellow", "Magenta", "Cyan"]
+    end function
+
+    function CaptionColorText(value as string) as string
+        return Tr(value)
+    end function
+
+    function BuildCaptionColorOptions(selectedColor as string) as object
+        options = []
+        for each color in CaptionColors()
+            options.Push(Option(CaptionColorText(color), color, color = selectedColor))
+        end for
+        return options
+    end function
+
+    ' Roku's background opacity values, including Off (no background) and Default (the OS setting).
+    function CaptionOpacities() as object
+        return ["Default", "Off", "25%", "50%", "75%", "100%"]
+    end function
+
+    function CaptionOpacityText(value as string) as string
+        if value = "Off"
+            return Tr(Locale.PlaybackMenu.Off)
+        end if
+        return Tr(value)
+    end function
+
+    function BuildCaptionOpacityOptions(selectedOpacity as string) as object
+        options = []
+        for each opacity in CaptionOpacities()
+            options.Push(Option(CaptionOpacityText(opacity), opacity, opacity = selectedOpacity))
+        end for
+        return options
+    end function
+
+    ' The appearance rows appended to the subtitle level. Each opens its own choice list.
+    function SubtitleStyleRows(textColor as string, backgroundColor as string, backgroundOpacity as string) as object
+        return [
+            { title: Tr(Locale.PlaybackMenu.TextColor) + ": " + CaptionColorText(textColor), value: Level.SubtitleTextColor }
+            { title: Tr(Locale.PlaybackMenu.BackgroundColor) + ": " + CaptionColorText(backgroundColor), value: Level.SubtitleBackgroundColor }
+            { title: Tr(Locale.PlaybackMenu.BackgroundOpacity) + ": " + CaptionOpacityText(backgroundOpacity), value: Level.SubtitleBackgroundOpacity }
+        ]
+    end function
+
     ' The DASH manifest's audio tracks (languages / auto-dubbed variants).
     function BuildAudioOptions(tracks as object, selectedTrack as object) as object
         options = []
@@ -165,10 +216,41 @@ namespace PlayerOverlayLogic
         return ValidString(track.Language) = ValidString(selectedTrack.Language)
     end function
 
+    ' YouTube's playback speeds, in menu order. The string is the value a row carries (parsed back to the float).
+    function SpeedChoices() as object
+        return ["0.25", "0.5", "0.75", "1", "1.25", "1.5", "1.75", "2"]
+    end function
+
+    ' One speed as YouTube labels it: "Normal" for 1x, otherwise "<n>x".
+    function SpeedText(value as string) as string
+        if value = "1"
+            return Tr(Locale.PlaybackMenu.NormalSpeed)
+        end if
+        return value + "x"
+    end function
+
+    ' A live speed as the main row shows it: the menu label when it is one of YouTube's, else the raw number.
+    function SpeedTextFor(speed as float) as string
+        for each value in SpeedChoices()
+            if Abs(value.ToFloat() - speed) < 0.001
+                return SpeedText(value)
+            end if
+        end for
+        return speed.ToStr() + "x"
+    end function
+
+    function BuildSpeedOptions(speed as float) as object
+        options = []
+        for each value in SpeedChoices()
+            options.Push(Option(SpeedText(value), value, Abs(value.ToFloat() - speed) < 0.001))
+        end for
+        return options
+    end function
+
     ' NOTE: the quality flag is NOT named hasQuality: case-insensitively that collides with the HasQuality function
     ' above, and the compiler then mangles the reference to the function instead of the parameter (if <function>
     ' throws at runtime, killing BuildMainMenuRows and silently keeping the menu closed).
-    function MainRows(qualityLabel as string, showQuality as boolean, subtitleLabel as string, hasSubtitles as boolean, audioLabel as string, hasAudio as boolean) as object
+    function MainRows(qualityLabel as string, showQuality as boolean, subtitleLabel as string, hasSubtitles as boolean, audioLabel as string, hasAudio as boolean, speedLabel as string) as object
         rows = []
         if showQuality
             rows.Push({ title: Tr(Locale.PlaybackMenu.Quality) + ": " + qualityLabel, value: Level.Quality })
@@ -178,6 +260,9 @@ namespace PlayerOverlayLogic
         end if
         if hasAudio
             rows.Push({ title: Tr(Locale.PlaybackMenu.Audio) + ": " + audioLabel, value: Level.Audio })
+        end if
+        if speedLabel <> ""
+            rows.Push({ title: Tr(Locale.PlaybackMenu.Speed) + ": " + speedLabel, value: Level.Speed })
         end if
         rows.Push({ title: Tr(Locale.PlaybackMenu.VideoDescription), value: "details" })
         rows.Push({ title: Tr(Locale.PlaybackMenu.Comments), value: "comments" })
@@ -241,6 +326,99 @@ namespace PlayerOverlayLogic
             return Tr(Locale.PlaybackMenu.NoDescription)
         end if
         return description
+    end function
+
+    ' The game the video is about, when YouTube's structured description has one.
+    function DetailsGame(metadata as object) as object
+        game = ValidAssociativeArray(metadata).game
+        if not IsAssociativeArray(game)
+            return invalid
+        end if
+        title = ValidString(game.title)
+        if title = ""
+            return invalid
+        end if
+        return {
+            title: title
+            year: ValidString(game.year)
+            image: ValidString(game.image)
+        }
+    end function
+
+    ' The description's selectable links as the details overlay shows them: the raw label (used as the title of a
+    ' video opened from a link) plus the type-prefixed row text.
+    function DescriptionLinkRows(metadata as object) as object
+        rows = []
+        links = ValidArray(ValidAssociativeArray(metadata).descriptionLinks)
+        for each link in links
+            if not IsAssociativeArray(link)
+                continue for
+            end if
+            kind = ValidString(link.kind)
+            id = ValidString(link.id)
+            if id = ""
+                continue for
+            end if
+            label = ValidString(link.label).Trim()
+            if label = ""
+                label = id
+            end if
+            if kind = "channel"
+                text = Tr(Locale.SearchFilters.Channel) + ": " + label
+            else
+                text = Tr(Locale.SearchFilters.Video) + ": " + label
+            end if
+            rows.Push({ kind: kind, id: id, label: label, text: text })
+        end for
+        return rows
+    end function
+
+    ' --- Channel button (bottom-left of the player) ---
+
+    ' The channel the logo button opens. The played queue item carries authorId when the metadata does not.
+    function ChannelId(metadata as object, content as object) as string
+        id = ValidString(ValidAssociativeArray(metadata).authorId)
+        if id = "" and content <> invalid and content.hasField("authorId")
+            id = ValidString(content.authorId)
+        end if
+        return id
+    end function
+
+    ' The channel's avatar: Innertube's owner renderer, Invidious's author thumbnails, or the generic user icon.
+    function ChannelAvatarUri(metadata as object) as string
+        meta = ValidAssociativeArray(metadata)
+        uri = ValidString(meta.authorThumbnail)
+        if uri = ""
+            for each thumbnail in ValidArray(meta.authorThumbnails)
+                if IsAssociativeArray(thumbnail)
+                    url = ValidString(thumbnail.url)
+                    if url <> ""
+                        uri = url
+                    end if
+                end if
+            end for
+        end if
+        if uri = ""
+            return "pkg:/images/icons/user-200.png"
+        end if
+        if uri.StartsWith("//")
+            uri = "https:" + uri
+        end if
+        return uri
+    end function
+
+    ' The channel button's options: subscribe/unsubscribe when a profile is signed in, then open the channel.
+    function ChannelRows(canSubscribe as boolean, isSubscribed as boolean) as object
+        rows = []
+        if canSubscribe
+            if isSubscribed
+                rows.Push({ title: Tr(Locale.Buttons.Unsubscribe), value: "unsubscribe" })
+            else
+                rows.Push({ title: Tr(Locale.Buttons.Subscribe), value: "subscribe" })
+            end if
+        end if
+        rows.Push({ title: Tr(Locale.ContextMenu.OpenChannel), value: "channel" })
+        return rows
     end function
 
     ' --- Comments overlay rows ---

@@ -122,18 +122,12 @@ See [Playlet Brighterscript Plugins](./plugins.md)
 
 Playlet is split into two parts: `Playlet App` and `Playlet Lib`.
 
-`Playlet App` is a regular Roku app, that uses a [ComponentLibrary](https://developer.roku.com/en-ca/docs/references/scenegraph/control-nodes/componentlibrary.md) to load the rest of the app from [Playlet Lib](#playlet-lib).
-
-In a way, `Playlet App` is a thin loader, while most of the logic lives in [Playlet Lib](#playlet-lib).
+`Playlet Lib` is merged into the `Playlet App` package at build time (`tools/merge-lib.js`), so the app creates the `MainScene` right away instead of mounting a [ComponentLibrary](https://developer.roku.com/en-ca/docs/references/scenegraph/control-nodes/componentlibrary.md) on every launch. A lib version pinned from the web app is still loaded as a ComponentLibrary instead of the bundled one.
 
 `Playlet App` is responsible for a few things:
 
-- Load `Playlet lib`
-  - By default, it tries to load the latest version from Github
-  - If that fails (for example, if Github was down), it fallsback to loading an embedded copy of Playlet Lib
-    - `if Github was down` -> yes, this has happened in the past, and it did not stop Playlet for working.
-  - In dev mode, it loads Playlet lib that's being served by [BrightScript Language Extension for VS Code](#brightscript-language-extension-for-vs-code)
-  - Once loaded, Playlet loads the `MainScene` from Playlet Lib
+- Create `MainScene` from the bundled Playlet Lib
+  - If a lib was pinned from the web app, load it as a ComponentLibrary instead
 - Pass Launch parameters and Input parameters to Playlet Lib
 - Show a loading screen and wait for Playlet Lib to hide it
 
@@ -153,7 +147,7 @@ There are a few reasons we made this separation:
 
 ## Playlet Lib
 
-`Playlet Lib` is a [ComponentLibrary](https://developer.roku.com/en-ca/docs/references/scenegraph/control-nodes/componentlibrary.md) that gets loaded by [Playlet App](#playlet-app). It containes pretty much all the logic needed to run the app.
+`Playlet Lib` contains pretty much all the logic needed to run the app. It is merged into the [Playlet App](#playlet-app) package at build time; it is also published on Github as a ComponentLibrary so a specific lib version can be pinned from the web app.
 
 ### WebServer
 
@@ -180,18 +174,12 @@ These are useful to see if the files and caching are working as expected.
 
 ### Releases from Github
 
-Since Component Libraries are simply zip/squashfs files hosted at some HTTPS endpoint, Github releases are used to host and deliver Playet Lib to users. By default, Playlet grabs `https://github.com/iBicha/playlet/releases/latest/download/playlet-lib.squashfs.pkg` and loads it, but this can be pointed to somewhere else, if for some reason the Github repository becomes unavailable.
+Since Component Libraries are simply zip/squashfs files hosted at some HTTPS endpoint, Github releases are used to publish Playlet Lib. A lib version pinned from the web app is loaded from that URL instead of the bundled one.
 Squashfs files are faster to load, but they require signing. Zip files can be used without signing if they are served from an HTTPS endpoint.
 
 ### Dev library hosted by VS Code Extension
 
-When in debug mode, Playlet lib is packaged and served locally on port 8086, and Playlet app would use it instead of the Playlet lib from Github. This is an important detail, because once you stop debugging in VS Code, the dev app on your Roku TV won't function anymore, with an error:
-
-> Could not load Playlet component library from any of the following urls:
->
-> - \[debug\] http://192.168.1.x:8086/playlet-lib.zip <!-- markdownlint-disable-line -->
->   Please restart Playlet.
->   If the problem persist, contact Playlet authors.
+The dev library served on port 8086 is no longer loaded; the app always runs the lib that was merged into its package at build time. To test lib changes, rebuild the app (`npm run build:dev`).
 
 ### Feature flags
 

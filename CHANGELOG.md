@@ -9,11 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Playback speed in the player's settings menu, with YouTube's speeds from 0.25x to 2x
+- Related-videos feed in the player: press Down to browse the watch page's recommendations in a grid, with a load-more tile and Up on the first row to leave
 - Emoji in titles, queue cells, queue notifications and comments, drawn with a bundled emoji font
 - Reply count next to the "View replies" hint in the player's comments
+- "Hide AI slop channels" setting, which hides channels from the [AiSList](https://github.com/Override92/AiSList) blocklist and, optionally, its warnlist
+
+### Changed
+
+- Startup no longer mounts Playlet Lib as a component library: the lib is merged into the app package, which removes the loading-screen wait
 
 ### Fixed
 
+- The play/pause key working while the player menu, video description or comments are open
 - "View replies" doing nothing on comments whose replies arrive under the commentRepliesRenderer wrapper
 - Up/Down keys staying dead after closing the player menu, comments or video details, because focus stayed on the hidden list
 - Player settings menu not opening at all when a quality was selected

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { InvidiousApi } from "lib/Api/InvidiousApi";
   import { PlayletApi } from "lib/Api/PlayletApi";
   import { translate, userPreferencesStore } from "lib/Stores";
 
@@ -17,6 +18,9 @@
   async function handleChange() {
     if (key !== "") {
       await PlayletApi.saveUserPreference(key, value);
+      if (key === "content_feed.aislist" || key === "content_feed.aislist.warnlist") {
+        InvidiousApi.clearCache();
+      }
     }
   }
 </script>

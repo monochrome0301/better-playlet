@@ -9,6 +9,7 @@
         <field id="enableSystemLogType" type="string" />
         <field id="lastExitInfo" type="assocarray" />
         <function name="CreateInputTransportEventsHandler" />
+        <function name="CreateMainScene" />
     </interface>
     <script type="text/brightscript" uri="pkg:/source/Dialog.bs" />
     <script type="text/brightscript" uri="pkg:/source/Manifest.bs" />

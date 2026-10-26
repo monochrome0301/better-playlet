@@ -747,6 +747,10 @@ namespace InnertubeService
         return Innertube.GetCommentsPage(videoId, ValidString(OptionUtils.Get(options, "continuation")), OptionUtils.Get(options, "cancellation"))
     end function
 
+    function GetRelatedVideos(continuation as string, options = invalid as object) as object
+        return Innertube.GetRelatedVideosPage(continuation, OptionUtils.Get(options, "cancellation"))
+    end function
+
     function ResolveUrl(url as string, options = invalid as object) as object
         cancellation = OptionUtils.Get(options, "cancellation")
 

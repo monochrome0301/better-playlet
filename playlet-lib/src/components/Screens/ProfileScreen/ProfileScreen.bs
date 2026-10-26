@@ -67,10 +67,10 @@ function OnLoginWithInvidiousSelected() as void
     invidiousInstance = m.preferences["invidious.instance"]
     if StringUtils.IsNullOrEmpty(invidiousInstance)
         DialogUtils.ShowDialogEx({
-            title: "No Invidious Instance"
+            title: Tr(Locale.Dialogs.NoInvidiousInstance)
             message: [
-                "Playlet built-in backend does not support Invidious login.",
-                "Can only login with Invidious if an Invidious instance is set in the settings."
+                Tr(Locale.Dialogs.NoInvidiousInstanceMessage1),
+                Tr(Locale.Dialogs.NoInvidiousInstanceMessage2)
             ]
         })
         return

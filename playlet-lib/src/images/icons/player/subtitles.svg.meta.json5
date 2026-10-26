@@ -1,0 +1,12 @@
+{
+  inputHash: '0f6d8beb7fa49d9d4b7f63cd8687172a',
+  outputs: [
+    {
+      outputFilePath: 'images/icons/player/subtitles.png',
+      outputHash: '551dce03f9621c5678cac45d0ef7a497',
+      width: 42,
+      height: 42,
+    },
+  ],
+}
+

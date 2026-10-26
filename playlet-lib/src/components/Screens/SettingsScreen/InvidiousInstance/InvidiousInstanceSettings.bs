@@ -101,10 +101,8 @@ end function
 
 function OnEditButtonSelected()
     keyboardDialog = createObject("roSGNode", "StandardKeyboardDialog")
-    ' TODO:P2 localize
-    keyboardDialog.title = "Edit Instance"
-    ' TODO:P2 localize
-    keyboardDialog.message = [`Enter the instance url (e.g. ${Invidious.INSTANCE_EXAMPLE})`]
+    keyboardDialog.title = Tr(Locale.InvidiousSettings.EditInstance)
+    keyboardDialog.message = [Tr(Locale.InvidiousSettings.EnterInstanceUrl).replace("%1", Invidious.INSTANCE_EXAMPLE)]
     keyboardDialog.text = m.top.text
     keyboardDialog.buttons = [Tr(Locale.Buttons.OK), Tr(Locale.Buttons.Cancel)]
     keyboardDialog.observeField("buttonSelected", FuncName(OnKeyboardButton))

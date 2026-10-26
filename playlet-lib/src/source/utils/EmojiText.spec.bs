@@ -35,7 +35,7 @@ namespace Tests
 
         @it("Wraps symbols the bundled font covers")
         function _()
-            m.assertEqual(EmojiText.Markup("★♥♪"), "<emoji>★♥♪</emoji>")
+            m.assertEqual(EmojiText.Markup("♥✔❌"), "<emoji>♥✔❌</emoji>")
         end function
 
         @it("Drops modifiers the bundled font does not have")

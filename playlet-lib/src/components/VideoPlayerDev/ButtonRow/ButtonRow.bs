@@ -1,21 +1,29 @@
 import "pkg:/components/VideoPlayerDev/TransportController.bs"
 import "pkg:/source/utils/Types.bs"
 
-' Trackbar track spans x=68..1212: right cluster right-aligns to 1212, center cluster centers on 640.
+' Trackbar track spans x=68..1212: the left cluster left-aligns to 68, the right cluster right-aligns to 1212,
+' the center cluster centers on 640.
 const ROW_Y = 560
 const BUTTON_WIDTH = 42
 const BUTTON_SPACING = 20
 const SCREEN_CENTER_X = 640
+const TRACKBAR_LEFT_X = 68
 const TRACKBAR_RIGHT_X = 1212
 
 function Init()
-    ' Focus order MUST match PlayerCoordinatorLogic.PlayerButton (playPause=0, minimize=1, comments=2, settings=3).
+    ' Focus order MUST match PlayerCoordinatorLogic.PlayerButton (channel=0, description=1, playPause=2,
+    ' minimize=3, comments=4, subtitles=5, settings=6) and reads left cluster -> center -> right, as on screen.
     m.buttons = [
+        m.top.findNode("ChannelButton")
+        m.top.findNode("DescriptionButton")
         m.top.findNode("PlayPauseButton")
         m.top.findNode("MinimizeButton")
         m.top.findNode("CommentsButton")
+        m.top.findNode("SubtitlesButton")
         m.top.findNode("SettingsButton")
     ]
+    m.playPauseButton = m.buttons[2]
+    m.leftCluster = m.top.findNode("LeftCluster")
     m.centerCluster = m.top.findNode("CenterCluster")
     m.rightCluster = m.top.findNode("RightCluster")
     LayoutClusters()
@@ -39,8 +47,10 @@ end function
 ' Position the buttons inside each cluster and the clusters on screen, all from child count, so adding a
 ' button auto-positions without hardcoded offsets.
 function LayoutClusters() as void
+    LayoutButtons(m.leftCluster)
     LayoutButtons(m.centerCluster)
     LayoutButtons(m.rightCluster)
+    m.leftCluster.translation = [TRACKBAR_LEFT_X, ROW_Y]
     m.centerCluster.translation = [SCREEN_CENTER_X - ClusterWidth(m.centerCluster) / 2, ROW_Y]
     m.rightCluster.translation = [TRACKBAR_RIGHT_X - ClusterWidth(m.rightCluster), ROW_Y]
 end function
@@ -64,7 +74,7 @@ function Repaint() as void
     ' fades the parent group, so visible=true with a hidden parent stays unpainted.
     m.top.visible = (m.top.transportMode = TransportController.Mode.Idle)
 
-    m.buttons[0].toggleState = not m.top.playing ' toggleState false = play icon, true = pause icon
+    m.playPauseButton.toggleState = not m.top.playing ' toggleState false = play icon, true = pause icon
 
     for i = 0 to m.buttons.Count() - 1
         m.buttons[i].focused = m.top.rowFocused and i = m.top.focusedIndex

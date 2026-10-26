@@ -1,0 +1,7 @@
+<component name="RelatedVideoGrid" extends="MarkupGrid">
+    <!-- The related feed's grid. It owns Up/Down, so Up at the first row never reaches the overlay: report it
+         here and let the overlay close the feed. -->
+    <interface>
+        <field id="upAtTop" type="boolean" alwaysNotify="true" />
+    </interface>
+</component>

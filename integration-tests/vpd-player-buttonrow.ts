@@ -39,7 +39,14 @@ const CONTENT_ID = 'jNQXAC9IVRw'; // "Me at the zoo"
     await expectField('#MinimizeButton.focused', true);
     await expectField('#PlayPauseButton.focused', false);
     await press(Key.Right);
-    await expectField('#buttonRow.focusedIndex', Button.minimize); // clamp, no wrap
+    await press(Key.Right);
+    await press(Key.Right);
+    await expectField('#buttonRow.focusedIndex', Button.settings);
+    await press(Key.Right);
+    await expectField('#buttonRow.focusedIndex', Button.settings); // clamp, no wrap
+    await press(Key.Left);
+    await press(Key.Left);
+    await press(Key.Left);
     await press(Key.Left);
     await expectField('#buttonRow.focusedIndex', Button.playPause);
 

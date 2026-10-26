@@ -1,5 +1,7 @@
 <script lang="ts">
   import { ExternalControlProtocol } from "lib/Api/ExternalControlProtocol";
+  import { translate } from "lib/Stores";
+  import { get } from "svelte/store";
 
   import HomeIcon from "assets/remote-control/home.svg.svelte";
   import ArrowBackIcon from "assets/remote-control/arrow-back.svg.svelte";
@@ -102,16 +104,7 @@
   }
 
   function showRemoteNotWorkingDialog() {
-    // show dialog with instructions
-    let content = `If the remote control is not working, please check your device settings. Go to:
-- Settings
-- System
-- Advanced System Settings
-- Control by mobile apps
-- Network access
-And set it to "Enabled".`;
-
-    alert(content);
+    alert(get(translate)("If the remote control is not working, check your device settings: Settings → System → Advanced System Settings → Control by mobile apps → Network access, and set it to Enabled."));
   }
 </script>
 
@@ -174,7 +167,7 @@ And set it to "Enabled".`;
     </div>
     <button
       on:click={showRemoteNotWorkingDialog}
-      class="btn btn-xs btn-accent m-4">Remote not working?</button
+      class="btn btn-xs btn-accent m-4">{$translate("Remote not working?")}</button
     >
   </div>
 </div>

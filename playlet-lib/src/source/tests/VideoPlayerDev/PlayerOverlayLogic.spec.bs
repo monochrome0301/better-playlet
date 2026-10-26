@@ -72,6 +72,39 @@ namespace Tests
             m.assertEqual(options[0].title, "[x] " + Tr(Locale.PlaybackMenu.Off))
         end function
 
+        @describe("subtitle appearance options")
+
+        @it("lists the OS caption colors and marks the selected one")
+        function _()
+            options = PlayerOverlayLogic.BuildCaptionColorOptions("White")
+            m.assertEqual(options.Count(), 9)
+            m.assertEqual(options[0].value, "Default")
+            m.assertEqual(options[1].value, "White")
+            m.assertEqual(options[1].title, "[x] White")
+            m.assertEqual(options[8].value, "Cyan")
+        end function
+
+        @it("lists the background opacities, Off included, and marks the selected one")
+        function _()
+            options = PlayerOverlayLogic.BuildCaptionOpacityOptions("75%")
+            m.assertEqual(options.Count(), 6)
+            m.assertEqual(options[0].value, "Default")
+            m.assertEqual(options[1].title, "[  ] " + Tr(Locale.PlaybackMenu.Off))
+            m.assertEqual(options[4].title, "[x] 75%")
+        end function
+
+        @it("the subtitle level's appearance rows show the current values")
+        function _()
+            rows = PlayerOverlayLogic.SubtitleStyleRows("Yellow", "Black", "75%")
+            m.assertEqual(rows.Count(), 3)
+            m.assertEqual(rows[0].title, Tr(Locale.PlaybackMenu.TextColor) + ": Yellow")
+            m.assertEqual(rows[0].value, PlayerOverlayLogic.Level.SubtitleTextColor)
+            m.assertEqual(rows[1].title, Tr(Locale.PlaybackMenu.BackgroundColor) + ": Black")
+            m.assertEqual(rows[1].value, PlayerOverlayLogic.Level.SubtitleBackgroundColor)
+            m.assertEqual(rows[2].title, Tr(Locale.PlaybackMenu.BackgroundOpacity) + ": 75%")
+            m.assertEqual(rows[2].value, PlayerOverlayLogic.Level.SubtitleBackgroundOpacity)
+        end function
+
         @it("audio options mark the selected language and label by Description then Language")
         function _()
             tracks = [
@@ -88,15 +121,38 @@ namespace Tests
 
         @it("includes only the levels that have choices, plus the description and comments shortcuts")
         function _()
-            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false)
+            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false, "")
             m.assertEqual(rows.Count(), 3)
             m.assertEqual(rows[0].value, PlayerOverlayLogic.Level.Quality)
             m.assertEqual(rows[1].title, Tr(Locale.PlaybackMenu.VideoDescription))
             m.assertEqual(rows[2].value, "comments")
 
-            rows = PlayerOverlayLogic.MainRows("Auto", false, "Off", true, "English", true)
+            rows = PlayerOverlayLogic.MainRows("Auto", false, "Off", true, "English", true, "1.5x")
             m.assertEqual(rows.Count(), 5)
             m.assertTrue(rows[0].title.InStr(Tr(Locale.PlaybackMenu.Subtitles)) = 0)
+            m.assertEqual(rows[2].value, PlayerOverlayLogic.Level.Speed)
+            m.assertEqual(rows[2].title, Tr(Locale.PlaybackMenu.Speed) + ": 1.5x")
+        end function
+
+        @describe("speed options")
+
+        @it("lists YouTube's speeds, Normal for 1x, and marks the current one")
+        function _()
+            options = PlayerOverlayLogic.BuildSpeedOptions(1.0)
+            m.assertEqual(options.Count(), 8)
+            m.assertEqual(options[0].value, "0.25")
+            m.assertEqual(options[0].title, "[  ] 0.25x")
+            m.assertEqual(options[3].title, "[x] " + Tr(Locale.PlaybackMenu.NormalSpeed))
+            m.assertEqual(options[7].value, "2")
+            m.assertEqual(options[7].title, "[  ] 2x")
+        end function
+
+        @it("marks a non-default speed and labels it on the main row")
+        function _()
+            options = PlayerOverlayLogic.BuildSpeedOptions(1.5)
+            m.assertEqual(options[5].title, "[x] 1.5x")
+            m.assertEqual(PlayerOverlayLogic.SpeedTextFor(1.25), "1.25x")
+            m.assertEqual(PlayerOverlayLogic.SpeedTextFor(1.0), Tr(Locale.PlaybackMenu.NormalSpeed))
         end function
 
         @describe("video details")
@@ -130,6 +186,72 @@ namespace Tests
             m.assertEqual(PlayerOverlayLogic.DetailsDescription(invalid), Tr(Locale.PlaybackMenu.NoDescription))
             m.assertEqual(PlayerOverlayLogic.DetailsDescription({ description: "  " }), Tr(Locale.PlaybackMenu.NoDescription))
             m.assertEqual(PlayerOverlayLogic.DetailsDescription({ description: "Hello" }), "Hello")
+        end function
+
+        @it("maps the description links to rows with their type in the text and the raw label kept")
+        function _()
+            metadata = {
+                descriptionLinks: [
+                    { kind: "video", id: "vid1", label: "Other video" }
+                    { kind: "channel", id: "UCabc", label: "" }
+                ]
+            }
+            rows = PlayerOverlayLogic.DescriptionLinkRows(metadata)
+
+            m.assertEqual(rows.Count(), 2)
+            m.assertEqual(rows[0].id, "vid1")
+            m.assertEqual(rows[0].label, "Other video")
+            m.assertEqual(rows[0].text, Tr(Locale.SearchFilters.Video) + ": Other video")
+            m.assertEqual(rows[1].text, Tr(Locale.SearchFilters.Channel) + ": UCabc", "the id stands in for a missing label")
+            m.assertEqual(PlayerOverlayLogic.DescriptionLinkRows(invalid).Count(), 0)
+        end function
+
+        @it("passes the game through when it has a name, otherwise nothing")
+        function _()
+            game = PlayerOverlayLogic.DetailsGame({ game: { title: "Super Mario World", year: "1990", image: "https://img" } })
+            m.assertEqual(game.title, "Super Mario World")
+            m.assertEqual(game.year, "1990")
+            m.assertEqual(game.image, "https://img")
+            m.assertEqual(PlayerOverlayLogic.DetailsGame({ game: { year: "1990" } }), invalid)
+            m.assertEqual(PlayerOverlayLogic.DetailsGame(invalid), invalid)
+        end function
+
+        @describe("channel button")
+
+        @it("reads the channel id from the metadata, then from the played queue item")
+        function _()
+            m.assertEqual(PlayerOverlayLogic.ChannelId({ authorId: "UCmeta" }, invalid), "UCmeta")
+
+            content = CreateObject("roSGNode", "Node")
+            content.addField("authorId", "string", false)
+            content.authorId = "UCcontent"
+            m.assertEqual(PlayerOverlayLogic.ChannelId({}, content), "UCcontent")
+            m.assertEqual(PlayerOverlayLogic.ChannelId(invalid, content), "UCcontent")
+            m.assertEqual(PlayerOverlayLogic.ChannelId(invalid, invalid), "")
+        end function
+
+        @it("uses the owner thumbnail, then Invidious's author thumbnails, then the generic user icon")
+        function _()
+            m.assertEqual(PlayerOverlayLogic.ChannelAvatarUri({ authorThumbnail: "https://a/one.jpg" }), "https://a/one.jpg")
+            m.assertEqual(PlayerOverlayLogic.ChannelAvatarUri({ authorThumbnails: [{ url: "https://a/small.jpg" }, { url: "https://a/big.jpg" }] }), "https://a/big.jpg")
+            m.assertEqual(PlayerOverlayLogic.ChannelAvatarUri({ authorThumbnails: [{ url: "//a/big.jpg" }] }), "https://a/big.jpg")
+            m.assertEqual(PlayerOverlayLogic.ChannelAvatarUri(invalid), "pkg:/images/icons/user-200.png")
+        end function
+
+        @it("offers subscribe/unsubscribe only when a profile can subscribe, then open the channel")
+        function _()
+            rows = PlayerOverlayLogic.ChannelRows(true, false)
+            m.assertEqual(rows.Count(), 2)
+            m.assertEqual(rows[0].title, Tr(Locale.Buttons.Subscribe))
+            m.assertEqual(rows[1].title, Tr(Locale.ContextMenu.OpenChannel))
+
+            rows = PlayerOverlayLogic.ChannelRows(true, true)
+            m.assertEqual(rows[0].title, Tr(Locale.Buttons.Unsubscribe))
+            m.assertEqual(rows[0].value, "unsubscribe")
+
+            rows = PlayerOverlayLogic.ChannelRows(false, false)
+            m.assertEqual(rows.Count(), 1)
+            m.assertEqual(rows[0].value, "channel")
         end function
 
         @describe("comment rows")

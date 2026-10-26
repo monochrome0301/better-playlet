@@ -27,8 +27,8 @@ A thin coordinator over a pure-logic brain and projection-only renderers:
   reports, and the playback summary sent on close (startup, play starts, playing and underrun time, errors, INV-D1
   heals and tail resolves, how it ended). The coordinator reports what happens; it holds no telemetry code.
 - **Renderers** (`TrickPlayBar/`, `BifDisplay/`, `LargePause/`, `LoadBufferSpinner/`, `ButtonRow/`,
-  `VideoPlayerButton/`) — SceneGraph components that are pure projections of scalar input fields.
-  Each self-derives its own visibility from `transportMode` (a commit sets `transportMode=idle` and the bif
+  `VideoPlayerButton/`, `ChannelButton/`, `RelatedVideos/`) — SceneGraph components that are pure projections of
+  scalar input fields. Each self-derives its own visibility from `transportMode` (a commit sets `transportMode=idle` and the bif
   hides itself, with no external hide call). The title/metadata labels and the shared `Clock` component live
   directly in a Group under Chrome (the clock self-ticks once a minute — no coordinator plumbing).
 
@@ -102,6 +102,16 @@ the playing edge; the device auto-resumes on any seek).
 A transport freezes the video, so an external resume from the linked phone (Lounge sets `control=resume` on the
 player) is caught in `OnControlChange` and takes over: cancel the transport, hide the bif/chrome, and play. VPD
 itself only ever resumes at idle, so a resume under a transport is unambiguously external.
+
+## Related videos
+
+Down while idle (on the bar tier, or from a hidden chrome) opens the watch page's recommendations as a
+3-column grid; without any it falls through to Down's old job (reveal the chrome / move tiers). OK plays the
+picked video through the queue and closes the player, Up on the first row or Back closes the feed. The feed is
+built from `content.metadata.recommendedVideos` (the `/next` watch-page list, with the endscreen as fallback),
+so opening it needs no request of its own; the video keeps playing behind the scrim. When the watch page also
+carried a recommendations continuation (`/next`'s `recommendedVideosContinuation`), the last tile loads the next
+page through the `RelatedVideosJob` job and appends it, landing focus on the first new video.
 
 ## Seeks
 

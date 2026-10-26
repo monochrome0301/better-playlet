@@ -1,0 +1,142 @@
+import "pkg:/components/Services/AISList/AISList.bs"
+import "pkg:/source/tests/LoggingGlobals.bs"
+
+namespace Tests
+
+    @suite
+    class AISListTests extends Rooibos.BaseTestSuite
+
+        protected override function beforeEach()
+            Tests.SetUpLoggingGlobals()
+        end function
+
+        function CreateService(warnlistEnabled = false as boolean) as object
+            return new AISList.AISListService({
+                "content_feed.aislist": true
+                "content_feed.aislist.warnlist": warnlistEnabled
+            })
+        end function
+
+        function CreateVideo(authorId as string, handle = "" as string) as object
+            item = {
+                type: "video"
+                videoId: "video1"
+                authorId: authorId
+            }
+            if handle <> ""
+                item.channelHandle = handle
+            end if
+            return item
+        end function
+
+        function BlocklistText() as string
+            return `! comment` + chr(13) + chr(10) + `@BlockedChannel` + chr(13) + chr(10) + `UCblockedchannelid000000` + chr(13) + chr(10)
+        end function
+
+        @describe("AISList.NormalizeList")
+
+        @it("ignores comments and blanks, lowercases handles and keeps channel ids")
+        function _()
+            list = AISList.NormalizeList(m.BlocklistText())
+            m.assertTrue(AISList.Contains(list.handles, "@blockedchannel"))
+            m.assertTrue(AISList.Contains(list.ids, "UCblockedchannelid000000"))
+            m.assertFalse(AISList.Contains(list.handles, "! comment"))
+            m.assertFalse(list.handles.InStr(" ") > -1)
+        end function
+
+        @it("returns empty sets for a list without entries")
+        function _()
+            list = AISList.NormalizeList("! only a comment" + chr(10) + chr(10))
+            m.assertEqual(list.handles, "")
+            m.assertEqual(list.ids, "")
+        end function
+
+        @describe("AISList.ParseVanityHandle")
+
+        @it("reads the handle from a channel metadata response")
+        function _()
+            json = {
+                metadata: {
+                    channelMetadataRenderer: {
+                        vanityChannelUrl: "http://www.youtube.com/@SomeChannel"
+                    }
+                }
+            }
+            m.assertEqual(AISList.ParseVanityHandle(json), "@somechannel")
+        end function
+
+        @it("has no handle for a channel that only has a channel URL")
+        function _()
+            json = {
+                metadata: {
+                    channelMetadataRenderer: {
+                        vanityChannelUrl: "http://www.youtube.com/channel/UCabc"
+                    }
+                }
+            }
+            m.assertEqual(AISList.ParseVanityHandle(json), "")
+        end function
+
+        @it("is invalid when the response has no channel metadata")
+        function _()
+            m.assertInvalid(AISList.ParseVanityHandle({}))
+        end function
+
+        @describe("AISList.AISListService")
+
+        @it("hides a video whose channel handle is listed")
+        function _()
+            service = m.CreateService()
+            service.SetLists(m.BlocklistText())
+            items = [m.CreateVideo("UC1", "@blockedchannel"), m.CreateVideo("UC2", "@allowed")]
+            filtered = service.FilterItems(items, false)
+            m.assertEqual(filtered.Count(), 1)
+            m.assertEqual(filtered[0].authorId, "UC2")
+        end function
+
+        @it("hides a video whose channel id is listed")
+        function _()
+            service = m.CreateService()
+            service.SetLists(m.BlocklistText())
+            filtered = service.FilterItems([m.CreateVideo("UCblockedchannelid000000")], false)
+            m.assertEqual(filtered.Count(), 0)
+        end function
+
+        @it("hides warnlisted channels only when the warnlist is enabled")
+        function _()
+            items = [m.CreateVideo("UC1", "@warnedchannel")]
+
+            withoutWarnlist = m.CreateService(false)
+            withoutWarnlist.SetLists(m.BlocklistText(), "@warnedchannel" + chr(10))
+            m.assertEqual(withoutWarnlist.FilterItems(items, false).Count(), 1)
+
+            withWarnlist = m.CreateService(true)
+            withWarnlist.SetLists(m.BlocklistText(), "@warnedchannel" + chr(10))
+            m.assertEqual(withWarnlist.FilterItems(items, false).Count(), 0)
+        end function
+
+        @it("keeps unknown channels")
+        function _()
+            service = m.CreateService()
+            service.SetLists(m.BlocklistText())
+            filtered = service.FilterItems([m.CreateVideo("UCunknownchannel000000", "@notlisted")], false)
+            m.assertEqual(filtered.Count(), 1)
+        end function
+
+        @it("does nothing when the preference is off")
+        function _()
+            service = new AISList.AISListService({ "content_feed.aislist": false })
+            service.SetLists(m.BlocklistText())
+            m.assertEqual(service.FilterItems([m.CreateVideo("UC1", "@blockedchannel")], false).Count(), 1)
+        end function
+
+        @it("does nothing when the lists are empty")
+        function _()
+            service = m.CreateService()
+            service.SetLists("")
+            m.assertEqual(service.FilterItems([m.CreateVideo("UC1", "@blockedchannel")], false).Count(), 1)
+        end function
+
+    end class
+
+end namespace

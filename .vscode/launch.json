@@ -18,19 +18,6 @@
             "files": [
                 "**"
             ],
-            "componentLibrariesPort": 8086,
-            "componentLibraries": [
-                {
-                    "rootDir": "${workspaceFolder}/build/playlet-lib",
-                    "sourceDirs": [
-                        "${workspaceFolder}/playlet-lib/src"
-                    ],
-                    "outFile": "playlet-lib.zip",
-                    "files": [
-                        "**"
-                    ]
-                }
-            ],
             "preLaunchTask": "build-dev",
             "injectRdbOnDeviceComponent": true,
             "injectRaleTrackerTask": true,

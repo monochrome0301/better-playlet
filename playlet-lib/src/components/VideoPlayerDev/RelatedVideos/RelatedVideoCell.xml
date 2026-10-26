@@ -1,0 +1,27 @@
+<component name="RelatedVideoCell" extends="Group">
+    <!-- One tile in the related-videos feed: thumbnail with duration, up to two title lines, then the
+         author · views · age line. Compact so two 3-column rows fit above the player's bottom edge. -->
+    <interface>
+        <field id="itemContent" type="node" onChange="OnContentSet" />
+    </interface>
+    <children>
+        <LayoutGroup itemSpacings="[8,2,2]">
+            <Poster id="thumbnail" width="350" height="196" loadDisplayMode="scaleToZoom"
+                failedBitmapUri="pkg:/images/thumbnail-missing.jpg">
+                <Rectangle id="durationRect" width="64" height="26" color="0x000000" opacity="0.8"
+                    translation="[278,166]" visible="false">
+                    <Label id="durationLabel" width="64" height="26" horizAlign="center" vertAlign="center"
+                        font="font:SmallestSystemFont" />
+                </Rectangle>
+            </Poster>
+            <Rectangle id="loadMoreRect" width="350" height="196" color="0x1A1A1A"
+                opacity="0.92" visible="false">
+                <Label id="loadMoreLabel" width="350" height="196" horizAlign="center" vertAlign="center"
+                    wrap="true" font="font:SmallestBoldSystemFont" color="0xFEFEFEFF" />
+            </Rectangle>
+            <EmojiLabel id="titleLabel" width="350" maxLines="2" wrap="true"
+                baseFont="font:SmallestBoldSystemFont" baseSize="18" />
+            <Label id="metaLabel" width="350" height="22" font="font:SmallestSystemFont" color="0xBBBBBBFF" />
+        </LayoutGroup>
+    </children>
+</component>

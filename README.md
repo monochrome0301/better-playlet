@@ -21,63 +21,58 @@
   </a>
 </p>
 
-# Playlet
-
-Better-Playlet is an unofficial YouTube client and fork for Roku 📺
+# Better-Playlet
 
 ## What is Better-Playlet
 
-Is a vibecoded (because i dont know how to code :C) fork from Playlet made with UI and comfort in mind, puting the youtube comments (compatibility with gifs in comments is a work in progress) and made from scratch the UI (the UI rework is a work in progress, but the Roku TV programming languages are a bit limited in a lot of thing so is going to take a long time), is made to have all the thing from and usual youtube client, descriptions, dislikes (Return Youtube Dislike), and a lot of other things that Playlet has a little difficult to enjoy in their massive esplendor.
+It is a fork of **[Playlet](https://github.com/iBicha/playlet)** made with vibecoding (because I don't know how to program :C) and created with the interface and comfort in mind. It includes YouTube comments (GIF compatibility in comments is a work in progress) and the user interface has been rebuilt from scratch (the interface overhaul is a work in progress, but Roku TV programming languages have quite a few limitations in many things, so it's going to take a long time). It is made to have everything a regular YouTube client has: descriptions, dislikes ([Return YouTube Dislike](https://returnyoutubedislike.com/)), and many other things that in Playlet are a bit hard to enjoy in all their splendor.
 
 ## Screenshots
 
-  <a href="./docs/screenshots/README.md">
-
 | [![Home](docs/screenshots/home.jpg)](docs/screenshots/README.md) | [![Search](docs/screenshots/search.jpg)](docs/screenshots/README.md) | [![Settings](docs/screenshots/settings.jpg)](docs/screenshots/README.md) |
 | ---------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-
-  </a>
 
 More under [Screenshots](./docs/screenshots/README.md)
 
 ## Installation
 
-[Playlet on Roku channel store](https://channelstore.roku.com/details/4a41d0921265a5e31429a7679442153f:b5bcb5b630c28b01e93bf59856317b43/playlet) or search "Playlet" in the Roku channel store on your device.
+Better-Playlet is an unofficial client (and fork of Playlet) for [Roku](https://www.roku.com/).
 
-Can't install from the store? See [How to install Playlet as a sideloaded/dev app](https://github.com/iBicha/playlet/discussions/371)
+Installing Better-Playlet is only available via **sideload** ([how to install Playlet as a sideloaded/dev app](https://github.com/iBicha/playlet/discussions/371)).
 
 ## Features
 
-- 🔥 No Ads (Not now, not ever)
-- 🕵️ No Tracking
-- 🛡️ Privacy driven (supports [Invidious](https://invidious.io/) backend)
-- 🙋 User accounts (supports YouTube and Invidious accounts)
-- ⚔️ [SponsorBlock](https://sponsor.ajay.app/) integration (skips undesirable sections in videos)
-- 👎 View Dislikes in a video with Return Youtube Dislike
-- 📱 Browse, search, and cast from phone using the YouTube app or the browser
+- 🔥 No ads (not now, not ever)
+- 🕵️ No tracking
+- 🛡️ Privacy-focused (compatible with the [Invidious](https://invidious.io/) backend)
+- 🙋 User accounts (compatible with YouTube and Invidious accounts)
+- ⚔️ [SponsorBlock](https://sponsor.ajay.app/) integration (skips unwanted sections of videos)
+- 👎 See YouTube video dislikes with [Return YouTube Dislike](https://returnyoutubedislike.com/) (exclusive Better-Playlet feature)
+- 💬 See comments and comment replies (exclusive Better-Playlet feature)
+- 📄 See video descriptions and access other videos and channels from them (exclusive Better-Playlet feature)
+- 📱 Browse, search, and cast from your phone using the YouTube app
 - 🔮 Picture-in-picture mode
-- ⚡ Fast! [Check out how we compare with the official YouTube app](https://youtu.be/qmSvA-QQW20)
+- ⚡ Fast! [See how we compare to the official YouTube app](https://youtu.be/qmSvA-QQW20)
 - 🔤 Translated using [Weblate](https://hosted.weblate.org/projects/playlet/playlet/)
 
-### Cast from phone
+## Cast from phone
 
-- Open "Remote" tab in Playlet
-  - Scan QR Code with Phone, and use the browser; OR
-  - Use the YouTube app to connect using the same Wi-Fi; OR
-  - Use the `Link with TV code` to connect
+- Open **"Remote"** in Better-Playlet
+  - Scan the QR code with your phone and use the browser; or
+  - Use the [YouTube app](https://www.youtube.com/) to connect using the same Wi-Fi network; or
+  - Use the **"Link with TV code"** option to connect
 
 ## Development
 
-For everything related to Playlet app development, please see the [documentation](./docs/README.md)
+For everything related to Better-Playlet app development, see the [documentation](./docs/README.md).
 
 ## Analytics and telemetry
 
-Roku collects usage data, and you can find the data made available to Playlet in the [Wiki](https://github.com/iBicha/playlet/wiki).
-Playlet could run on variaty of devices, with different capabilities and screen sizes, and different Invidious instances, in addition to the experimentation YouTube does based on account and/or ip.
-This is why it was necessary to collect telemetry/diagnostics data, in order to capture issues and fix them. However, you can disable this feature in the settings.
-But it's not enough, it's important to report any issues you encouter using Playlet, so they can be addressed.
+Roku collects usage data, and you can find the data made available to Better-Playlet on the [wiki](https://github.com/iBicha/playlet/wiki).
 
-## Why Playlet
+Better-Playlet can run on a variety of devices, with different capabilities and screen sizes, and different [Invidious](https://invidious.io/) instances, in addition to the experimentation YouTube does based on the account and/or IP. That's why it was necessary to collect telemetry/diagnostic data, to detect problems and fix them. However, you can disable this feature in the settings.
+
+## Why Better-Playlet
 
 ```none
 playlet - noun
@@ -85,23 +80,17 @@ play•let /ˈplālət/
 : a short play
 ```
 
-**Better-Playlet** is about keeping the time you spend on YouTube short and useful. It values your time, so it does not show you ads, and allows you to skip sponsored sections and other irrelevant information that's designed to monitize you and/or waste your time.
+**[Better-Playlet](https://github.com/monochrome0301/better-playlet)** and **[Playlet](https://github.com/iBicha/playlet)** are about keeping the time you spend on [YouTube](https://www.youtube.com/) short and useful. They value your time, so they don't show you ads and let you skip sponsored sections and other irrelevant information designed to monetize you and/or make you waste your time.
 
-There's a cliché about how a lot of open source software is **`"Made with ♡"`**. This project in particular is **not**.<br/>
-**Better-Playlet** and **Playlet** was created out of **spite**, because I believe I have watched enough back-to-back, unskippable YouTube ads for a lifetime.
+There is a cliché about how much open-source software is **"Made with ♡"**. This particular project is **not**.<br/>
+**[Better-Playlet](https://github.com/monochrome0301/better-playlet)** and **[Playlet](https://github.com/iBicha/playlet)** were created out of **spite**, because I think I've already seen enough consecutive and unavoidable YouTube ads for a lifetime.
 
-By removing all the bloat, the ads, the tracking, we could end up with an even faster app than the official one.
+By removing all the excess, ads, and tracking, we might end up with an app that's even faster than the official one.
 
-In any case, I hope you find **Better-Playlet** or **Playlet** useful, and pleasant to use.
-
-## AI models used
-
-DeepSeek 4.1-1017
+In any case, I hope you find **[Playlet](https://github.com/iBicha/playlet)** useful and pleasant to use.
 
 ## Disclaimer
 
-**Better-Playlet** does not serve or distribute any material from unauthorized sources.<br/>
-**Better-Playlet** is simply a frontend to other systems (such as [Invidious](https://github.com/iv-org/invidious)), bringing the watching experience to the TV, as opposed to the existing frontends that are web and mobile focused.<br/>
-**Better-Playlet** authors acknowledge that all trademarks and registered trademarks mentioned in this repository and related pages are the property of their respective owners. The use of these trademarks or trade names is for identification purposes only and does not imply any endorsement, affiliation, or sponsorship by the trademark owner.
-
-<!-- markdownlint-configure-file {"MD024": { "siblings_only": true } } -->
+**[Better-Playlet](https://github.com/monochrome0301/better-playlet)** and **[Playlet](https://github.com/iBicha/playlet)** does not serve or distribute any material from unauthorized sources.<br/>
+**[Better-Playlet](https://github.com/monochrome0301/better-playlet)** and **[Playlet](https://github.com/iBicha/playlet)** is simply a frontend to other systems (such as [Invidious](https://invidious.io/)), bringing the watching experience to the TV, as opposed to the existing frontends that are web and mobile focused.<br/>
+**Playlet** authors acknowledge that all trademarks and registered trademarks mentioned in this repository and related pages are the property of their respective owners. The use of these trademarks or trade names is for identification purposes only and does not imply any endorsement, affiliation, or sponsorship by the trademark owner.

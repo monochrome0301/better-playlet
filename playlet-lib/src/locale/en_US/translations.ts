@@ -833,12 +833,52 @@
         <translation>Remove AI-generated dubbed audio tracks.</translation>
     </message>
     <message>
+        <source>Subtitle text color</source>
+        <translation>Subtitle text color</translation>
+    </message>
+    <message>
+        <source>Color of the subtitle text. Default follows the Roku caption settings.</source>
+        <translation>Color of the subtitle text. Default follows the Roku caption settings.</translation>
+    </message>
+    <message>
+        <source>Subtitle background color</source>
+        <translation>Subtitle background color</translation>
+    </message>
+    <message>
+        <source>Color of the subtitle background. Default follows the Roku caption settings.</source>
+        <translation>Color of the subtitle background. Default follows the Roku caption settings.</translation>
+    </message>
+    <message>
+        <source>Subtitle background opacity</source>
+        <translation>Subtitle background opacity</translation>
+    </message>
+    <message>
+        <source>Opacity of the subtitle background. Default follows the Roku caption settings.</source>
+        <translation>Opacity of the subtitle background. Default follows the Roku caption settings.</translation>
+    </message>
+    <message>
         <source>Disable Shorts</source>
         <translation>Disable Shorts</translation>
     </message>
     <message>
         <source>Disable short videos.</source>
         <translation>Disable short videos.</translation>
+    </message>
+    <message>
+        <source>Hide AI slop channels</source>
+        <translation>Hide AI slop channels</translation>
+    </message>
+    <message>
+        <source>Hide channels from the AiSList community blocklist. The list is downloaded from GitHub. Data: AiSList (CC BY-NC 4.0).</source>
+        <translation>Hide channels from the AiSList community blocklist. The list is downloaded from GitHub. Data: AiSList (CC BY-NC 4.0).</translation>
+    </message>
+    <message>
+        <source>Also hide likely AI channels</source>
+        <translation>Also hide likely AI channels</translation>
+    </message>
+    <message>
+        <source>Also hide channels from the AiSList warnlist (medium confidence). Only applies while 'Hide AI slop channels' is enabled.</source>
+        <translation>Also hide channels from the AiSList warnlist (medium confidence). Only applies while 'Hide AI slop channels' is enabled.</translation>
     </message>
     <message>
         <source>Invidious preferences</source>
@@ -1041,12 +1081,28 @@
         <translation>Audio</translation>
     </message>
     <message>
+        <source>Speed</source>
+        <translation>Speed</translation>
+    </message>
+    <message>
+        <source>Normal</source>
+        <translation>Normal</translation>
+    </message>
+    <message>
         <source>Comments</source>
         <translation>Comments</translation>
     </message>
     <message>
         <source>Video description</source>
         <translation>Video description</translation>
+    </message>
+    <message>
+        <source>Links</source>
+        <translation>Links</translation>
+    </message>
+    <message>
+        <source>Games</source>
+        <translation>Games</translation>
     </message>
     <message>
         <source>No description</source>
@@ -1071,6 +1127,54 @@
     <message>
         <source>Off</source>
         <translation>Off</translation>
+    </message>
+    <message>
+        <source>Text color</source>
+        <translation>Text color</translation>
+    </message>
+    <message>
+        <source>Background color</source>
+        <translation>Background color</translation>
+    </message>
+    <message>
+        <source>Background opacity</source>
+        <translation>Background opacity</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Default</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>White</translation>
+    </message>
+    <message>
+        <source>Black</source>
+        <translation>Black</translation>
+    </message>
+    <message>
+        <source>Red</source>
+        <translation>Red</translation>
+    </message>
+    <message>
+        <source>Green</source>
+        <translation>Green</translation>
+    </message>
+    <message>
+        <source>Blue</source>
+        <translation>Blue</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>Yellow</translation>
+    </message>
+    <message>
+        <source>Magenta</source>
+        <translation>Magenta</translation>
+    </message>
+    <message>
+        <source>Cyan</source>
+        <translation>Cyan</translation>
     </message>
     <message>
         <source>No comments yet</source>
@@ -1099,6 +1203,18 @@
     <message>
         <source>Hearted by creator</source>
         <translation>Hearted by creator</translation>
+    </message>
+    <message>
+        <source>Related videos</source>
+        <translation>Related videos</translation>
+    </message>
+    <message>
+        <source>Load more videos</source>
+        <translation>Load more videos</translation>
+    </message>
+    <message>
+        <source>Failed to load more videos</source>
+        <translation>Failed to load more videos</translation>
     </message>
     <message>
         <source>Request not sent.</source>
@@ -1519,6 +1635,82 @@
     <message>
         <source>Select keyboard language</source>
         <translation>Select keyboard language</translation>
+    </message>
+    <message>
+        <source>No Invidious Instance</source>
+        <translation>No Invidious Instance</translation>
+    </message>
+    <message>
+        <source>Playlet built-in backend does not support Invidious login.</source>
+        <translation>Playlet built-in backend does not support Invidious login.</translation>
+    </message>
+    <message>
+        <source>Can only login with Invidious if an Invidious instance is set in the settings.</source>
+        <translation>Can only login with Invidious if an Invidious instance is set in the settings.</translation>
+    </message>
+    <message>
+        <source>Edit Instance</source>
+        <translation>Edit Instance</translation>
+    </message>
+    <message>
+        <source>Enter the instance url (e.g. %1)</source>
+        <translation>Enter the instance url (e.g. %1)</translation>
+    </message>
+    <message>
+        <source>Video not available</source>
+        <translation>Video not available</translation>
+    </message>
+    <message>
+        <source>Remote not working?</source>
+        <translation>Remote not working?</translation>
+    </message>
+    <message>
+        <source>If the remote control is not working, check your device settings: Settings → System → Advanced System Settings → Control by mobile apps → Network access, and set it to Enabled.</source>
+        <translation>If the remote control is not working, check your device settings: Settings → System → Advanced System Settings → Control by mobile apps → Network access, and set it to Enabled.</translation>
+    </message>
+    <message>
+        <source>No Invidious instance configured. Please set one in settings.</source>
+        <translation>No Invidious instance configured. Please set one in settings.</translation>
+    </message>
+    <message>
+        <source>Please use your Roku device to login to YouTube.</source>
+        <translation>Please use your Roku device to login to YouTube.</translation>
+    </message>
+    <message>
+        <source>Enter the code you see on your Roku device</source>
+        <translation>Enter the code you see on your Roku device</translation>
+    </message>
+    <message>
+        <source>Key</source>
+        <translation>Key</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Value</translation>
+    </message>
+    <message>
+        <source>App internal state</source>
+        <translation>App internal state</translation>
+    </message>
+    <message>
+        <source>Registry</source>
+        <translation>Registry</translation>
+    </message>
+    <message>
+        <source>Full state</source>
+        <translation>Full state</translation>
+    </message>
+    <message>
+        <source>link</source>
+        <translation>link</translation>
+    </message>
+    <message>
+        <source>Export registry</source>
+        <translation>Export registry</translation>
+    </message>
+    <message>
+        <source>Export full state</source>
+        <translation>Export full state</translation>
     </message>
 </context>
 </TS>

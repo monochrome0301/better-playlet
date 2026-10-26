@@ -1,8 +1,11 @@
+import "pkg:/components/ChannelView/ChannelUtils.bs"
 import "pkg:/components/ContentNode/ProfileContentAuthTokenUtils.types.bs"
 import "pkg:/components/Dialog/DialogUtils.bs"
 import "pkg:/components/JobSystem/Jobs.bs"
 import "pkg:/components/JobSystem/JobSystem.bs"
 import "pkg:/components/Services/Innertube/Constants.bs"
+import "pkg:/components/Services/Invidious/InvidiousToContentNode.bs"
+import "pkg:/components/VideoFeed/FeedLoadState.bs"
 import "pkg:/components/VideoPlayer/Lounge.bs"
 import "pkg:/components/VideoPlayerDev/ErrorDialogController.bs"
 import "pkg:/components/VideoPlayerDev/PlaybackTelemetry.bs"
@@ -84,6 +87,22 @@ function Initialize()
     m.commentsVideoId = ""
     m.commentsJobKind = CommentJobKind.Page
     m.commentsJobIndex = -1
+    ' related-videos feed: opened by Down, listing the loaded watch page's recommendations.
+    m.relatedOpen = false
+    m.relatedItems = []
+    m.relatedContinuation = ""
+    m.relatedHasMore = false
+    m.relatedLoading = false
+    m.relatedJob = invalid
+    ' a channel opened from a description link, loading before its ChannelView opens.
+    m.pendingChannel = invalid
+    ' the channel button's menu: subscription state fetched on open and written back by the subscribe/status jobs.
+    m.channelSubscribed = false
+    m.channelStatusAuthorId = ""
+    m.channelStatusJob = invalid
+    m.channelStatusNode = CreateObject("roSGNode", "Node")
+    m.channelStatusNode.AddField("isSubscribed", "boolean", false)
+    m.channelStatusNode.ObserveField("isSubscribed", FuncName(OnChannelSubscriptionStatus))
     ' a setSeek that arrived while the content loads (ms, -1 = none): the content-load seek goes there instead.
     m.loadingSetSeekMs = -1
 
@@ -96,7 +115,7 @@ function Initialize()
     m.firstFrameSeen = false
     m.showFullScreenHint = false
     m.focusTarget = PlayerCoordinatorLogic.FocusTarget.Bar
-    m.focusedButton = 0
+    m.focusedButton = PlayerCoordinatorLogic.PlayerButton.PlayPause
     m.armedTimerId = TransportController.Timer.None ' which module timer the single transportTimer holds
     m.lastCommitSeq = 0
     m.lastFinishSeq = 0
@@ -126,6 +145,7 @@ function Initialize()
     m.playerMenu = m.top.findNode("playerMenu")
     m.commentsList = m.top.findNode("commentsList")
     m.videoDetails = m.top.findNode("videoDetails")
+    m.relatedVideos = m.top.findNode("relatedVideos")
 
     m.autoHide = m.top.findNode("autoHide")
     m.transportTimer = m.top.findNode("transportTimer")
@@ -171,6 +191,7 @@ function OnNodeReady()
 
     ' enableUI=false: the OS draws no chrome; we draw it all from the renderers.
     m.top.enableUI = false
+    ApplyCaptionStyle()
 
     minRect = m.top.minRect
     if m.container.fullscreen
@@ -208,6 +229,10 @@ function OnNodeReady()
     m.commentsList.ObserveField("selected", FuncName(OnCommentsSelected))
     m.commentsList.ObserveField("closed", FuncName(OnCommentsClosed))
     m.videoDetails.ObserveField("closed", FuncName(OnDetailsClosed))
+    m.videoDetails.ObserveField("selected", FuncName(OnDetailsLinkSelected))
+    m.relatedVideos.ObserveField("closed", FuncName(OnRelatedClosed))
+    m.relatedVideos.ObserveField("selected", FuncName(OnRelatedSelected))
+    m.relatedVideos.ObserveField("loadMore", FuncName(OnRelatedLoadMore))
 
     ' a player that starts minimized shows the PiP hint (1s after the shrink settles, auto-hides after 5s).
     m.showFullScreenHint = not m.container.fullscreen
@@ -363,16 +388,20 @@ end function
 '===============================================================================
 function OnKeyEvent(key as string, press as boolean) as boolean
     ' An open overlay owns the remote: its own list already handled Up/Down/OK and Back; everything else is
-    ' swallowed here so it cannot scrub, close the player, or toggle PiP behind the overlay. An overlay that
-    ' says open but is not on screen (a half-finished open) is healed instead of owning the remote: a swallowed
-    ' Back there is an app with no way out.
-    if m.commentsOpen and m.commentsList.visible
-        return true
-    end if
-    if m.menuLevel <> PlayerOverlayLogic.Level.None and m.playerMenu.visible
-        return true
-    end if
-    if m.videoDetails.visible
+    ' swallowed here so it cannot scrub, close the player, or toggle PiP behind the overlay — except the media
+    ' keys, which still pause/resume so playback can be stopped without leaving the overlay first. An overlay
+    ' that says open but is not on screen (a half-finished open) is healed instead of owning the remote: a
+    ' swallowed Back there is an app with no way out.
+    overlayOpen = (m.commentsOpen and m.commentsList.visible) or (m.menuLevel <> PlayerOverlayLogic.Level.None and m.playerMenu.visible) or m.videoDetails.visible or (m.relatedOpen and m.relatedVideos.visible)
+    if overlayOpen
+        if press
+            ' a dedicated Pause key only pauses; Play/PlayOnly are the play/pause toggle (the combined button's keys).
+            if key = RemoteKeys.Play or key = RemoteKeys.PlayOnly
+                TogglePlayPause()
+            else if key = RemoteKeys.Pause and m.top.state = VideoState.Playing
+                TogglePlayPause()
+            end if
+        end if
         return true
     end if
     if m.commentsOpen
@@ -380,6 +409,9 @@ function OnKeyEvent(key as string, press as boolean) as boolean
     end if
     if m.menuLevel <> PlayerOverlayLogic.Level.None
         CloseMenu()
+    end if
+    if m.relatedOpen
+        CloseRelated()
     end if
 
     ' The SponsorBlock manual-skip notice outranks the focus tiers: while it is armed and on screen, OK does
@@ -389,6 +421,12 @@ function OnKeyEvent(key as string, press as boolean) as boolean
         return true
     end if
     if press and key = RemoteKeys.Back and m.sponsorblock.DismissManual()
+        return true
+    end if
+
+    ' Down on the trackbar (or from a hidden chrome) opens the related-videos feed. Without recommendations
+    ' it falls through to Down's old jobs: revealing the chrome or moving between the focus tiers.
+    if press and key = RemoteKeys.Down and m.focusTarget = PlayerCoordinatorLogic.FocusTarget.Bar and m.transport.transportMode = TransportController.Mode.Idle and TryOpenRelated()
         return true
     end if
 
@@ -606,11 +644,17 @@ end function
 function ActivateButton(index as integer) as void
     if index = PlayerCoordinatorLogic.PlayerButton.PlayPause
         TogglePlayPause()
+    else if index = PlayerCoordinatorLogic.PlayerButton.Channel
+        OpenChannelMenu()
+    else if index = PlayerCoordinatorLogic.PlayerButton.Description
+        OpenDetails()
     else if index = PlayerCoordinatorLogic.PlayerButton.Minimize
         MinimizeReset()
         VideoQueueUtils.ToggleVideoPictureInPicture(m.videoQueue)
     else if index = PlayerCoordinatorLogic.PlayerButton.Comments
         OpenComments()
+    else if index = PlayerCoordinatorLogic.PlayerButton.Subtitles
+        OpenMenu(PlayerOverlayLogic.Level.Subtitles)
     else if index = PlayerCoordinatorLogic.PlayerButton.Settings
         OpenMenu()
     end if
@@ -630,9 +674,9 @@ function SyncFocus() as void
 end function
 
 '===============================================================================
-' Playback settings menu — quality (reloads the stream), subtitles and audio (live track switch), and the
-' comments shortcut. The overlay is a two-level list: the main level shows the current values, a selection
-' opens one level (Back walks back to main), or applies a track / reloads at the picked quality.
+' Playback settings menu — quality (reloads the stream), subtitles and audio (live track switch), playback speed,
+' and the comments shortcut. The overlay is a two-level list: the main level shows the current values, a selection
+' opens one level (Back walks back to main), or applies a track / speed / reloads at the picked quality.
 '===============================================================================
 ' The player takes the remote back from an overlay. The overlay releases its inner list first: setting focus on
 ' the player while that list still holds it leaves the remote on the hidden list — keys make the click sound and
@@ -642,11 +686,11 @@ function TakeFocusBackFrom(overlay as object) as void
     NodeSetFocus(m.top, true)
 end function
 
-function OpenMenu() as void
+function OpenMenu(level = PlayerOverlayLogic.Level.Main as string) as void
     if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.videoDetails.visible
         return
     end if
-    SetMenuLevel(PlayerOverlayLogic.Level.Main)
+    SetMenuLevel(level)
 end function
 
 function SetMenuLevel(level as string) as void
@@ -659,9 +703,25 @@ function SetMenuLevel(level as string) as void
     else if level = PlayerOverlayLogic.Level.Subtitles
         m.playerMenu.title = Tr(Locale.PlaybackMenu.Subtitles)
         m.menuRows = PlayerOverlayLogic.BuildSubtitleOptions(ContentSubtitleTracks(), m.selectedSubtitleTrack)
+        m.menuRows.Append(PlayerOverlayLogic.SubtitleStyleRows(SubtitlePreference("playback.subtitle_text_color", "Default"), SubtitlePreference("playback.subtitle_background_color", "Default"), SubtitlePreference("playback.subtitle_background_opacity", "Default")))
+    else if level = PlayerOverlayLogic.Level.SubtitleTextColor
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.TextColor)
+        m.menuRows = PlayerOverlayLogic.BuildCaptionColorOptions(SubtitlePreference("playback.subtitle_text_color", "Default"))
+    else if level = PlayerOverlayLogic.Level.SubtitleBackgroundColor
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.BackgroundColor)
+        m.menuRows = PlayerOverlayLogic.BuildCaptionColorOptions(SubtitlePreference("playback.subtitle_background_color", "Default"))
+    else if level = PlayerOverlayLogic.Level.SubtitleBackgroundOpacity
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.BackgroundOpacity)
+        m.menuRows = PlayerOverlayLogic.BuildCaptionOpacityOptions(SubtitlePreference("playback.subtitle_background_opacity", "Default"))
     else if level = PlayerOverlayLogic.Level.Audio
         m.playerMenu.title = Tr(Locale.PlaybackMenu.Audio)
         m.menuRows = PlayerOverlayLogic.BuildAudioOptions(AvailableAudioTracks(), m.selectedAudioTrack)
+    else if level = PlayerOverlayLogic.Level.Speed
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.Speed)
+        m.menuRows = PlayerOverlayLogic.BuildSpeedOptions(CurrentSpeed())
+    else if level = PlayerOverlayLogic.Level.Channel
+        m.playerMenu.title = CurrentChannelName()
+        m.menuRows = PlayerOverlayLogic.ChannelRows(CurrentProfile() <> invalid, m.channelSubscribed)
     end if
     m.playerMenu.rows = m.menuRows
     m.playerMenu.focusIndex = 0
@@ -683,8 +743,10 @@ function CloseMenu() as void
 end function
 
 function OnMenuClosed() as void
-    if m.menuLevel = PlayerOverlayLogic.Level.Main
+    if m.menuLevel = PlayerOverlayLogic.Level.Main or m.menuLevel = PlayerOverlayLogic.Level.Channel
         CloseMenu()
+    else if m.menuLevel = PlayerOverlayLogic.Level.SubtitleTextColor or m.menuLevel = PlayerOverlayLogic.Level.SubtitleBackgroundColor or m.menuLevel = PlayerOverlayLogic.Level.SubtitleBackgroundOpacity
+        SetMenuLevel(PlayerOverlayLogic.Level.Subtitles)
     else
         SetMenuLevel(PlayerOverlayLogic.Level.Main)
     end if
@@ -693,6 +755,18 @@ end function
 function OnMenuSelected() as void
     index = m.playerMenu.selected.index
     if index < 0 or index >= m.menuRows.Count()
+        return
+    end if
+
+    if m.menuLevel = PlayerOverlayLogic.Level.Channel
+        value = m.menuRows[index].value
+        if value = "subscribe" or value = "unsubscribe"
+            ToggleChannelSubscription(CurrentChannelId())
+        else if value = "channel"
+            channelId = CurrentChannelId()
+            CloseMenu()
+            OpenLinkedChannel(channelId)
+        end if
         return
     end if
 
@@ -715,10 +789,26 @@ function OnMenuSelected() as void
         CloseMenu()
         ApplyQuality(value)
     else if m.menuLevel = PlayerOverlayLogic.Level.Subtitles
-        ApplySubtitle(value)
-        SetMenuLevel(PlayerOverlayLogic.Level.Main)
+        if value = PlayerOverlayLogic.Level.SubtitleTextColor or value = PlayerOverlayLogic.Level.SubtitleBackgroundColor or value = PlayerOverlayLogic.Level.SubtitleBackgroundOpacity
+            SetMenuLevel(value)
+        else
+            ApplySubtitle(value)
+            SetMenuLevel(PlayerOverlayLogic.Level.Subtitles)
+        end if
+    else if m.menuLevel = PlayerOverlayLogic.Level.SubtitleTextColor
+        ApplySubtitleSetting("playback.subtitle_text_color", value)
+        SetMenuLevel(PlayerOverlayLogic.Level.Subtitles)
+    else if m.menuLevel = PlayerOverlayLogic.Level.SubtitleBackgroundColor
+        ApplySubtitleSetting("playback.subtitle_background_color", value)
+        SetMenuLevel(PlayerOverlayLogic.Level.Subtitles)
+    else if m.menuLevel = PlayerOverlayLogic.Level.SubtitleBackgroundOpacity
+        ApplySubtitleSetting("playback.subtitle_background_opacity", value)
+        SetMenuLevel(PlayerOverlayLogic.Level.Subtitles)
     else if m.menuLevel = PlayerOverlayLogic.Level.Audio
         ApplyAudio(value)
+        SetMenuLevel(PlayerOverlayLogic.Level.Main)
+    else if m.menuLevel = PlayerOverlayLogic.Level.Speed
+        ApplySpeed(value)
         SetMenuLevel(PlayerOverlayLogic.Level.Main)
     end if
 end function
@@ -755,7 +845,13 @@ function BuildMainMenuRows() as object
         audioLabel = PlayerOverlayLogic.TrackLabel(audioTrack)
     end if
 
-    return PlayerOverlayLogic.MainRows(qualityLabel, canChangeQuality, subtitleLabel, subtitleTracks.Count() > 0, audioLabel, hasAudio)
+    ' VOD only: live has no speed control, and firmware without the field would silently ignore a write.
+    speedLabel = ""
+    if not m.transport.isLive and m.top.hasField("playbackSpeed")
+        speedLabel = PlayerOverlayLogic.SpeedTextFor(CurrentSpeed())
+    end if
+
+    return PlayerOverlayLogic.MainRows(qualityLabel, canChangeQuality, subtitleLabel, subtitleTracks.Count() > 0, audioLabel, hasAudio, speedLabel)
 end function
 
 function CurrentQuality() as string
@@ -838,6 +934,37 @@ function ApplySubtitle(value as string) as void
     m.top.subtitleTrack = track
 end function
 
+' Reads a subtitle style preference, falling back when the preferences node lacks it (mock / old builds).
+function SubtitlePreference(key as string, fallback as string) as string
+    if m.preferences <> invalid and m.preferences.hasField(key)
+        value = ValidString(m.preferences[key])
+        if value <> ""
+            return value
+        end if
+    end if
+    return fallback
+end function
+
+' Persists the choice (the preferences node writes it to the registry) and repaints the caption renderer.
+function ApplySubtitleSetting(key as string, value as string) as void
+    if m.preferences <> invalid and m.preferences.hasField(key)
+        m.preferences[key] = value
+    end if
+    ApplyCaptionStyle()
+end function
+
+' captionStyle is the Video node's per-app override of the OS caption defaults.
+function ApplyCaptionStyle() as void
+    if not m.top.hasField("captionStyle")
+        return
+    end if
+    m.top.captionStyle = {
+        "Text/Color": SubtitlePreference("playback.subtitle_text_color", "Default")
+        "Background/Color": SubtitlePreference("playback.subtitle_background_color", "Default")
+        "Background/Opacity": SubtitlePreference("playback.subtitle_background_opacity", "Default")
+    }
+end function
+
 function ApplyAudio(value as string) as void
     tracks = AvailableAudioTracks()
     index = value.ToInt()
@@ -847,6 +974,32 @@ function ApplyAudio(value as string) as void
     track = tracks[index]
     m.selectedAudioTrack = track
     m.top.audioTrack = track
+end function
+
+function CurrentSpeed() as float
+    speed = ValidFloat(m.top.playbackSpeed)
+    if speed <= 0
+        return 1.0
+    end if
+    return speed
+end function
+
+' The device applies a speed change on the next play, so a playing video is paused/resumed around the write
+' (same as the Lounge setPlaybackSpeed handler).
+function ApplySpeed(value as string) as void
+    speed = value.ToFloat()
+    if speed <= 0 or not m.top.hasField("playbackSpeed")
+        return
+    end if
+    didPause = (m.top.state = VideoState.Playing)
+    if didPause
+        m.top.control = VideoControl.Pause
+    end if
+    m.top.playbackSpeed = speed
+    if didPause
+        m.top.control = VideoControl.Resume
+    end if
+    Lounge.SendPlaybackSpeedChanged(speed)
 end function
 
 '===============================================================================
@@ -1053,7 +1206,7 @@ function OnCommentsClosed() as void
 end function
 
 '===============================================================================
-' Video details overlay — description plus the stats the loaded metadata carries.
+' Video details overlay — description, the game it is about, plus the stats the loaded metadata carries.
 '===============================================================================
 function OpenDetails() as void
     metadata = ContentMetadata()
@@ -1064,6 +1217,8 @@ function OpenDetails() as void
     end if
     m.videoDetails.title = title
     m.videoDetails.description = PlayerOverlayLogic.DetailsDescription(metadata)
+    m.videoDetails.links = PlayerOverlayLogic.DescriptionLinkRows(metadata)
+    m.videoDetails.game = PlayerOverlayLogic.DetailsGame(metadata)
     m.videoDetails.visible = true
     UpdateDetailsStats()
     NodeSetFocus(m.videoDetails, true)
@@ -1087,6 +1242,352 @@ end function
 
 function OnDetailsClosed() as void
     CloseDetails()
+end function
+
+'===============================================================================
+' Related videos feed — the loaded watch page's recommendations as a grid, opened by Down from the player.
+' A pick replaces what plays now (the queue starts it); the last tile loads the next page; Up on the first
+' row or Back closes the feed.
+'===============================================================================
+function TryOpenRelated() as boolean
+    if m.relatedOpen or not m.container.fullscreen
+        return false
+    end if
+    items = RelatedItems()
+    if items.Count() = 0
+        return false
+    end if
+    m.relatedItems = items
+    m.relatedContinuation = ValidString(ValidAssociativeArray(ContentMetadata()).recommendedVideosContinuation)
+    m.relatedHasMore = m.relatedContinuation <> ""
+    m.relatedLoading = false
+    m.relatedVideos.title = Tr(Locale.PlaybackMenu.RelatedVideos)
+    m.relatedVideos.status = ""
+    m.relatedVideos.content = BuildRelatedContent(items, m.relatedHasMore)
+    m.relatedVideos.visible = true
+    m.relatedOpen = true
+    NodeSetFocus(m.relatedVideos, true)
+    return true
+end function
+
+' The recommendations worth offering: playable items other than the one playing now.
+function RelatedItems() as object
+    items = []
+    currentVideoId = ""
+    content = m.top.content
+    if content <> invalid and content.hasField("videoId")
+        currentVideoId = ValidString(content.videoId)
+    end if
+    for each item in ValidArray(ValidAssociativeArray(ContentMetadata()).recommendedVideos)
+        if not IsAssociativeArray(item)
+            continue for
+        end if
+        videoId = ValidString(item.videoId)
+        if videoId = "" or videoId = currentVideoId
+            continue for
+        end if
+        items.Push(item)
+    end for
+    return items
+end function
+
+' Row cells take the same content nodes as the feeds; Invidious's relative thumbnails get its instance. With
+' more pages available the last tile is the load-more marker, so the grid's own navigation reaches it.
+function BuildRelatedContent(items as object, hasMore as boolean) as object
+    content = CreateObject("roSGNode", "ContentNode")
+    instance = ""
+    try
+        instance = m.invidious@.GetInstance()
+    catch e
+        ' a test mock has no Invidious service; absolute thumbnails do not need the instance.
+    end try
+    for each item in items
+        node = InvidiousContent.ToVideoContentNode(invalid, item, instance)
+        if node <> invalid
+            content.appendChild(node)
+        end if
+    end for
+    if hasMore
+        marker = content.createChild("ContentNode")
+        marker.addFields({
+            loadMore: true
+            title: Tr(Locale.PlaybackMenu.LoadMoreVideos)
+        })
+    end if
+    return content
+end function
+
+function OnRelatedSelected() as void
+    if not m.relatedVideos.visible
+        return
+    end if
+    index = ValidInt(ValidAssociativeArray(m.relatedVideos.selected).index)
+    if index < 0 or index >= m.relatedItems.Count()
+        return
+    end if
+    item = m.relatedItems[index]
+    CloseRelated()
+    PlayLinkedVideo(ValidString(item.videoId), ValidString(item.title))
+end function
+
+' The last tile: fetch the watch page's next recommendation page and append it.
+function OnRelatedLoadMore() as void
+    if not m.relatedOpen or m.relatedLoading or not m.relatedHasMore
+        return
+    end if
+    m.relatedLoading = true
+    m.relatedVideos.status = Tr(Locale.VideoPlayer.Loading)
+    m.relatedJob = JobSystem.CreateCallback(OnRelatedJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.RelatedVideosJob, {
+        continuation: m.relatedContinuation
+    }, m.relatedJob)
+end function
+
+function OnRelatedJobDone(event as object) as void
+    JobSystem.UnobserveCallback(event.getRoSGNode())
+    m.relatedJob = invalid
+    m.relatedLoading = false
+
+    info = event.getInfo()
+    if info.cancel = true or not m.relatedOpen or not m.relatedVideos.visible
+        return
+    end if
+
+    if not info.success
+        m.relatedVideos.status = Tr(Locale.PlaybackMenu.RelatedVideosLoadError)
+        return
+    end if
+
+    data = ValidAssociativeArray(info.data)
+    firstNew = m.relatedItems.Count()
+    added = AppendRelatedItems(ValidArray(data.videos))
+    m.relatedContinuation = ValidString(data.continuation)
+    m.relatedHasMore = m.relatedContinuation <> ""
+    m.relatedVideos.status = ""
+    m.relatedVideos.content = BuildRelatedContent(m.relatedItems, m.relatedHasMore)
+    if added > 0
+        ' land on the first video the page added instead of back at the top
+        m.relatedVideos.focusIndex = firstNew
+    end if
+end function
+
+' Append the page's playable videos that are not in the feed yet; returns how many it gained.
+function AppendRelatedItems(items as object) as integer
+    currentVideoId = ""
+    content = m.top.content
+    if content <> invalid and content.hasField("videoId")
+        currentVideoId = ValidString(content.videoId)
+    end if
+    known = {}
+    for each item in m.relatedItems
+        known[ValidString(item.videoId)] = true
+    end for
+
+    added = 0
+    for each item in items
+        if not IsAssociativeArray(item)
+            continue for
+        end if
+        videoId = ValidString(item.videoId)
+        if videoId = "" or videoId = currentVideoId or known[videoId] = true
+            continue for
+        end if
+        known[videoId] = true
+        m.relatedItems.Push(item)
+        added += 1
+    end for
+    return added
+end function
+
+function CloseRelated() as void
+    if m.relatedJob <> invalid
+        m.relatedJob.cancel = true
+        JobSystem.UnobserveCallback(m.relatedJob)
+        m.relatedJob = invalid
+    end if
+    m.relatedLoading = false
+    m.relatedContinuation = ""
+    m.relatedHasMore = false
+    m.relatedOpen = false
+    m.relatedItems = []
+    ' focus leaves the overlay before it is hidden: hiding the focused node can strand the scene's focus.
+    TakeFocusBackFrom(m.relatedVideos)
+    m.relatedVideos.visible = false
+    m.relatedVideos.content = invalid
+    m.relatedVideos.status = ""
+    ArmAutoHide()
+end function
+
+function OnRelatedClosed() as void
+    CloseRelated()
+end function
+
+'===============================================================================
+' Channel menu — the channel logo button's subscribe / open-channel options. The status and the subscribe
+' action reuse the ChannelView jobs, writing their result onto a small node the coordinator observes.
+'===============================================================================
+function OpenChannelMenu() as void
+    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.videoDetails.visible
+        return
+    end if
+    channelId = CurrentChannelId()
+    if channelId = ""
+        return
+    end if
+    ' a new author starts unknown: the status node keeps the previous channel's value, so reset both.
+    if m.channelStatusAuthorId <> channelId
+        m.channelStatusAuthorId = channelId
+        m.channelSubscribed = false
+        m.channelStatusNode.isSubscribed = false
+    end if
+    SetMenuLevel(PlayerOverlayLogic.Level.Channel)
+    FetchChannelSubscriptionStatus(channelId)
+end function
+
+function CurrentChannelId() as string
+    return PlayerOverlayLogic.ChannelId(ContentMetadata(), m.top.content)
+end function
+
+function CurrentChannelName() as string
+    name = ValidString(ValidAssociativeArray(ContentMetadata()).author)
+    if name = ""
+        return Tr(Locale.SearchFilters.Channel)
+    end if
+    return name
+end function
+
+function CurrentProfile() as object
+    if m.profilesService = invalid
+        return invalid
+    end if
+    return m.profilesService.currentProfile
+end function
+
+function FetchChannelSubscriptionStatus(channelId as string) as void
+    profile = CurrentProfile()
+    if profile = invalid
+        return
+    end if
+    if m.channelStatusJob <> invalid
+        m.channelStatusJob.cancel = true
+        JobSystem.UnobserveCallback(m.channelStatusJob)
+    end if
+    m.channelStatusJob = JobSystem.CreateCallback(OnChannelStatusJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.FetchSubscriptionStatusJob, {
+        channelView: m.channelStatusNode
+        ucid: channelId
+        invidious: m.invidious
+        profile: profile
+    }, m.channelStatusJob)
+end function
+
+function OnChannelStatusJobDone(event as object) as void
+    callback = event.getRoSGNode()
+    JobSystem.UnobserveCallback(callback)
+    if callback = m.channelStatusJob
+        m.channelStatusJob = invalid
+    end if
+end function
+
+' The status/subscribe jobs write the node field; on success the open menu relabels Subscribe <-> Unsubscribe.
+function OnChannelSubscriptionStatus() as void
+    m.channelSubscribed = m.channelStatusNode.isSubscribed
+    if m.menuLevel = PlayerOverlayLogic.Level.Channel
+        SetMenuLevel(PlayerOverlayLogic.Level.Channel)
+    end if
+end function
+
+function ToggleChannelSubscription(channelId as string) as void
+    profile = CurrentProfile()
+    if profile = invalid or channelId = ""
+        return
+    end if
+    ' a status fetch still in flight would overwrite the subscribe result with the pre-click state.
+    if m.channelStatusJob <> invalid
+        m.channelStatusJob.cancel = true
+        JobSystem.UnobserveCallback(m.channelStatusJob)
+        m.channelStatusJob = invalid
+    end if
+    JobSystem.QueueJob(m.jobQueue, Jobs.SubscribeJob, {
+        channelView: m.channelStatusNode
+        invidious: m.invidious
+        ucid: channelId
+        subscribe: not m.channelSubscribed
+        profile: profile
+    })
+end function
+
+' OK on a description link: a video replaces what plays now (the queue starts it); a channel opens above the
+' queue and the player closes, so it is not left playing behind the channel.
+function OnDetailsLinkSelected() as void
+    if not m.videoDetails.visible
+        return
+    end if
+    selected = m.videoDetails.selected
+    if not IsAssociativeArray(selected)
+        return
+    end if
+    links = m.videoDetails.links
+    index = ValidInt(selected.index)
+    if not IsArray(links) or index < 0 or index >= links.Count()
+        return
+    end if
+    link = links[index]
+    if not IsAssociativeArray(link)
+        return
+    end if
+    if ValidString(link.kind) = "channel"
+        OpenLinkedChannel(ValidString(link.id))
+    else
+        PlayLinkedVideo(ValidString(link.id), ValidString(link.label))
+    end if
+end function
+
+function PlayLinkedVideo(videoId as string, title as string) as void
+    if StringUtils.IsNullOrEmpty(videoId)
+        return
+    end if
+    videoNode = CreateObject("roSGNode", "VideoContentNode")
+    videoNode.videoId = videoId
+    videoNode.id = videoId
+    if not StringUtils.IsNullOrEmpty(title)
+        videoNode.title = title
+    end if
+    m.videoQueue.playVideo = videoNode
+end function
+
+function OpenLinkedChannel(channelId as string) as void
+    if StringUtils.IsNullOrEmpty(channelId)
+        return
+    end if
+    ' the channel node is loaded first: a ChannelView opened with only an authorId never builds its feeds.
+    if m.pendingChannel <> invalid
+        m.pendingChannel.UnobserveField("loadState")
+        m.pendingChannel = invalid
+    end if
+    channel = CreateObject("roSGNode", "ChannelContentNode")
+    channel.authorId = channelId
+    channel.ObserveField("loadState", FuncName(OnLinkedChannelLoaded))
+    m.pendingChannel = channel
+    channel@.LoadChannel(m.invidious, m.jobQueue)
+end function
+
+function OnLinkedChannelLoaded() as void
+    channel = m.pendingChannel
+    if channel = invalid
+        return
+    end if
+    state = channel.loadState
+    if state <> FeedLoadState.Loaded and state <> FeedLoadState.Error
+        return
+    end if
+    m.pendingChannel = invalid
+    channel.UnobserveField("loadState")
+    if state <> FeedLoadState.Loaded
+        return
+    end if
+    ChannelUtils.Open(channel, m.appController)
+    ClosePlayer()
 end function
 
 '===============================================================================
@@ -1522,6 +2023,9 @@ function OnFullScreenChange() as void
     ' stays as-is) and hide chrome/spinner/pause now. Fires for the minimize button, external minimize, and a
     ' video that starts minimized.
     if not fullscreen
+        if m.relatedOpen
+            CloseRelated()
+        end if
         if m.transport.transportMode <> TransportController.Mode.Idle
             m.transport.ResetTransport()
             ApplyTransport()
@@ -1945,6 +2449,7 @@ function UpdateOverlayMeta() as void
     secondaryTitle = ValidString(content.secondaryTitle)
     m.titleLabel.rawText = title
     m.secondaryTitleLabel.rawText = secondaryTitle
+    m.buttonRow.channelAvatarUri = PlayerOverlayLogic.ChannelAvatarUri(ContentMetadata())
     ' the loading overlay shows the same title + secondary title while loading.
     m.spinner.title = title
     m.spinner.secondaryTitle = secondaryTitle
@@ -2086,6 +2591,17 @@ function OnClose() as void
     m.commentsList.unobserveField("selected")
     m.commentsList.unobserveField("closed")
     m.videoDetails.unobserveField("closed")
+    m.videoDetails.unobserveField("selected")
+    m.channelStatusNode.UnobserveField("isSubscribed")
+    if m.channelStatusJob <> invalid
+        m.channelStatusJob.cancel = true
+        JobSystem.UnobserveCallback(m.channelStatusJob)
+        m.channelStatusJob = invalid
+    end if
+    if m.pendingChannel <> invalid
+        m.pendingChannel.UnobserveField("loadState")
+        m.pendingChannel = invalid
+    end if
     m.autoHide.unobserveField("fire")
     m.transportTimer.unobserveField("fire")
     m.liveBadgeHold.unobserveField("fire")
@@ -2116,6 +2632,12 @@ function OnClose() as void
         m.commentsJob.cancel = true
         JobSystem.UnobserveCallback(m.commentsJob)
         m.commentsJob = invalid
+    end if
+
+    if m.relatedJob <> invalid
+        m.relatedJob.cancel = true
+        JobSystem.UnobserveCallback(m.relatedJob)
+        m.relatedJob = invalid
     end if
 
     if m.sponsorBlockSegmentsJob <> invalid

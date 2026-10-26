@@ -1,0 +1,45 @@
+' ChannelButton @SGNode suite — instantiates just the button and asserts the avatar projection, the focus tint
+' and the pulse. Pure projection: the coordinator owns focus and keys.
+
+namespace Tests
+
+    @SGNode("ChannelButton")
+    @suite
+    class ChannelButtonTests extends Rooibos.BaseTestSuite
+
+        @describe("avatar")
+
+        @it("projects avatarUri onto the circle-masked poster")
+        function _()
+            m.top.avatarUri = "https://example.com/avatar.jpg"
+            m.assertEqual(m.top.findNode("avatar").uri, "https://example.com/avatar.jpg")
+        end function
+
+        @describe("focus tint")
+
+        @it("resting uses the dark circle; focus inverts it, leaving a ring around the avatar")
+        function _()
+            m.top.focused = false
+            m.assertEqual(m.top.findNode("background").blendColor, m.top.backgroundColor)
+
+            m.top.focused = true
+            m.assertEqual(m.top.findNode("background").blendColor, m.top.focusedBackgroundColor)
+        end function
+
+        @describe("scale pulse")
+
+        @it("gaining focus starts the pulse; a nudge starts it without a focus change")
+        function _()
+            anim = m.top.findNode("nudgeAnim")
+            m.top.focused = false
+            anim.control = "stop"
+            m.top.focused = true
+            m.assertEqual(anim.control, "start")
+            anim.control = "stop"
+            m.top.nudge = true
+            m.assertEqual(anim.control, "start")
+        end function
+
+    end class
+
+end namespace

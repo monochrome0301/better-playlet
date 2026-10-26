@@ -26,7 +26,7 @@ function ScrollTo(viewPort as object, containerToMove as object, focusNode as ob
         translateX = viewPort.x + viewPort.width - rect.x - rect.width
     end if
 
-    if rect.y < viewPort.y
+    if rect.y < viewPort.y or rect.height > viewPort.height
         translateY = viewPort.y - rect.y
     else if rect.y + rect.height > viewPort.y + viewPort.height
         translateY = viewPort.y + viewPort.height - rect.y - rect.height

@@ -17,34 +17,24 @@ function Init() as void
     m.loadingIndicator.visible = true
     m.loadingIndicator.message = GetLoadingMessage()
 
-    m.playletLibUrls = GetPlayletLibUrls()
-    m.playletLibUrlIndex = 0
-
-    LoadPlayletLib()
+    ' The lib is built into the app package (see tools/merge-lib.js), so the scene
+    ' is created right away. Only a lib pinned from the web app is loaded separately.
+    m.playletLibUrls = Registry.GetPlayletLibUrlsFromRegistry()
+    if m.playletLibUrls <> invalid
+        m.shouldClearRegistryOnLoadFail = true
+        m.playletLibUrlIndex = 0
+        LoadPlayletLib()
+    end if
 end function
 
-function GetPlayletLibUrls() as object
-    #if DEBUG
-        debug = { type: "debug-zip", link: Manifest.ReadValue("playlet_lib_zip_debug_url") }
-        embedded = { type: "embedded-zip", link: Manifest.ReadValue("playlet_lib_zip_embedded_url") }
-        #if DEBUG_FALLBACK_TO_EMBEDDED
-            return [debug, embedded]
-        #else
-            return [debug]
-        #end if
-    #else
-        savedUrls = Registry.GetPlayletLibUrlsFromRegistry()
-        if savedUrls <> invalid
-            m.shouldClearRegistryOnLoadFail = true
-            return savedUrls
-        end if
-
-        githubSquashFs = { type: "github-squashfs", link: Manifest.ReadValue("playlet_lib_squashfs_remote_url") }
-        githubZip = { type: "github-zip", link: Manifest.ReadValue("playlet_lib_zip_remote_url") }
-        embedded = { type: "embedded-zip", link: Manifest.ReadValue("playlet_lib_zip_embedded_url") }
-        ' Sideloaded builds must show the lib they were built with; downloading upstream would replace the UI.
-        return [embedded, githubSquashFs, githubZip]
-    #end if
+' Called by Main once launchArgs are set, so the lib reads them during startup
+function CreateMainScene(_unused as dynamic) as void
+    if m.playletLibUrls <> invalid
+        ' A pinned lib creates the scene when it finishes loading
+        return
+    end if
+    m.scene.findNode("MainSceneContainer").createChild("MainScene")
+    m.scene.libSceneCreated = true
 end function
 
 function LoadPlayletLib() as void
@@ -84,6 +74,11 @@ function OnLoadStatusChanged() as void
 end function
 
 function CreateInputTransportEventsHandler(_unused as dynamic) as object
+    if m.playletLibUrls = invalid
+        ' Not in the app's compile scope: the lib is merged into the package after compiling
+        nodeType = "InputTransportEventsHandler"
+        return CreateObject("roSGNode", nodeType)
+    end if
     return CreateObject("roSGNode", "PlayletLib:InputTransportEventsHandler")
 end function
 

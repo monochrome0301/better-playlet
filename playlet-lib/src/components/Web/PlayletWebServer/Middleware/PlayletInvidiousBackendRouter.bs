@@ -1,3 +1,4 @@
+import "pkg:/components/Services/AISList/AISList.bs"
 import "pkg:/components/Services/Innertube/InnertubeService.bs"
 import "pkg:/components/Web/WebServer/Http/HttpRouter.bs"
 
@@ -11,6 +12,11 @@ namespace Http
             m.innertube = server.sceneNodes.innertube
             m.loungeService = server.sceneNodes.loungeService
             m.preferences = server.sceneNodes.preferences
+            m.aislist = new AISList.AISListService(m.preferences)
+        end function
+
+        function FilterItems(items as dynamic, resolve = true as boolean) as dynamic
+            return m.aislist.FilterItems(items, resolve)
         end function
 
         @get("/playlet-invidious-backend/authorize_token")
@@ -92,7 +98,7 @@ namespace Http
             end if
 
             responseBody = {
-                "videos": ValidArray(result.feeds[0].items)
+                "videos": ValidArray(m.FilterItems(result.feeds[0].items))
             }
 
             if result.feeds[0].DoesExist("continuation")
@@ -221,7 +227,9 @@ namespace Http
                 return true
             end if
 
-            response.Json(result.feeds[0])
+            feed = result.feeds[0]
+            feed.items = m.FilterItems(feed.items)
+            response.Json(feed)
 
             return true
         end function
@@ -270,7 +278,7 @@ namespace Http
                 return true
             end if
 
-            response.Json(ValidArray(result.feeds[0].items))
+            response.Json(ValidArray(m.FilterItems(result.feeds[0].items)))
 
             if result.DoesExist("cache-control")
                 response.headers["cache-control"] = result["cache-control"]
@@ -335,7 +343,9 @@ namespace Http
                 return true
             end if
 
-            response.Json(result.feeds[0])
+            feed = result.feeds[0]
+            feed.items = m.FilterItems(feed.items)
+            response.Json(feed)
 
             return true
         end function
@@ -441,6 +451,7 @@ namespace Http
                 end if
 
                 feed = result.feeds[0]
+                feed.items = m.FilterItems(feed.items)
                 if feed.items.Count() > 0
                     response.Json(feed)
                     if fetchedPages = 1 and result.DoesExist("cache-control")
@@ -616,6 +627,11 @@ namespace Http
                 metadata = InnertubeService.GetVideoMetadata(videoId, options)
             end if
 
+            if IsArray(metadata.recommendedVideos)
+                ' No resolution here: playback must not wait for channel lookups.
+                metadata.recommendedVideos = m.FilterItems(metadata.recommendedVideos, false)
+            end if
+
             response.Json(metadata)
 
             if metadata.error <> invalid
@@ -690,6 +706,10 @@ namespace Http
                 response.Json(playlist)
                 response.http_code = 500
                 return true
+            end if
+
+            if IsArray(playlist.videos)
+                playlist.videos = m.FilterItems(playlist.videos)
             end if
 
             index = request.query.index
@@ -770,6 +790,10 @@ namespace Http
                     return true
                 end if
 
+                if IsArray(channel.items)
+                    channel.items = m.FilterItems(channel.items)
+                end if
+
                 response.Json(channel)
                 if channel.DoesExist("cache-control")
                     response.headers["cache-control"] = channel["cache-control"]
@@ -813,6 +837,10 @@ namespace Http
                     response.Json(channel)
                     response.http_code = 500
                     return true
+                end if
+
+                if IsArray(channel.items)
+                    channel.items = m.FilterItems(channel.items)
                 end if
 
                 result = {}

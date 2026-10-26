@@ -42,20 +42,31 @@ namespace Innertube
 
         AddVideoDetailsFromNextResponse(payload, parsedResponse)
 
+        ' The watch page's right-hand recommendations (about 20). The endscreen feed is the fallback: it is
+        ' much shorter and a creator can leave it empty.
+        recommendations = ParseRecommendationItems(RecommendationResults(payload), request)
+        if recommendations.videos.Count() = 0
+            endscreen = ObjectUtils.Dig(payload, ["playerOverlays", "playerOverlayRenderer", "endScreen"])
+            feeds = Innertube.ParseResponseDataForFeeds(endscreen, {
+                request: request
+                noContainers: true
+            })
+            if feeds.Count() > 0
+                recommendations.videos = ValidArray(feeds[0].items)
+            end if
+        end if
+        if recommendations.videos.Count() > 0
+            parsedResponse["recommendedVideos"] = recommendations.videos
+        end if
+        ' the token for more of the same list, so the player's related feed can page without reloading the watch page.
+        if recommendations.continuation <> ""
+            parsedResponse["recommendedVideosContinuation"] = recommendations.continuation
+        end if
+
         playerOverlayRenderer = ObjectUtils.Dig(payload, ["playerOverlays", "playerOverlayRenderer"])
         if not IsAssociativeArray(playerOverlayRenderer)
             LogWarn("Invalid playerOverlayRenderer", playerOverlayRenderer)
             return parsedResponse
-        end if
-
-        endscreen = playerOverlayRenderer["endScreen"]
-
-        feeds = Innertube.ParseResponseDataForFeeds(endscreen, {
-            request: request
-            noContainers: true
-        })
-        if feeds.Count() > 0
-            parsedResponse["recommendedVideos"] = ValidArray(feeds[0].items)
         end if
 
         ' Sometimes the title and author are missing in /player respnonse, so we get them here.
@@ -82,8 +93,113 @@ namespace Innertube
         return parsedResponse
     end function
 
+    ' The watch page's recommendation list, as compact/lockup renderers. Only known renderers are handed to the
+    ' parser: the list also carries continuations and playlist/radio entries, and an unknown node throws in
+    ' DEBUG builds. Playlist entries that survive parsing are dropped (a related feed can only play videos).
+    function ParseRecommendedVideos(payload as object, request as HttpClient.Request) as object
+        return ParseRecommendationItems(RecommendationResults(payload), request).videos
+    end function
+
+    function RecommendationResults(payload as object) as dynamic
+        return ObjectUtils.Dig(payload, ["contents", "twoColumnWatchNextResults", "secondaryResults", "secondaryResults", "results"])
+    end function
+
+    ' The playable videos among a recommendation node list, plus the token that asks for the next page.
+    function ParseRecommendationItems(results as dynamic, request as HttpClient.Request) as object
+        result = {
+            videos: []
+            continuation: ""
+        }
+        if not IsArray(results)
+            return result
+        end if
+
+        videoRenderers = ["lockupViewModel", "compactVideoRenderer", "videoRenderer", "gridVideoRenderer"]
+        rendererResults = []
+        for each item in results
+            if not IsAssociativeArray(item)
+                continue for
+            end if
+            for each renderer in videoRenderers
+                if item.DoesExist(renderer)
+                    rendererResults.Push(item)
+                    exit for
+                end if
+            end for
+            token = RecommendationContinuation(item)
+            if token <> ""
+                result.continuation = token
+            end if
+        end for
+        if rendererResults.Count() = 0
+            return result
+        end if
+
+        feeds = Innertube.ParseResponseDataForFeeds(rendererResults, {
+            request: request
+            noContainers: true
+        })
+        if feeds.Count() = 0
+            return result
+        end if
+
+        for each video in ValidArray(feeds[0].items)
+            if IsAssociativeArray(video) and ValidString(video.videoId) <> ""
+                result.videos.Push(video)
+            end if
+        end for
+        return result
+    end function
+
+    ' "Show more" rides the continuation as an endpoint on the node or as a button inside it.
+    function RecommendationContinuation(item as object) as string
+        token = ValidString(ObjectUtils.Dig(item, ["continuationItemRenderer", "continuationEndpoint", "continuationCommand", "token"]))
+        if token = ""
+            token = ValidString(ObjectUtils.Dig(item, ["continuationItemRenderer", "button", "buttonRenderer", "command", "continuationCommand", "token"]))
+        end if
+        return token
+    end function
+
+    ' One more page of the watch page's recommendations, for the player's related feed.
+    function GetRelatedVideosPage(continuation as string, cancellation as object) as object
+        request = CreateNextRequest({ "continuation": continuation })
+        request.Cancellation(cancellation)
+        response = request.Await()
+        if not response.IsSuccess()
+            return { error: response.ErrorMessage() }
+        end if
+
+        payload = response.Json()
+        if not IsAssociativeArray(payload)
+            return { error: "Invalid related videos response" }
+        end if
+
+        items = []
+        for each listName in ["onResponseReceivedEndpoints", "onResponseReceivedActions"]
+            for each command in ValidArray(payload[listName])
+                for each action in ["reloadContinuationItemsCommand", "appendContinuationItemsAction", "appendContinuationItemsCommand"]
+                    appended = ObjectUtils.Dig(command, [action, "continuationItems"])
+                    if IsArray(appended)
+                        items.Append(appended)
+                    end if
+                end for
+            end for
+        end for
+
+        result = ParseRecommendationItems(items, request)
+        return {
+            videos: result.videos
+            continuation: result.continuation
+        }
+    end function
+
     ' The watch page's stats live outside the player response: the like button and the description panel.
     function AddVideoDetailsFromNextResponse(payload as object, parsedResponse as object) as void
+        game = ParseGame(payload)
+        if game <> invalid
+            parsedResponse["game"] = game
+        end if
+
         contents = ObjectUtils.Dig(payload, ["contents", "twoColumnWatchNextResults", "results", "results", "contents"])
         if not IsArray(contents)
             return
@@ -108,8 +224,135 @@ namespace Innertube
                 if description <> "" and StringUtils.IsNullOrEmpty(parsedResponse.description)
                     parsedResponse["description"] = description
                 end if
+                links = ParseDescriptionLinks(secondary)
+                if links.Count() > 0
+                    parsedResponse["descriptionLinks"] = links
+                end if
+                owner = ObjectUtils.Dig(secondary, ["owner", "videoOwnerRenderer"])
+                if IsAssociativeArray(owner)
+                    if StringUtils.IsNullOrEmpty(parsedResponse.authorId)
+                        parsedResponse["authorId"] = ObjectUtils.Dig(owner, ["navigationEndpoint", "browseEndpoint", "browseId"])
+                    end if
+                    thumbnails = ObjectUtils.Dig(owner, ["thumbnail", "thumbnails"])
+                    if IsArray(thumbnails)
+                        for each thumbnail in thumbnails
+                            if IsAssociativeArray(thumbnail)
+                                url = ValidString(thumbnail.url)
+                                if url <> ""
+                                    parsedResponse["authorThumbnail"] = url
+                                end if
+                            end if
+                        end for
+                    end if
+                end if
             end if
         end for
+    end function
+
+    ' The game the video is about: the structured description's "Games" section carries its name, year and cover.
+    function ParseGame(payload as object) as object
+        panels = ObjectUtils.Dig(payload, ["engagementPanels"])
+        if not IsArray(panels)
+            return invalid
+        end if
+
+        for each panel in panels
+            items = ObjectUtils.Dig(panel, ["engagementPanelSectionListRenderer", "content", "structuredDescriptionContentRenderer", "items"])
+            if not IsArray(items)
+                continue for
+            end if
+            for each item in items
+                attributes = ObjectUtils.Dig(item, ["videoAttributesSectionViewModel", "videoAttributeViewModels"])
+                if not IsArray(attributes)
+                    continue for
+                end if
+                for each attribute in attributes
+                    game = ObjectUtils.Dig(attribute, ["videoAttributeViewModel"])
+                    if not IsAssociativeArray(game)
+                        continue for
+                    end if
+                    title = ValidString(game.title)
+                    if title = ""
+                        continue for
+                    end if
+                    ' YouTube can list several games; the details overlay shows the first.
+                    return {
+                        title: title
+                        year: ValidString(game.subtitle)
+                        image: ParseGameImage(game)
+                    }
+                end for
+            end for
+        end for
+        return invalid
+    end function
+
+    ' The largest cover source; YouTube lists them smallest first.
+    function ParseGameImage(game as object) as string
+        sources = ObjectUtils.Dig(game, ["image", "sources"])
+        if not IsArray(sources)
+            return ""
+        end if
+        url = ""
+        for each source in sources
+            if IsAssociativeArray(source) and not StringUtils.IsNullOrEmpty(source.url)
+                url = source.url
+            end if
+        end for
+        url = ValidString(url)
+        if url.StartsWith("//")
+            url = "https:" + url
+        end if
+        return url
+    end function
+
+    ' The description's links to another video or channel: attributedDescription's commandRuns carry the target.
+    ' A chapter is a watchEndpoint on the same video (continuePlayback), so it is not offered as a link.
+    function ParseDescriptionLinks(secondary as object) as object
+        links = []
+        attributed = ObjectUtils.Dig(secondary, ["attributedDescription"])
+        if not IsAssociativeArray(attributed)
+            return links
+        end if
+        content = ValidString(attributed.content)
+        runs = ObjectUtils.Dig(attributed, ["commandRuns"])
+        if not IsArray(runs)
+            return links
+        end if
+        seen = {}
+        for each commandRun in runs
+            if not IsAssociativeArray(commandRun)
+                continue for
+            end if
+            command = ObjectUtils.Dig(commandRun, ["onTap", "innertubeCommand"])
+            if not IsAssociativeArray(command)
+                continue for
+            end if
+            kind = ""
+            id = ""
+            watch = ObjectUtils.Dig(command, ["watchEndpoint"])
+            browse = ObjectUtils.Dig(command, ["browseEndpoint"])
+            if IsAssociativeArray(watch) and not ValidBool(watch.continuePlayback)
+                kind = "video"
+                id = ValidString(watch.videoId)
+            else if IsAssociativeArray(browse) and ValidString(browse.browseId).StartsWith("UC")
+                ' channel browse ids start with UC; playlists (VL…, PL…) are not offered.
+                kind = "channel"
+                id = ValidString(browse.browseId)
+            end if
+            if StringUtils.IsNullOrEmpty(id) or seen.DoesExist(kind + id)
+                continue for
+            end if
+            seen[kind + id] = true
+            startIndex = ValidInt(commandRun.startIndex)
+            spanLength = ValidInt(commandRun.length)
+            label = ""
+            if startIndex >= 0 and spanLength > 0
+                label = content.Mid(startIndex, spanLength).Trim()
+            end if
+            links.Push({ kind: kind, id: id, label: label })
+        end for
+        return links
     end function
 
     ' Current shape is the segmented like/dislike view; older responses carry a toggle button.
@@ -138,6 +381,12 @@ namespace Innertube
     end function
 
     function ParseVideoDescription(secondary as object) as string
+        ' Current watch pages put the panel straight under the secondary info renderer;
+        ' older responses nested it under "description".
+        content = ObjectUtils.Dig(secondary, ["attributedDescription", "content"])
+        if IsString(content) and content <> ""
+            return content
+        end if
         content = ObjectUtils.Dig(secondary, ["description", "attributedDescription", "content"])
         if IsString(content) and content <> ""
             return content

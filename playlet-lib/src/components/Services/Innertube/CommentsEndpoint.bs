@@ -124,7 +124,8 @@ namespace Innertube
         commands = payload.onResponseReceivedEndpoints
         if IsArray(commands)
             for each command in commands
-                for each key in ["reloadContinuationItemsCommand", "appendContinuationItemsCommand"]
+                ' replies pages arrive as appendContinuationItemsAction, not ...Command.
+                for each key in ["reloadContinuationItemsCommand", "appendContinuationItemsCommand", "appendContinuationItemsAction"]
                     continuationItems = ObjectUtils.Dig(command, [key, "continuationItems"])
                     if IsArray(continuationItems)
                         items.Append(continuationItems)
