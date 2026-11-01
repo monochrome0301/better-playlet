@@ -1167,7 +1167,7 @@ namespace Innertube
 
         metadata = ObjectUtils.Dig(nodeData, ["metadata", "lockupMetadataViewModel"])
 
-        title = ObjectUtils.Dig(metadata, ["title", "content"])
+        title = ParseLockupTitle(metadata, context)
         contentImage = nodeData["contentImage"]
         thumbnailViewModel = ObjectUtils.Dig(contentImage, ["thumbnailViewModel"])
         if thumbnailViewModel = invalid
@@ -1204,6 +1204,7 @@ namespace Innertube
             "type": "video"
             "videoId": videoId
             "title": title
+            "author": LockupAuthor(lines)
             "authorId": authorId
             "lines": lines
             "videoThumbnails": videoThumbnails
@@ -1213,6 +1214,53 @@ namespace Innertube
 
         PushFeedItem(video, context)
         return invalid
+    end function
+
+    ' The lockup's title. The watch page's recommendations carry it at "title.content", but responses have
+    ' also been seen with the title as a plain string or as simpleText/runs shaped text. Without it the
+    ' related feed shows tiles with thumbnails and no text, so every known shape is tried before giving up.
+    function ParseLockupTitle(metadata as object, context as object) as string
+        title = ObjectUtils.Dig(metadata, ["title"])
+        if IsString(title)
+            return title
+        end if
+
+        if IsAssociativeArray(title)
+            content = ValidString(title["content"])
+            if content <> ""
+                return content
+            end if
+        end if
+
+        title = ParseText(title)
+        if title = "" and not context.DoesExist("loggedEmptyLockupTitle")
+            ' One warn per response: an unknown shape keeps the feed's titles empty and this prints the
+            ' node to add a dig for.
+            context["loggedEmptyLockupTitle"] = true
+            details = ""
+            titleNode = ObjectUtils.Dig(metadata, ["title"])
+            rows = ObjectUtils.Dig(metadata, ["metadata", "contentMetadataViewModel", "metadataRows"])
+            if titleNode <> invalid
+                details += "title: " + FormatJson(titleNode)
+            end if
+            if rows <> invalid
+                if details <> ""
+                    details += " "
+                end if
+                details += "rows: " + FormatJson(rows)
+            end if
+            LogWarnNoTelemetry("Lockup item has no title", details)
+        end if
+        return title
+    end function
+
+    ' The channel name: the first metadata row of a video lockup. Returned as "author" so the content node
+    ' conversion maps it to _author even when the rows end up elsewhere.
+    function LockupAuthor(lines as object) as string
+        if IsArray(lines) and lines.Count() > 0
+            return ValidString(lines[0])
+        end if
+        return ""
     end function
 
     function ParseLockupMetadataLines(metadata as object) as object
@@ -1265,7 +1313,7 @@ namespace Innertube
 
         metadata = ObjectUtils.Dig(nodeData, ["metadata", "lockupMetadataViewModel"])
 
-        title = ObjectUtils.Dig(metadata, ["title", "content"])
+        title = ParseLockupTitle(metadata, context)
         authorId = ObjectUtils.Dig(metadata, ["image", "decoratedAvatarViewModel", "rendererContext", "commandContext", "onTap", "innertubeCommand", "browseEndpoint", "browseId"])
 
         thumbnailViewModel = ObjectUtils.Dig(nodeData, ["contentImage", "thumbnailViewModel"])
@@ -1284,6 +1332,7 @@ namespace Innertube
             "type": "video"
             "videoId": videoId
             "title": title
+            "author": LockupAuthor(lines)
             "authorId": authorId
             "lines": lines
             "videoThumbnails": videoThumbnails
@@ -1302,7 +1351,7 @@ namespace Innertube
 
         metadata = ObjectUtils.Dig(nodeData, ["metadata", "lockupMetadataViewModel"])
 
-        title = ObjectUtils.Dig(metadata, ["title", "content"])
+        title = ParseLockupTitle(metadata, context)
         thumbnailViewModel = ObjectUtils.Dig(nodeData, ["contentImage", "collectionThumbnailViewModel", "primaryThumbnail", "thumbnailViewModel"])
         thumbnail = ObjectUtils.Dig(thumbnailViewModel, ["image", "sources", 0, "url"])
         videoCountText = GetThumbnailBadgeText(thumbnailViewModel)

@@ -1,0 +1,65 @@
+import "pkg:/components/Services/Invidious/InvidiousToContentNode.bs"
+
+namespace Tests
+
+    @suite
+    class InvidiousToContentNodeTests extends Rooibos.BaseTestSuite
+
+        @describe("InvidiousContent.ToVideoContentNode")
+
+        @it("maps the named fields of an Invidious video")
+        function _()
+            item = {
+                type: "video"
+                videoId: "vid1"
+                title: "Title"
+                author: "Author"
+                authorId: "UCauthor"
+                lengthSeconds: 61
+                published: 0
+                publishedText: "1 day ago"
+                videoThumbnails: [{ quality: "medium", url: "https://thumb" }]
+                viewCountText: "1 view"
+            }
+
+            node = InvidiousContent.ToVideoContentNode(invalid, item, "")
+
+            m.assertEqual(node.title, "Title")
+            m.assertEqual(node._author, "Author")
+            m.assertEqual(node.authorId, "UCauthor")
+            m.assertEqual(node.thumbnail, "https://thumb")
+            m.assertEqual(node.publishedText, "1 day ago")
+            m.assertEqual(node.viewCountText, "1 view")
+        end function
+
+        @it("mirrors the channel name from lines into _author when there is no author field")
+        function _()
+            item = {
+                type: "video"
+                videoId: "vid2"
+                title: "Title"
+                lines: ["Channel Name", "1K 2d ago"]
+            }
+
+            node = InvidiousContent.ToVideoContentNode(invalid, item, "")
+
+            m.assertEqual(node._author, "Channel Name")
+            m.assertEqual(node.lines.Count(), 2)
+        end function
+
+        @it("leaves _author empty for a video without author or lines")
+        function _()
+            item = {
+                type: "video"
+                videoId: "vid3"
+                title: "Title"
+            }
+
+            node = InvidiousContent.ToVideoContentNode(invalid, item, "")
+
+            m.assertEqual(node.title, "Title")
+            m.assertEqual(node._author, "")
+        end function
+    end class
+
+end namespace

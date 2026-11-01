@@ -274,6 +274,10 @@ namespace Locale
         SubtitleBackgroundOpacity = "Subtitle background opacity"
         SubtitleBackgroundOpacityDescription = "Opacity of the subtitle background. Default follows the Roku caption settings."
 
+        SubtitlesPreferences = "Subtitles preferences"
+        ConfigureSubtitles = "Configure subtitles"
+        SubtitlesSettingsDescription = "Subtitle text color, background color and background opacity"
+
         Backend = "Backend"
         BackendPreferences = "Backend preferences"
         SelectedBackend = "Selected backend"

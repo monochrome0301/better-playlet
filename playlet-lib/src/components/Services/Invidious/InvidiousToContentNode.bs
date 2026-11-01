@@ -54,6 +54,11 @@ namespace InvidiousContent
         SetIfExists(node, "lines", item, "lines")
         SetIfExists(node, "videoInfo", item, "videoInfo")
         SetIfExists(node, "percentDurationWatched", item, "percentDurationWatched")
+        ' Some items only carry the channel name in `lines` (lockup recommendations); mirror it into _author
+        ' so consumers can use either field.
+        if StringUtils.IsNullOrEmpty(node._author) and IsArray(node.lines) and node.lines.Count() > 0
+            node._author = ValidString(node.lines[0])
+        end if
 
         return node
     end function

@@ -1,0 +1,7 @@
+<component name="SubtitleSettingContent" extends="ContentNode">
+    <interface>
+        <field id="settingKey" type="string" />
+        <field id="settingTitle" type="string" />
+        <field id="currentValue" type="string" />
+    </interface>
+</component>

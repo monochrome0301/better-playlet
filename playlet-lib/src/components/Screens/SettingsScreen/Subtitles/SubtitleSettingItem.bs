@@ -1,0 +1,9 @@
+function OnContentSet() as void
+    content = m.top.itemContent
+    if content = invalid
+        return
+    end if
+
+    m.top.settingTitle = content.settingTitle
+    m.top.currentValue = content.currentValue
+end function

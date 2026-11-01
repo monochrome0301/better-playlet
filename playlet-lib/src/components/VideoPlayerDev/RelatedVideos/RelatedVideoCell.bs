@@ -1,6 +1,13 @@
+import "pkg:/source/utils/EmojiText.bs"
 import "pkg:/source/utils/Types.bs"
 
 function Init()
+    FindNodes()
+end function
+
+' Grid cells can have their content set before Init runs (the same race RowCell works around with
+' aliases): resolve the nodes again whenever a reference is missing.
+function FindNodes() as void
     m.thumbnail = m.top.findNode("thumbnail")
     m.titleLabel = m.top.findNode("titleLabel")
     m.metaLabel = m.top.findNode("metaLabel")
@@ -11,8 +18,11 @@ function Init()
 end function
 
 function OnContentSet() as void
+    if m.thumbnail = invalid or m.titleLabel = invalid or m.metaLabel = invalid
+        FindNodes()
+    end if
     content = m.top.itemContent
-    if content = invalid
+    if content = invalid or m.titleLabel = invalid or m.metaLabel = invalid or m.thumbnail = invalid
         return
     end if
 
@@ -30,8 +40,16 @@ function OnContentSet() as void
         return
     end if
 
-    m.titleLabel.rawText = ValidString(content.title)
+    title = ValidString(content.title)
+    m.titleLabel.rawText = title
+    ' The EmojiLabel derives its markup text from rawText in its own observer, which can race the cell
+    ' being recycled on a fast grid; setting the identical markup here makes the title show regardless
+    ' of which callback lands first.
+    m.titleLabel.text = EmojiText.Markup(title)
     m.thumbnail.uri = ValidString(content.thumbnail)
+    ' The meta line sits right below however many lines the title took, with no extra gap.
+    titleHeight = m.titleLabel.localBoundingRect().height
+    m.metaLabel.translation = [0, 204 + titleHeight + 2]
     m.metaLabel.text = MetaText(content)
     duration = ValidString(content.lengthText)
     m.durationRect.visible = duration <> ""

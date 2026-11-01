@@ -1377,6 +1377,18 @@
         <translation>Opacidad del fondo de los subtítulos. Predeterminado usa la configuración de subtítulos de Roku.</translation>
     </message>
     <message>
+        <source>Subtitles preferences</source>
+        <translation>Ajustes de subtítulos</translation>
+    </message>
+    <message>
+        <source>Configure subtitles</source>
+        <translation>Configurar subtítulos</translation>
+    </message>
+    <message>
+        <source>Subtitle text color, background color and background opacity</source>
+        <translation>Color del texto, color del fondo y opacidad del fondo de los subtítulos</translation>
+    </message>
+    <message>
         <source>Disable Shorts</source>
         <translation>Desactivar Shorts</translation>
     </message>

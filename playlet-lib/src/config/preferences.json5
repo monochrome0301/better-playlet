@@ -42,13 +42,29 @@
         defaultValue: true,
         visibility: "tv",
       },
+    ],
+  },
+  {
+    displayText: "Subtitles",
+    key: "subtitles",
+    description: "Subtitles preferences",
+    visibility: "tv",
+    children: [
       {
+        displayText: "Configure subtitles",
+        key: "subtitles.settings",
+        description: "Subtitle text color, background color and background opacity",
+        visibility: "tv",
+        rokuComponent: "SubtitlesControl",
+      },
+      {
+        // Hidden from the settings list; edited in the Subtitles sub-screen
         displayText: "Subtitle text color",
         key: "playback.subtitle_text_color",
         description: "Color of the subtitle text. Default follows the Roku caption settings.",
         type: "radio",
         defaultValue: "Default",
-        visibility: "tv",
+        visibility: "off",
         options: [
           { displayText: "Default", value: "Default" },
           { displayText: "White", value: "White" },
@@ -67,7 +83,7 @@
         description: "Color of the subtitle background. Default follows the Roku caption settings.",
         type: "radio",
         defaultValue: "Default",
-        visibility: "tv",
+        visibility: "off",
         options: [
           { displayText: "Default", value: "Default" },
           { displayText: "White", value: "White" },
@@ -86,7 +102,7 @@
         description: "Opacity of the subtitle background. Default follows the Roku caption settings.",
         type: "radio",
         defaultValue: "Default",
-        visibility: "tv",
+        visibility: "off",
         options: [
           { displayText: "Default", value: "Default" },
           { displayText: "Off", value: "Off" },

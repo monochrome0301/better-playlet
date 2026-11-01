@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Emoji in titles, queue cells, queue notifications and comments, drawn with a bundled emoji font
 - Reply count next to the "View replies" hint in the player's comments
 - "Hide AI slop channels" setting, which hides channels from the [AiSList](https://github.com/Override92/AiSList) blocklist and, optionally, its warnlist
+- Dedicated Subtitles section in Settings: the subtitle text color, background color and background opacity now live behind a "Configure subtitles" button that opens their own settings screen
 
 ### Changed
 
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - "View replies" doing nothing on comments whose replies arrive under the commentRepliesRenderer wrapper
 - Up/Down keys staying dead after closing the player menu, comments or video details, because focus stayed on the hidden list
 - Player settings menu not opening at all when a quality was selected
+- The related-videos feed showing tiles with thumbnails but no title or channel: the lockup title is now read from every known response shape, the channel name is mirrored from the metadata rows, and an unknown shape logs a warn with the node to add a dig for. The cell also lays its labels at fixed positions instead of a LayoutGroup (which measured the thumbnail by its 120x90 placeholder until the bitmap loaded, shifting the text under it) and sets the title markup directly, so recycled cells can no longer lose it
 
 ## [0.49.0] - 2026-10-23
 

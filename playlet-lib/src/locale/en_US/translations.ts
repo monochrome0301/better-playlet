@@ -857,6 +857,18 @@
         <translation>Opacity of the subtitle background. Default follows the Roku caption settings.</translation>
     </message>
     <message>
+        <source>Subtitles preferences</source>
+        <translation>Subtitles preferences</translation>
+    </message>
+    <message>
+        <source>Configure subtitles</source>
+        <translation>Configure subtitles</translation>
+    </message>
+    <message>
+        <source>Subtitle text color, background color and background opacity</source>
+        <translation>Subtitle text color, background color and background opacity</translation>
+    </message>
+    <message>
         <source>Disable Shorts</source>
         <translation>Disable Shorts</translation>
     </message>

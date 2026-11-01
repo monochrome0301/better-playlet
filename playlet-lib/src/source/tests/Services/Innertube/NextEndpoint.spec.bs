@@ -208,6 +208,72 @@ namespace Tests
             m.assertEqual(videos[0].title, "One")
         end function
 
+        @it("reads a lockup recommendation's title, channel and metadata lines")
+        function _()
+            videos = Innertube.ParseRecommendedVideos(m.PayloadWithLockup({
+                metadata: {
+                    lockupMetadataViewModel: {
+                        title: { content: "Lockup title" }
+                        metadata: {
+                            contentMetadataViewModel: {
+                                metadataRows: [
+                                    { metadataParts: [{ text: { content: "Channel Name" } }] }
+                                    { metadataParts: [{ text: { content: "1K" } }, { text: { content: "2d ago" } }] }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }), invalid)
+
+            m.assertEqual(videos.Count(), 1)
+            m.assertEqual(videos[0].videoId, "rec2")
+            m.assertEqual(videos[0].title, "Lockup title")
+            m.assertEqual(videos[0].author, "Channel Name")
+            m.assertEqual(videos[0].lines.Count(), 2)
+            m.assertEqual(videos[0].lines[0], "Channel Name")
+            m.assertEqual(videos[0].lines[1], "1K 2d ago")
+        end function
+
+        @it("reads a lockup title that is a plain string or simpleText shaped")
+        function _()
+            videos = Innertube.ParseRecommendedVideos(m.PayloadWithLockup({
+                metadata: { lockupMetadataViewModel: { title: "Plain title" } }
+            }), invalid)
+            m.assertEqual(videos[0].title, "Plain title")
+
+            videos = Innertube.ParseRecommendedVideos(m.PayloadWithLockup({
+                metadata: { lockupMetadataViewModel: { title: { simpleText: "Simple title" } } }
+            }), invalid)
+            m.assertEqual(videos[0].title, "Simple title")
+        end function
+
+        @it("keeps a lockup without a title in the feed and does not throw")
+        function _()
+            videos = Innertube.ParseRecommendedVideos(m.PayloadWithLockup({
+                metadata: { lockupMetadataViewModel: {} }
+            }), invalid)
+            m.assertEqual(videos.Count(), 1)
+            m.assertEqual(videos[0].title, "")
+        end function
+
+        ' The watch page with one video lockup (contentId "rec2") in its recommendations.
+        function PayloadWithLockup(lockupMetadata as object) as object
+            payload = m.Payload(invalid, invalid)
+            payload.contents.twoColumnWatchNextResults["secondaryResults"] = {
+                secondaryResults: {
+                    results: [{
+                        lockupViewModel: {
+                            contentType: "LOCKUP_CONTENT_TYPE_VIDEO"
+                            contentId: "rec2"
+                        }
+                    }]
+                }
+            }
+            payload.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results[0].lockupViewModel.Append(lockupMetadata)
+            return payload
+        end function
+
         @it("reads the recommendations' continuation token, on the endpoint or on a button")
         function _()
             result = Innertube.ParseRecommendationItems([

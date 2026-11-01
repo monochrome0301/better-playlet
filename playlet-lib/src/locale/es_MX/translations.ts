@@ -501,6 +501,18 @@
         <translation>Preferencias de reproducción de video</translation>
     </message>
     <message>
+        <source>Subtitles preferences</source>
+        <translation>Ajustes de subtítulos</translation>
+    </message>
+    <message>
+        <source>Configure subtitles</source>
+        <translation>Configurar subtítulos</translation>
+    </message>
+    <message>
+        <source>Subtitle text color, background color and background opacity</source>
+        <translation>Color del texto, color del fondo y opacidad del fondo de los subtítulos</translation>
+    </message>
+    <message>
         <source>Preferred video quality</source>
         <translation>Calidad de video preferida</translation>
     </message>

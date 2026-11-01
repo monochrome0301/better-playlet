@@ -1,0 +1,24 @@
+<component name="SubtitleSettingItem" extends="Group">
+    <interface>
+        <field id="itemContent" type="node" onChange="OnContentSet" />
+
+        <field id="settingTitle" type="string" alias="titleLabel.text" />
+        <field id="currentValue" type="string" alias="valueLabel.text" />
+    </interface>
+    <children>
+        <Label id="titleLabel"
+            font="font:SmallestSystemFont"
+            width="320"
+            height="32"
+            vertAlign="center"
+            horizAlign="left"
+            translation="[10, 0]" />
+        <Label id="valueLabel"
+            width="320"
+            height="32"
+            font="font:SmallestSystemFont"
+            vertAlign="center"
+            horizAlign="right"
+            translation="[310, 0]" />
+    </children>
+</component>
