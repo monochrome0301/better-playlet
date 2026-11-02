@@ -188,6 +188,20 @@ namespace Tests
             m.assertEqual(PlayerOverlayLogic.DetailsDescription({ description: "Hello" }), "Hello")
         end function
 
+        @it("pages a long description by the pane area, keeping every character")
+        function _()
+            text = ""
+            for i = 0 to 199
+                text = text + "word "
+            end for
+            pages = PlayerOverlayLogic.TextPages(text, 600, 320)
+            m.assertTrue(pages.Count() > 1, "a 1000-character description spans more than one page")
+            m.assertEqual(pages.Join(""), text, "the split keeps every character")
+            m.assertTrue(pages[0].Len() <= PlayerOverlayLogic.PageChars(600, 320))
+            m.assertEqual(pages[0].Right(1), " ", "a page never ends mid-word")
+            m.assertEqual(PlayerOverlayLogic.TextPages("short", 600, 320).Count(), 1)
+        end function
+
         @it("maps the description links to rows with their type in the text and the raw label kept")
         function _()
             metadata = {

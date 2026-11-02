@@ -1,11 +1,28 @@
+import "pkg:/components/VideoPlayerDev/PlayerOverlayLogic.bs"
 import "pkg:/source/utils/FocusManagement.bs"
 import "pkg:/source/utils/Locale.bs"
 import "pkg:/source/utils/RemoteKeys.bs"
 import "pkg:/source/utils/Types.bs"
 
+' The description pane: one EmojiLabel page at a time, Up/Down pages it. A plain Label cannot draw the bundled
+' emoji font, and ScrollableText's internal Label cannot mix fonts either, so the split is done by pane area
+' (PlayerOverlayLogic.TextPages) and the pane keeps focus, letting the keys bubble to OnKeyEvent.
+const PANE_X = 160
+const PANE_Y = 166
+const PANE_WITH_LINKS = 600
+const PANE_FULL = 960
+const PANE_HEIGHT = 480
+const PANE_HEIGHT_WITH_GAME = 320
+
+' Every findNode is guarded on purpose: a throw in a child's Init makes VideoPlayerDev uncreatable, so an
+' overlay that fails to build must degrade, never take playback down with it.
 function Init()
     m.top.focusable = true
+    m.description = ""
+    m.pages = []
+    m.page = 0
     m.descriptionText = m.top.findNode("descriptionText")
+    m.pageLabel = m.top.findNode("pageLabel")
     m.linksLabel = m.top.findNode("linksLabel")
     m.linksList = m.top.findNode("linksList")
     m.gameGroup = m.top.findNode("gameGroup")
@@ -13,13 +30,18 @@ function Init()
     m.gamePoster = m.top.findNode("gamePoster")
     m.gameTitle = m.top.findNode("gameTitle")
     m.gameYear = m.top.findNode("gameYear")
-    m.linksList.ObserveField("itemSelected", FuncName(OnLinkSelected))
+    if m.linksList <> invalid
+        m.linksList.ObserveField("itemSelected", FuncName(OnLinkSelected))
+    end if
     OnTitleSet()
     OnLinksSet()
 end function
 
 function OnTitleSet() as void
-    m.top.findNode("titleLabel").rawText = ValidString(m.top.title)
+    titleLabel = m.top.findNode("titleLabel")
+    if titleLabel <> invalid
+        titleLabel.rawText = ValidString(m.top.title)
+    end if
 end function
 
 function OnLinksSet() as void
@@ -35,42 +57,124 @@ function OnLinksSet() as void
         end for
     end if
     hasLinks = content.getChildCount() > 0
-    m.linksList.content = content
-    m.linksList.visible = hasLinks
-    m.linksLabel.visible = hasLinks
-    m.linksLabel.text = Tr(Locale.PlaybackMenu.Links)
-    ' the description takes the full width when there is nothing to list beside it.
-    if hasLinks
-        m.descriptionText.width = 600
-    else
-        m.descriptionText.width = 960
+    if m.linksList <> invalid
+        m.linksList.content = content
+        m.linksList.visible = hasLinks
     end if
+    if m.linksLabel <> invalid
+        m.linksLabel.visible = hasLinks
+        m.linksLabel.text = Tr(Locale.PlaybackMenu.Links)
+    end if
+    ' the description takes the full width when there is nothing to list beside it.
+    ApplyPaneSize(hasLinks)
+    RenderDescription()
 end function
 
 ' The game card sits under the description, which gives up the height it needs.
 function OnGameSet() as void
     game = m.top.game
     hasGame = IsAssociativeArray(game) and ValidString(game.title) <> ""
-    m.gameGroup.visible = hasGame
-    if hasGame
-        m.descriptionText.height = 320
-        m.gameLabel.text = Tr(Locale.PlaybackMenu.Games)
-        m.gameTitle.text = ValidString(game.title)
-        m.gameYear.text = ValidString(game.year)
-        m.gameYear.visible = m.gameYear.text <> ""
-        m.gamePoster.uri = ValidString(game.image)
-    else
-        m.descriptionText.height = 480
+    if m.gameGroup <> invalid
+        m.gameGroup.visible = hasGame
     end if
+    if hasGame
+        if m.gameLabel <> invalid
+            m.gameLabel.text = Tr(Locale.PlaybackMenu.Games)
+        end if
+        if m.gameTitle <> invalid
+            m.gameTitle.text = ValidString(game.title)
+        end if
+        if m.gameYear <> invalid
+            m.gameYear.text = ValidString(game.year)
+            m.gameYear.visible = m.gameYear.text <> ""
+        end if
+        if m.gamePoster <> invalid
+            m.gamePoster.uri = ValidString(game.image)
+        end if
+    end if
+    ApplyPaneSize(m.linksList <> invalid and m.linksList.visible)
+    RenderDescription()
+end function
+
+function OnDescriptionSet() as void
+    m.description = ValidString(m.top.description)
+    RenderDescription()
+end function
+
+function ApplyPaneSize(hasLinks as boolean) as void
+    if m.descriptionText = invalid
+        return
+    end if
+    width = PANE_FULL
+    if hasLinks
+        width = PANE_WITH_LINKS
+    end if
+    height = PANE_HEIGHT
+    if m.gameGroup <> invalid and m.gameGroup.visible
+        height = PANE_HEIGHT_WITH_GAME
+    end if
+    m.descriptionText.width = width
+    m.descriptionText.height = height
+    if m.pageLabel <> invalid
+        ' just inside the pane's bottom-right corner, so it never sits on the text or the game card.
+        m.pageLabel.translation = [PANE_X + width - 64, PANE_Y + height - 26]
+    end if
+end function
+
+function RenderDescription() as void
+    if m.descriptionText = invalid
+        return
+    end if
+    m.pages = PlayerOverlayLogic.TextPages(m.description, m.descriptionText.width, m.descriptionText.height)
+    m.page = 0
+    ShowPage()
+end function
+
+function ShowPage() as void
+    if m.descriptionText = invalid
+        return
+    end if
+    count = m.pages.Count()
+    if count > 0
+        m.descriptionText.rawText = m.pages[m.page]
+    end if
+    if m.pageLabel <> invalid
+        if count > 1
+            m.pageLabel.text = (m.page + 1).ToStr() + "/" + count.ToStr()
+        else
+            m.pageLabel.text = ""
+        end if
+    end if
+end function
+
+' A clamped page turn still consumes the key: at the ends there is nowhere else for Up/Down to go.
+function TurnPage(delta as integer) as void
+    page = m.page + delta
+    if page < 0 or page >= m.pages.Count()
+        return
+    end if
+    m.page = page
+    ShowPage()
 end function
 
 function OnFocusChange() as void
     ' true hands the remote to the description; false releases it, so the player can take focus back.
-    NodeSetFocus(m.descriptionText, m.top.focus)
+    if m.descriptionText <> invalid
+        NodeSetFocus(m.descriptionText, m.top.focus)
+    end if
 end function
 
 function OnLinkSelected(event as object) as void
     m.top.selected = { index: event.getData() }
+end function
+
+' Focus is forwarded to the pane by OnFocusChange; checking the overlay too keeps the keys working if it lands
+' on the overlay itself instead of the inner pane.
+function DescriptionHasFocus() as boolean
+    if m.descriptionText = invalid
+        return false
+    end if
+    return m.descriptionText.hasFocus() or m.top.hasFocus()
 end function
 
 function OnKeyEvent(key as string, press as boolean) as boolean
@@ -81,8 +185,18 @@ function OnKeyEvent(key as string, press as boolean) as boolean
         m.top.closed = true
         return true
     end if
-    if m.linksList.visible
-        if key = RemoteKeys.Right and m.descriptionText.hasFocus()
+    ' Up/Down belong to the description while it holds focus (a single page just eats them), never the player.
+    if DescriptionHasFocus()
+        if key = RemoteKeys.Up
+            TurnPage(-1)
+            return true
+        else if key = RemoteKeys.Down
+            TurnPage(1)
+            return true
+        end if
+    end if
+    if m.linksList <> invalid and m.linksList.visible
+        if key = RemoteKeys.Right and DescriptionHasFocus()
             NodeSetFocus(m.linksList, true)
             return true
         end if

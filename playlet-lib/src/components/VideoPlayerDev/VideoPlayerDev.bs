@@ -179,6 +179,8 @@ function Initialize()
 
     httpAgent = m.top.getHttpAgent()
     httpAgent.AddHeader("User-Agent", VIDEO_PLAYER_USER_AGENT)
+    ' the device log's one line that tells "player built" from "player never got this far".
+    LogInfo("VideoPlayerDev ready")
 end function
 
 ' Called by AutoBind once the bound interface fields (container, jobQueue, services, ...) resolve.

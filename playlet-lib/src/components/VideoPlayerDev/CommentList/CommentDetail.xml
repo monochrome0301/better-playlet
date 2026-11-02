@@ -17,7 +17,8 @@
         <Label id="metaLabel" translation="[80,112]" width="1120" height="32"
             font="font:SmallestSystemFont" color="0xBBBBBBFF" wrap="false" />
         <!-- drawFocusFeedback off: the default light highlight would turn the whole page into a white slab. -->
-        <MarkupList id="pages" translation="[80,164]" itemSize="[1120,470]"
+        <!-- width/height are explicit: a zero-sized grid lays nothing out and can stall the render pass. -->
+        <MarkupList id="pages" translation="[80,164]" width="1120" height="470" itemSize="[1120,470]"
             itemComponentName="CommentDetailPage" numRows="1" vertFocusAnimationStyle="floatingFocus"
             drawFocusFeedback="false" />
     </children>

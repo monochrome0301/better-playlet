@@ -328,6 +328,44 @@ namespace PlayerOverlayLogic
         return description
     end function
 
+    ' Split a long description into pages that fit the pane at the current size. SceneGraph has no text
+    ' measurement at build time, so the budget is the comment reader's proven area: ~350 px² per character.
+    function TextPages(text as string, width as float, height as float) as object
+        pages = []
+        if text = ""
+            return pages
+        end if
+        cap = PageChars(width, height)
+        index = 1
+        while index <= text.Len()
+            chunk = text.Mid(index - 1, cap)
+            if index + cap <= text.Len()
+                cut = 0
+                for i = cap - 1 to 200 step -1
+                    separator = chunk.Mid(i - 1, 1)
+                    if separator = " " or separator = Chr(10)
+                        cut = i
+                        exit for
+                    end if
+                end for
+                if cut > 0
+                    chunk = chunk.Left(cut)
+                end if
+            end if
+            pages.Push(chunk)
+            index = index + chunk.Len()
+        end while
+        return pages
+    end function
+
+    function PageChars(width as float, height as float) as integer
+        chars = Int((width * height) / 350)
+        if chars < 200
+            chars = 200
+        end if
+        return chars
+    end function
+
     ' The game the video is about, when YouTube's structured description has one.
     function DetailsGame(metadata as object) as object
         game = ValidAssociativeArray(metadata).game

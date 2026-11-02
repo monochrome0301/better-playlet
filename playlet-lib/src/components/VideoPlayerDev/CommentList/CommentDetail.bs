@@ -13,18 +13,26 @@ function Init()
 end function
 
 function OnAuthorSet() as void
-    m.top.findNode("authorLabel").rawText = ValidString(m.top.author)
+    authorLabel = m.top.findNode("authorLabel")
+    if authorLabel <> invalid
+        authorLabel.rawText = ValidString(m.top.author)
+    end if
 end function
 
 function OnFocusChange() as void
     ' true hands the remote to the pages list; false releases it, so the player can take focus back.
-    NodeSetFocus(m.pages, m.top.focus)
+    if m.pages <> invalid
+        NodeSetFocus(m.pages, m.top.focus)
+    end if
 end function
 
 ' The full comment split into screen-sized pages. Pure string math — no text measurement: each page takes
 ' PAGE_CHARS characters, backed up to the nearest space/newline (never below PAGE_FLOOR, so pages stay big)
 ' so it does not end mid-word unless a single word is huge.
 function OnTextSet() as void
+    if m.pages = invalid
+        return
+    end if
     text = ValidString(m.top.text)
     content = CreateObject("roSGNode", "ContentNode")
     index = 1
