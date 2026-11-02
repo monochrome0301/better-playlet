@@ -1129,8 +1129,16 @@
         <translation>Nascondi risposte</translation>
     </message>
     <message>
+        <source>Replies</source>
+        <translation>Risposte</translation>
+    </message>
+    <message>
         <source>Hearted by creator</source>
         <translation>Contrassegnato con un cuore dal creatore</translation>
+    </message>
+    <message>
+        <source>Read more</source>
+        <translation>Leggi di più</translation>
     </message>
     <message>
         <source>Related videos</source>

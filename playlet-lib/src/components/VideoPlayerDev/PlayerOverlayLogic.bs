@@ -440,8 +440,9 @@ namespace PlayerOverlayLogic
         return parts.Join(" · ")
     end function
 
-    ' The visible rows of the comments overlay: every comment, its replies while it is expanded, then the
-    ' load-more row. Kinds: "comment" (OK toggles its replies), "reply" (inert), "more" (OK loads the next page).
+    ' The visible rows of the comments overlay: every top-level comment, then the load-more row. Replies never
+    ' appear here — they open in their own replies screen. Kinds: "comment" (OK opens the replies screen when it
+    ' has replies, else the maximized reader), "more" (OK loads the next page).
     function CommentRows(comments as object, hasMore as boolean) as object
         rows = []
         if IsArray(comments)
@@ -451,11 +452,6 @@ namespace PlayerOverlayLogic
                     continue for
                 end if
                 rows.Push(CommentRow("comment", i, comment, 0))
-                if ValidBool(comment.expanded)
-                    for each reply in ValidArray(comment.replyRows)
-                        rows.Push(CommentRow("reply", i, reply, 1))
-                    end for
-                end if
             end for
         end if
         if hasMore
@@ -464,21 +460,21 @@ namespace PlayerOverlayLogic
         return rows
     end function
 
-    ' One projected row. A comment that has replies says so, with their count, in its meta line, so OK on it is
-    ' discoverable.
+    ' One projected row. A comment that has replies says so, with their count, in its meta line; OK opens them in
+    ' their own screen. A long comment also says "Read more": its text is clipped in the row.
     function CommentRow(kind as string, commentIndex as integer, comment as object, indent as integer) as object
         meta = CommentMeta(comment)
-        if kind = "comment" and ValidString(comment.replyToken) <> ""
-            if ValidBool(comment.expanded)
-                hint = Tr(Locale.PlaybackMenu.HideReplies)
-            else
-                hint = Tr(Locale.PlaybackMenu.ViewReplies)
-            end if
+        long = CommentIsLong(ValidString(comment.text))
+        if kind = "comment" and CommentHasReplies(comment)
+            hint = Tr(Locale.PlaybackMenu.ViewReplies)
             replies = ValidString(comment.replies)
             if replies <> ""
                 hint = hint + " (" + replies + ")"
             end if
             meta = MetaWith(meta, hint)
+        end if
+        if long
+            meta = MetaWith(meta, Tr(Locale.PlaybackMenu.ReadMore))
         end if
         return {
             kind: kind
@@ -487,7 +483,19 @@ namespace PlayerOverlayLogic
             meta: meta
             text: ValidString(comment.text)
             indent: indent
+            long: long
         }
+    end function
+
+    ' A comment the row can open replies for: a continuation token still to fetch, or replies already loaded.
+    function CommentHasReplies(comment as object) as boolean
+        return ValidString(comment.replyToken) <> "" or ValidArray(comment.replyRows).Count() > 0
+    end function
+
+    ' A comment whose text a row cannot show whole (the row clips at about three lines). Length, not measured
+    ' lines — SceneGraph has no text measurement at row-build time. Drives the row's "Read more" hint.
+    function CommentIsLong(text as string) as boolean
+        return text.Len() > 200
     end function
 
     function MetaWith(meta as string, part as string) as string

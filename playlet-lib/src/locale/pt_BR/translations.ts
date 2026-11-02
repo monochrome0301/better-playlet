@@ -1505,8 +1505,16 @@
         <translation>Ocultar respostas</translation>
     </message>
     <message>
+        <source>Replies</source>
+        <translation>Respostas</translation>
+    </message>
+    <message>
         <source>Hearted by creator</source>
         <translation>Curtido pelo criador</translation>
+    </message>
+    <message>
+        <source>Read more</source>
+        <translation>Ler mais</translation>
     </message>
     <message>
         <source>Related videos</source>

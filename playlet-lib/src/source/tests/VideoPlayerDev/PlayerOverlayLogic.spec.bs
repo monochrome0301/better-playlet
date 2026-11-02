@@ -266,7 +266,7 @@ namespace Tests
                 replies: ""
                 replyToken: ""
                 replyRows: []
-                expanded: false
+                repliesLoaded: false
             }
             comment.Append(fields)
             return comment
@@ -282,22 +282,18 @@ namespace Tests
             m.assertEqual(rows[0].meta, "12 · 2 days ago · " + Tr(Locale.PlaybackMenu.HeartedByCreator))
         end function
 
-        @it("indents replies under their expanded comment, and appends the load-more row")
+        @it("keeps replies out of the comments list and appends the load-more row")
         function _()
             comments = [
-                m.Comment({ replyToken: "t1", expanded: true, replyRows: [m.Comment({ author: "@reply", likes: "" })] })
+                m.Comment({ replyToken: "t1", repliesLoaded: true, replyRows: [m.Comment({ author: "@reply", likes: "" })] })
                 m.Comment({ author: "@b" })
             ]
             rows = PlayerOverlayLogic.CommentRows(comments, true)
-            m.assertEqual(rows.Count(), 4)
+            m.assertEqual(rows.Count(), 3)
             m.assertEqual(rows[0].kind, "comment")
-            m.assertEqual(rows[0].meta.InStr(Tr(Locale.PlaybackMenu.HideReplies)) > 0, true)
-            m.assertEqual(rows[1].kind, "reply")
-            m.assertEqual(rows[1].commentIndex, 0)
-            m.assertEqual(rows[1].indent, 1)
-            m.assertEqual(rows[1].author, "@reply")
-            m.assertEqual(rows[2].kind, "comment")
-            m.assertEqual(rows[3].kind, "more")
+            m.assertTrue(rows[0].meta.InStr(Tr(Locale.PlaybackMenu.ViewReplies)) > 0)
+            m.assertEqual(rows[1].kind, "comment")
+            m.assertEqual(rows[2].kind, "more")
         end function
 
         @it("offers the replies hint only on comments that carry a replies token")
@@ -314,8 +310,26 @@ namespace Tests
             rows = PlayerOverlayLogic.CommentRows([m.Comment({ replyToken: "t1", replies: "3" })], false)
             m.assertEqual(rows[0].meta, "12 · 2 days ago · " + Tr(Locale.PlaybackMenu.ViewReplies) + " (3)")
 
-            rows = PlayerOverlayLogic.CommentRows([m.Comment({ replyToken: "t1", replies: "3", expanded: true })], false)
-            m.assertEqual(rows[0].meta, "12 · 2 days ago · " + Tr(Locale.PlaybackMenu.HideReplies) + " (3)")
+            rows = PlayerOverlayLogic.CommentRows([m.Comment({ replyToken: "t1", replies: "3", repliesLoaded: true, replyRows: [m.Comment({})] })], false)
+            m.assertEqual(rows[0].meta, "12 · 2 days ago · " + Tr(Locale.PlaybackMenu.ViewReplies) + " (3)")
+        end function
+
+        @it("flags a comment the row would clip, with a Read more hint")
+        function _()
+            clipped = ""
+            for i = 0 to 19
+                clipped = clipped + "0123456789"
+            end for
+            m.assertFalse(PlayerOverlayLogic.CommentIsLong("short"))
+            m.assertFalse(PlayerOverlayLogic.CommentIsLong(clipped))
+
+            rows = PlayerOverlayLogic.CommentRows([m.Comment({ text: clipped })], false)
+            m.assertFalse(rows[0].long)
+            m.assertEqual(rows[0].meta, "12 · 2 days ago")
+
+            rows = PlayerOverlayLogic.CommentRows([m.Comment({ text: clipped + "!" })], false)
+            m.assertTrue(rows[0].long)
+            m.assertEqual(rows[0].meta, "12 · 2 days ago · " + Tr(Locale.PlaybackMenu.ReadMore))
         end function
 
     end class

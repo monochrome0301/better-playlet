@@ -1,0 +1,15 @@
+import "pkg:/source/utils/EmojiText.bs"
+import "pkg:/source/utils/Types.bs"
+
+function OnContentSet() as void
+    content = m.top.itemContent
+    if content = invalid
+        return
+    end if
+    text = ValidString(content.text)
+    label = m.top.findNode("pageLabel")
+    ' rawText feeds the EmojiLabel's own markup observer; setting the identical markup here too makes the text
+    ' show regardless of which callback lands first (the pattern RelatedVideoCell uses for recycled cells).
+    label.rawText = text
+    label.text = EmojiText.Markup(text)
+end function

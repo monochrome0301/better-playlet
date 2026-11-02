@@ -1,0 +1,11 @@
+<component name="CommentDetailPage" extends="Group">
+    <!-- One page of the reader's MarkupList: a slice of the comment's full text, drawn through the same
+         EmojiLabel path the comment rows use (a plain Label would show boxes instead of emoji). -->
+    <interface>
+        <field id="itemContent" type="node" onChange="OnContentSet" />
+    </interface>
+    <children>
+        <EmojiLabel id="pageLabel" translation="[0,8]" width="1120"
+            baseFont="font:SmallestSystemFont" baseSize="18" color="0xDDDDDDFF" wrap="true" />
+    </children>
+</component>

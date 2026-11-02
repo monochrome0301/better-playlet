@@ -541,8 +541,16 @@
         <translation>Ocultar respuestas</translation>
     </message>
     <message>
+        <source>Replies</source>
+        <translation>Respuestas</translation>
+    </message>
+    <message>
         <source>Hearted by creator</source>
         <translation>Le gustó al creador</translation>
+    </message>
+    <message>
+        <source>Read more</source>
+        <translation>Leer más</translation>
     </message>
     <message>
         <source>Related videos</source>

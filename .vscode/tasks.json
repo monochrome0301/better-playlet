@@ -5,7 +5,12 @@
             "label": "build-dev",
             "dependsOn": [
                 "build-app-dev"
-            ]
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
             "label": "build-app-dev",

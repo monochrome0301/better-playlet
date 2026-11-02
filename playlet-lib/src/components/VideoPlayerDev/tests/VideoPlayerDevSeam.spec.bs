@@ -1102,6 +1102,88 @@ namespace Tests
             m.top.findNode("autoHide").control = "stop"
         end function
 
+        ' OK on a comment with replies opens its own replies screen — never inline with the other comments. OK on
+        ' a row there opens the maximized reader. A comment without replies opens the reader directly. NOTE: the
+        ' fetch case seeds a job the stub queue never resolves, which would block later selections — so it runs LAST.
+        @it("a comment with replies opens its own replies screen, separate from the comments list")
+        function _()
+            reply = { author: "@r", text: "the first reply" }
+            comment = { likes: "", publishedTime: "", hearted: false, replies: "", replyRows: [], repliesLoaded: false }
+            m.top.callFunc("TestShowComments")
+            list = m.top.findNode("commentsList")
+            replies = m.top.findNode("commentReplies")
+            detail = m.top.findNode("commentDetail")
+            m.assertFalse(replies.visible)
+
+            m.top.callFunc("TestSeedComments", [comment.Append({ author: "@a", text: "parent comment", replyToken: "tok", replies: "1", repliesLoaded: true, replyRows: [reply] })])
+            m.assertEqual(list.comments.Count(), 1, "replies never join the comments list")
+            list.selected = { index: 0 }
+            m.assertTrue(replies.visible, "the comment opens its replies screen")
+            m.assertTrue(replies.focus, "the replies screen claims the remote")
+            m.assertFalse(list.visible, "the comments list steps aside so the scrims do not stack")
+            m.assertFalse(detail.visible, "the reader does not open instead")
+            m.assertTrue(replies.title.InStr(Tr(Locale.PlaybackMenu.Replies)) > 0, "the screen is titled Replies")
+            m.assertEqual(replies.comments.Count(), 2, "the comment plus its reply")
+            m.assertEqual(replies.comments[1].text, "the first reply", "the reply is on the screen")
+
+            replies.selected = { index: 1 }
+            m.assertTrue(detail.visible, "OK on a reply opens the reader")
+            m.assertFalse(replies.visible, "the replies screen steps aside while the reader is up")
+            m.assertEqual(detail.text, "the first reply")
+            detail.closed = true
+            m.assertTrue(replies.visible, "Back returns to the replies screen")
+            m.assertTrue(replies.focus)
+            replies.closed = true
+            m.assertFalse(replies.visible, "Back closes the replies screen")
+            m.assertTrue(list.visible, "the comments list comes back")
+            m.assertTrue(list.focus)
+            m.top.findNode("autoHide").control = "stop"
+        end function
+
+        ' OK on a comment without replies opens the maximized reader (its text is clipped in the list).
+        @it("a comment without replies opens the maximized reader")
+        function _()
+            longText = ""
+            for i = 0 to 20
+                longText = longText + "0123456789"
+            end for
+            comment = { likes: "", publishedTime: "", hearted: false, replies: "", replyRows: [], repliesLoaded: false }
+            m.top.callFunc("TestShowComments")
+            list = m.top.findNode("commentsList")
+            replies = m.top.findNode("commentReplies")
+            detail = m.top.findNode("commentDetail")
+
+            m.top.callFunc("TestSeedComments", [comment.Append({ author: "@b", text: longText, replyToken: "" })])
+            m.assertTrue(list.comments[0].long, "the long comment is flagged")
+            list.selected = { index: 0 }
+            m.assertTrue(detail.visible, "OK on a comment without replies opens the reader")
+            m.assertFalse(replies.visible)
+            m.assertTrue(detail.focus, "the reader claims the remote")
+            m.assertTrue(m.top.findNode("pages").hasFocus(), "the pages list holds the real focus")
+            m.assertEqual(detail.text, longText, "the reader shows the full text")
+            detail.closed = true
+            m.assertFalse(detail.visible, "closed on Back")
+            m.assertTrue(list.focus, "the list takes the remote back")
+            m.top.findNode("autoHide").control = "stop"
+        end function
+
+        ' Opening a comment whose replies are not loaded opens the replies screen and starts the fetch: one click.
+        @it("the replies screen opens while its replies load")
+        function _()
+            comment = { likes: "", publishedTime: "", hearted: false, replies: "", replyRows: [], repliesLoaded: false }
+            m.top.callFunc("TestShowComments")
+            list = m.top.findNode("commentsList")
+            replies = m.top.findNode("commentReplies")
+
+            m.top.callFunc("TestSeedComments", [comment.Append({ author: "@a", text: "parent comment", replyToken: "tok", replies: "3" })])
+            list.selected = { index: 0 }
+            m.assertTrue(replies.visible, "the replies screen opens on the first click")
+            m.assertEqual(replies.status, Tr(Locale.PlaybackMenu.LoadingComments), "it shows the load")
+            m.assertEqual(replies.comments.Count(), 1, "only the comment until the replies land")
+            replies.closed = true
+            m.top.findNode("autoHide").control = "stop"
+        end function
+
         ' The media keys reach playback behind an open overlay: pause/resume without leaving the menu, the
         ' description or the comments first (every other key stays swallowed).
         @it("the media keys pause and resume behind an open overlay")
@@ -1384,7 +1466,7 @@ namespace Tests
                 classified[name] = "controller"
             end for
             ' cached child nodes / timers / animations / reusable helpers (structure, not state).
-            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime", "playerMenu", "commentsList", "videoDetails", "relatedVideos", "channelStatusNode"]
+            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime", "playerMenu", "commentsList", "commentDetail", "commentReplies", "videoDetails", "relatedVideos", "channelStatusNode"]
                 classified[name] = "node"
             end for
             ' in-flight job handles.
@@ -1396,7 +1478,7 @@ namespace Tests
                 classified[name] = "axis"
             end for
             ' flags / scratch — one-shot latches and counters with a single consuming path.
-            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsRows", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId", "commentsJobKind", "commentsJobIndex", "relatedItems", "relatedContinuation", "relatedHasMore", "relatedLoading", "pendingChannel", "rydVotes", "channelSubscribed", "channelStatusAuthorId"]
+            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsRows", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId", "commentsJobKind", "commentsJobIndex", "commentRepliesComment", "relatedItems", "relatedContinuation", "relatedHasMore", "relatedLoading", "pendingChannel", "rydVotes", "channelSubscribed", "channelStatusAuthorId"]
                 classified[name] = "flag"
             end for
             ' NOT coordinator state — node-scope + test-environment entries, pinned EXPLICITLY (no hidden

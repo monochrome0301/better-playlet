@@ -1537,8 +1537,16 @@
         <translation>Antworten ausblenden</translation>
     </message>
     <message>
+        <source>Replies</source>
+        <translation>Antworten</translation>
+    </message>
+    <message>
         <source>Hearted by creator</source>
         <translation>Vom Ersteller mit Herz markiert</translation>
+    </message>
+    <message>
+        <source>Read more</source>
+        <translation>Mehr lesen</translation>
     </message>
     <message>
         <source>Related videos</source>

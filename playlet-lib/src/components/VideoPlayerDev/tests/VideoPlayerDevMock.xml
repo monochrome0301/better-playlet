@@ -121,6 +121,8 @@
         <LargePause id="largePause" />
         <PlayerMenu id="playerMenu" visible="false" />
         <CommentList id="commentsList" visible="false" />
+        <CommentList id="commentReplies" visible="false" />
+        <CommentDetail id="commentDetail" visible="false" />
         <VideoDetails id="videoDetails" visible="false" />
         <RelatedVideos id="relatedVideos" visible="false" />
     </children>

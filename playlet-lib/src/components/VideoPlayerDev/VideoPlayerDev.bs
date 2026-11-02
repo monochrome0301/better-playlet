@@ -87,6 +87,7 @@ function Initialize()
     m.commentsVideoId = ""
     m.commentsJobKind = CommentJobKind.Page
     m.commentsJobIndex = -1
+    m.commentRepliesComment = -1
     ' related-videos feed: opened by Down, listing the loaded watch page's recommendations.
     m.relatedOpen = false
     m.relatedItems = []
@@ -144,6 +145,8 @@ function Initialize()
     m.fullScreenHint = m.top.findNode("fullScreenHint")
     m.playerMenu = m.top.findNode("playerMenu")
     m.commentsList = m.top.findNode("commentsList")
+    m.commentDetail = m.top.findNode("commentDetail")
+    m.commentReplies = m.top.findNode("commentReplies")
     m.videoDetails = m.top.findNode("videoDetails")
     m.relatedVideos = m.top.findNode("relatedVideos")
 
@@ -228,6 +231,9 @@ function OnNodeReady()
     m.playerMenu.ObserveField("closed", FuncName(OnMenuClosed))
     m.commentsList.ObserveField("selected", FuncName(OnCommentsSelected))
     m.commentsList.ObserveField("closed", FuncName(OnCommentsClosed))
+    m.commentDetail.ObserveField("closed", FuncName(OnCommentDetailClosed))
+    m.commentReplies.ObserveField("selected", FuncName(OnCommentRepliesSelected))
+    m.commentReplies.ObserveField("closed", FuncName(OnCommentRepliesClosed))
     m.videoDetails.ObserveField("closed", FuncName(OnDetailsClosed))
     m.videoDetails.ObserveField("selected", FuncName(OnDetailsLinkSelected))
     m.relatedVideos.ObserveField("closed", FuncName(OnRelatedClosed))
@@ -392,7 +398,7 @@ function OnKeyEvent(key as string, press as boolean) as boolean
     ' keys, which still pause/resume so playback can be stopped without leaving the overlay first. An overlay
     ' that says open but is not on screen (a half-finished open) is healed instead of owning the remote: a
     ' swallowed Back there is an app with no way out.
-    overlayOpen = (m.commentsOpen and m.commentsList.visible) or (m.menuLevel <> PlayerOverlayLogic.Level.None and m.playerMenu.visible) or m.videoDetails.visible or (m.relatedOpen and m.relatedVideos.visible)
+    overlayOpen = (m.commentsOpen and m.commentsList.visible) or (m.menuLevel <> PlayerOverlayLogic.Level.None and m.playerMenu.visible) or m.commentDetail.visible or m.commentReplies.visible or m.videoDetails.visible or (m.relatedOpen and m.relatedVideos.visible)
     if overlayOpen
         if press
             ' a dedicated Pause key only pauses; Play/PlayOnly are the play/pause toggle (the combined button's keys).
@@ -687,7 +693,7 @@ function TakeFocusBackFrom(overlay as object) as void
 end function
 
 function OpenMenu(level = PlayerOverlayLogic.Level.Main as string) as void
-    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.videoDetails.visible
+    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.commentDetail.visible or m.commentReplies.visible or m.videoDetails.visible
         return
     end if
     SetMenuLevel(level)
@@ -1003,9 +1009,9 @@ function ApplySpeed(value as string) as void
 end function
 
 '===============================================================================
-' Comments overlay — a page of top-level comments with "load more" pagination, and OK on a comment expands or
-' collapses its replies (one replies page per comment). The job runs off the player; the video keeps playing
-' behind the overlay.
+' Comments overlay — a page of top-level comments with "load more" pagination. OK on a comment with replies
+' opens them in their own screen; a comment without replies opens the maximized reader. The job runs off the
+' player; the video keeps playing behind the overlay.
 '===============================================================================
 function OpenComments() as void
     content = m.top.content
@@ -1036,7 +1042,11 @@ function FetchComments(continuation as string, kind as string, commentIndex as i
     end if
     m.commentsJobKind = kind
     m.commentsJobIndex = commentIndex
-    m.commentsList.status = Tr(Locale.PlaybackMenu.LoadingComments)
+    if kind = CommentJobKind.Replies
+        m.commentReplies.status = Tr(Locale.PlaybackMenu.LoadingComments)
+    else
+        m.commentsList.status = Tr(Locale.PlaybackMenu.LoadingComments)
+    end if
     m.commentsJob = JobSystem.CreateCallback(OnCommentsJobDone)
     JobSystem.QueueJob(m.jobQueue, Jobs.VideoCommentsJob, {
         videoId: m.commentsVideoId
@@ -1059,11 +1069,16 @@ function OnCommentsJobDone(event as object) as void
 
     if not info.success
         if kind = CommentJobKind.Replies
-            ' collapse it again: an expanded comment with nothing under it reads as a broken row.
-            SetCommentExpanded(commentIndex, false)
-            ShowCommentRows(0)
+            ' let a reopen retry, and say so on the screen the replies belong to.
+            if commentIndex >= 0 and commentIndex < m.commentsData.Count()
+                m.commentsData[commentIndex].repliesLoaded = false
+            end if
+            if m.commentRepliesComment = commentIndex
+                m.commentReplies.status = Tr(Locale.PlaybackMenu.CommentsLoadError)
+            end if
+        else
+            m.commentsList.status = Tr(Locale.PlaybackMenu.CommentsLoadError)
         end if
-        m.commentsList.status = Tr(Locale.PlaybackMenu.CommentsLoadError)
         return
     end if
 
@@ -1116,8 +1131,7 @@ function CommentRowData(comment as object) as object
         replies: ValidString(comment.replies)
         replyToken: ValidString(comment.replyContinuation)
         replyRows: []
-        expanded: false
-        rowIndex: 0
+        repliesLoaded: false
     }
 end function
 
@@ -1126,17 +1140,19 @@ function ApplyCommentReplies(commentIndex as integer, data as object) as void
         return
     end if
     comment = m.commentsData[commentIndex]
+    comment.repliesLoaded = true
     comments = data.comments
     if IsArray(comments)
         for each reply in comments
             comment.replyRows.Push(CommentRowData(reply))
         end for
     end if
-    ' the parent row keeps its visible index (its replies are inserted under it), so focus does not jump.
-    ShowCommentRows(ValidInt(comment.rowIndex))
+    if m.commentRepliesComment = commentIndex
+        ShowCommentReplies(commentIndex)
+    end if
 end function
 
-' The rows the list shows: comments, the replies of the expanded ones, then the load-more row.
+' The rows the comments list shows: top-level comments, then the load-more row.
 function ShowCommentRows(focusIndex as integer) as void
     rows = PlayerOverlayLogic.CommentRows(m.commentsData, m.commentsHasMore)
     m.commentsRows = rows
@@ -1161,35 +1177,114 @@ function OnCommentsSelected() as void
     if row.kind = "more"
         FetchComments(m.commentsContinuation, CommentJobKind.Page, -1)
     else if row.kind = "comment"
-        ToggleCommentReplies(index, row.commentIndex)
+        comment = m.commentsData[row.commentIndex]
+        if IsAssociativeArray(comment) and PlayerOverlayLogic.CommentHasReplies(comment)
+            OpenCommentReplies(row.commentIndex)
+        else
+            OpenCommentReader(row.author, row.meta, row.text)
+        end if
     end if
 end function
 
-' OK on a comment: expand its replies (fetching them the first time) or collapse them again.
-function ToggleCommentReplies(rowIndex as integer, commentIndex as integer) as void
+' The replies screen: the parent comment on top, then its replies, each indented. Replies never join the main
+' comments list. OK on any row opens the maximized reader.
+function OpenCommentReplies(commentIndex as integer) as void
     if commentIndex < 0 or commentIndex >= m.commentsData.Count()
         return
     end if
     comment = m.commentsData[commentIndex]
-    comment.rowIndex = rowIndex
-    if ValidBool(comment.expanded)
-        SetCommentExpanded(commentIndex, false)
-        ShowCommentRows(rowIndex)
-        return
+    m.commentRepliesComment = commentIndex
+    title = Tr(Locale.PlaybackMenu.Replies)
+    count = ValidString(comment.replies)
+    if count <> ""
+        title = title + " (" + count + ")"
     end if
-    if StringUtils.IsNullOrEmpty(ValidString(comment.replyToken))
-        return
+    m.commentReplies.title = title
+    ShowCommentReplies(commentIndex)
+    m.commentReplies.visible = true
+    NodeSetFocus(m.commentReplies, true)
+    ' one scrim at a time: the main list goes away while its replies screen is up, so their translucency does
+    ' not stack and its rows cannot bleed through.
+    m.commentsList.visible = false
+    if not ValidBool(comment.repliesLoaded) and ValidString(comment.replyToken) <> ""
+        comment.repliesLoaded = true
+        FetchComments(comment.replyToken, CommentJobKind.Replies, commentIndex)
     end if
-    SetCommentExpanded(commentIndex, true)
-    comment.replyRows = []
-    ShowCommentRows(rowIndex)
-    FetchComments(comment.replyToken, CommentJobKind.Replies, commentIndex)
 end function
 
-function SetCommentExpanded(commentIndex as integer, expanded as boolean) as void
-    if commentIndex >= 0 and commentIndex < m.commentsData.Count()
-        m.commentsData[commentIndex].expanded = expanded
+' The replies screen's rows: the comment, then the replies it has loaded so far. Called again when they land.
+function ShowCommentReplies(commentIndex as integer) as void
+    if commentIndex < 0 or commentIndex >= m.commentsData.Count()
+        return
     end if
+    comment = m.commentsData[commentIndex]
+    rows = [{
+        author: ValidString(comment.author)
+        meta: PlayerOverlayLogic.CommentMeta(comment)
+        text: ValidString(comment.text)
+        indent: 0
+    }]
+    for each reply in ValidArray(comment.replyRows)
+        rows.Push({
+            author: ValidString(reply.author)
+            meta: PlayerOverlayLogic.CommentMeta(reply)
+            text: ValidString(reply.text)
+            indent: 1
+        })
+    end for
+    m.commentReplies.comments = rows
+    m.commentReplies.status = ""
+end function
+
+function OnCommentRepliesSelected() as void
+    rows = m.commentReplies.comments
+    index = m.commentReplies.selected.index
+    if not IsArray(rows) or index < 0 or index >= rows.Count()
+        return
+    end if
+    row = rows[index]
+    OpenCommentReader(row.author, row.meta, row.text)
+end function
+
+' The maximized reader: one comment's (or reply's) full text. It is the topmost layer, so whichever screen
+' opened it goes away while it is up (constant translucency, nothing bleeding through).
+function OpenCommentReader(author as string, meta as string, text as string) as void
+    m.commentDetail.author = author
+    m.commentDetail.meta = meta
+    m.commentDetail.text = text
+    m.commentDetail.visible = true
+    NodeSetFocus(m.commentDetail, true)
+    if m.commentRepliesComment >= 0
+        m.commentReplies.visible = false
+    else
+        m.commentsList.visible = false
+    end if
+end function
+
+function CloseCommentDetail() as void
+    ' focus leaves the overlay before it is hidden: hiding the focused node can strand the scene's focus.
+    TakeFocusBackFrom(m.commentDetail)
+    m.commentDetail.visible = false
+    ' restore exactly the layer the reader covered: the replies screen when it came from there, else the list.
+    if m.commentRepliesComment >= 0
+        m.commentReplies.visible = true
+        NodeSetFocus(m.commentReplies, true)
+    else
+        m.commentsList.visible = true
+        NodeSetFocus(m.commentsList, true)
+    end if
+end function
+
+function OnCommentDetailClosed() as void
+    CloseCommentDetail()
+end function
+
+function OnCommentRepliesClosed() as void
+    TakeFocusBackFrom(m.commentReplies)
+    m.commentReplies.visible = false
+    m.commentRepliesComment = -1
+    m.commentsList.visible = true
+    NodeSetFocus(m.commentsList, true)
 end function
 
 function OnCommentsClosed() as void
@@ -1202,6 +1297,11 @@ function OnCommentsClosed() as void
     ' focus leaves the overlay before it is hidden: hiding the focused node can strand the scene's focus.
     TakeFocusBackFrom(m.commentsList)
     m.commentsList.visible = false
+    ' the reader and the replies screen sit on top of the list; neither may outlive it (a stranded scrim would
+    ' swallow the remote).
+    m.commentDetail.visible = false
+    m.commentReplies.visible = false
+    m.commentRepliesComment = -1
     ArmAutoHide()
 end function
 

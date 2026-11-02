@@ -1213,8 +1213,16 @@
         <translation>Hide replies</translation>
     </message>
     <message>
+        <source>Replies</source>
+        <translation>Replies</translation>
+    </message>
+    <message>
         <source>Hearted by creator</source>
         <translation>Hearted by creator</translation>
+    </message>
+    <message>
+        <source>Read more</source>
+        <translation>Read more</translation>
     </message>
     <message>
         <source>Related videos</source>

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Related-videos feed in the player: press Down to browse the watch page's recommendations in a grid, with a load-more tile and Up on the first row to leave
 - Emoji in titles, queue cells, queue notifications and comments, drawn with a bundled emoji font
 - Reply count next to the "View replies" hint in the player's comments
+- Maximized comment reader: OK on a comment without replies opens its full text (long ones are flagged "Read more" in the list); a comment with replies opens them in their own screen, never inline with the other comments
 - "Hide AI slop channels" setting, which hides channels from the [AiSList](https://github.com/Override92/AiSList) blocklist and, optionally, its warnlist
 - Dedicated Subtitles section in Settings: the subtitle text color, background color and background opacity now live behind a "Configure subtitles" button that opens their own settings screen
 
