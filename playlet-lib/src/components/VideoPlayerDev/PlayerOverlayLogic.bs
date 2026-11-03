@@ -250,7 +250,7 @@ namespace PlayerOverlayLogic
     ' NOTE: the quality flag is NOT named hasQuality: case-insensitively that collides with the HasQuality function
     ' above, and the compiler then mangles the reference to the function instead of the parameter (if <function>
     ' throws at runtime, killing BuildMainMenuRows and silently keeping the menu closed).
-    function MainRows(qualityLabel as string, showQuality as boolean, subtitleLabel as string, hasSubtitles as boolean, audioLabel as string, hasAudio as boolean, speedLabel as string) as object
+    function MainRows(qualityLabel as string, showQuality as boolean, subtitleLabel as string, hasSubtitles as boolean, audioLabel as string, hasAudio as boolean, speedLabel as string, showLiveChat = false as boolean) as object
         rows = []
         if showQuality
             rows.Push({ title: Tr(Locale.PlaybackMenu.Quality) + ": " + qualityLabel, value: Level.Quality })
@@ -263,6 +263,9 @@ namespace PlayerOverlayLogic
         end if
         if speedLabel <> ""
             rows.Push({ title: Tr(Locale.PlaybackMenu.Speed) + ": " + speedLabel, value: Level.Speed })
+        end if
+        if showLiveChat
+            rows.Push({ title: Tr(Locale.PlaybackMenu.LiveChat), value: "livechat" })
         end if
         rows.Push({ title: Tr(Locale.PlaybackMenu.VideoDescription), value: "details" })
         rows.Push({ title: Tr(Locale.PlaybackMenu.Comments), value: "comments" })

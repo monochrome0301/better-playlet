@@ -1102,6 +1102,22 @@ namespace Tests
             m.top.findNode("autoHide").control = "stop"
         end function
 
+        ' The live chat overlay owns the remote the same way, and its Back closes it.
+        @it("live chat overlay opens and closes")
+        function _()
+            m.top.callFunc("TestShowLiveChat")
+            m.assertTrue(m.Snap().liveChatOpen)
+            m.assertTrue(m.top.findNode("liveChatList").visible)
+            m.assertTrue(m.top.findNode("liveChatList").focus, "the open live chat overlay holds the remote")
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Ok, true), "the open live chat overlay owns OK")
+            m.assertTrue(m.top.callFunc("TestKey", RemoteKeys.Back, true), "the open live chat overlay owns Back")
+            m.top.findNode("liveChatList").closed = true
+            m.assertFalse(m.Snap().liveChatOpen, "closed on Back")
+            m.assertFalse(m.top.findNode("liveChatList").visible)
+            m.assertFalse(m.top.findNode("liveChatList").focus, "the closed live chat overlay releases the remote")
+            m.top.findNode("autoHide").control = "stop"
+        end function
+
         ' OK on a comment with replies opens its own replies screen — never inline with the other comments. OK on
         ' a row there opens the maximized reader. A comment without replies opens the reader directly. NOTE: the
         ' fetch case seeds a job the stub queue never resolves, which would block later selections — so it runs LAST.
@@ -1466,19 +1482,19 @@ namespace Tests
                 classified[name] = "controller"
             end for
             ' cached child nodes / timers / animations / reusable helpers (structure, not state).
-            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime", "playerMenu", "commentsList", "commentDetail", "commentReplies", "videoDetails", "relatedVideos", "channelStatusNode"]
+            for each name in ["chrome", "titleLabel", "secondaryTitleLabel", "clock", "bifDisplay", "trickPlayBar", "spinner", "largePause", "buttonRow", "fullScreenHint", "autoHide", "transportTimer", "liveBadgeHold", "liveEdgeClock", "liveChatTimer", "fullScreenHintTimer", "chromeFadeIn", "chromeFadeOut", "minimize", "nowDateTime", "playerMenu", "commentsList", "liveChatList", "commentDetail", "commentReplies", "videoDetails", "relatedVideos", "channelStatusNode"]
                 classified[name] = "node"
             end for
             ' in-flight job handles.
-            for each name in ["videoContentJob", "sponsorBlockSegmentsJob", "returnYouTubeDislikeJob", "markVideoWatchedJob", "commentsJob", "relatedJob", "channelStatusJob"]
+            for each name in ["videoContentJob", "sponsorBlockSegmentsJob", "returnYouTubeDislikeJob", "markVideoWatchedJob", "commentsJob", "liveChatJob", "relatedJob", "channelStatusJob"]
                 classified[name] = "job"
             end for
             ' STATE AXES — discrete coordinator state; each needs its transitions covered by a seam test.
-            for each name in ["chromeMode", "focusTarget", "focusedButton", "armedTimerId", "menuLevel", "commentsOpen", "relatedOpen"]
+            for each name in ["chromeMode", "focusTarget", "focusedButton", "armedTimerId", "menuLevel", "commentsOpen", "liveChatOpen", "relatedOpen"]
                 classified[name] = "axis"
             end for
             ' flags / scratch — one-shot latches and counters with a single consuming path.
-            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsRows", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId", "commentsJobKind", "commentsJobIndex", "commentRepliesComment", "relatedItems", "relatedContinuation", "relatedHasMore", "relatedLoading", "pendingChannel", "rydVotes", "channelSubscribed", "channelStatusAuthorId"]
+            for each name in ["onCloseCalled", "ignoreNextFinished", "videoPlayedSuccessfully", "firstFrameSeen", "showFullScreenHint", "repauseAfterSeek", "loadingSetSeekMs", "watchTimeMarker", "reportWatchTime", "errorDialogNode", "lastCommitSeq", "lastFinishSeq", "liveAstSeconds", "liveFallbackEdgeMs", "liveFallbackAtSeconds", "liveBadgeHoldActive", "menuRows", "qualityOverride", "selectedSubtitleTrack", "selectedAudioTrack", "reloadPositionMs", "sourceContentNode", "commentsData", "commentsRows", "commentsCount", "commentsContinuation", "commentsHasMore", "commentsVideoId", "commentsJobKind", "commentsJobIndex", "commentRepliesComment", "liveChatRows", "liveChatContinuation", "liveChatVideoId", "relatedItems", "relatedContinuation", "relatedHasMore", "relatedLoading", "pendingChannel", "rydVotes", "channelSubscribed", "channelStatusAuthorId"]
                 classified[name] = "flag"
             end for
             ' NOT coordinator state — node-scope + test-environment entries, pinned EXPLICITLY (no hidden

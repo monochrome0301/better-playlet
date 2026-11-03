@@ -51,6 +51,8 @@
         <!-- Live edge heartbeat: 1/s while live content plays; feeds the brain's clock-anchored edge so the
              time-behind offset stays current even while the device is paused and emits no events. -->
         <Timer id="liveEdgeClock" duration="1" repeat="true" />
+        <!-- Live chat poll: re-armed by the coordinator after each poll with the server's timeout. -->
+        <Timer id="liveChatTimer" duration="5" repeat="false" />
 
         <!-- ===================== coordinator-owned animations ===================== -->
         <Animation id="chromeFadeIn" duration="0.5" easeFunction="linear">
@@ -120,11 +122,12 @@
         <LargePause id="largePause" />
 
         <!-- ===================== overlays (paint above everything above) ===================== -->
-        <!-- Playback settings (quality / subtitles / audio / speed / comments), the comments list, the video
-             details and the related-videos feed. They stay hidden until opened; the coordinator hands them real
-             focus while open and routes their selections. -->
+        <!-- Playback settings (quality / subtitles / audio / speed / comments), the comments list, the live chat,
+             the video details and the related-videos feed. They stay hidden until opened; the coordinator hands
+             them real focus while open and routes their selections. -->
         <PlayerMenu id="playerMenu" visible="false" />
         <CommentList id="commentsList" visible="false" />
+        <CommentList id="liveChatList" visible="false" stickToEnd="true" />
         <CommentList id="commentReplies" visible="false" />
         <CommentDetail id="commentDetail" visible="false" />
         <VideoDetails id="videoDetails" visible="false" />

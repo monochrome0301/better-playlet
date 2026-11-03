@@ -1193,6 +1193,26 @@
         <translation>No comments yet</translation>
     </message>
     <message>
+        <source>Live chat</source>
+        <translation>Live chat</translation>
+    </message>
+    <message>
+        <source>Loading live chat...</source>
+        <translation>Loading live chat...</translation>
+    </message>
+    <message>
+        <source>No messages yet</source>
+        <translation>No messages yet</translation>
+    </message>
+    <message>
+        <source>Live chat is unavailable</source>
+        <translation>Live chat is unavailable</translation>
+    </message>
+    <message>
+        <source>Failed to load live chat</source>
+        <translation>Failed to load live chat</translation>
+    </message>
+    <message>
         <source>Loading comments...</source>
         <translation>Loading comments...</translation>
     </message>

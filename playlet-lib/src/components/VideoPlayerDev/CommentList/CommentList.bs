@@ -6,6 +6,8 @@ function Init()
     m.top.focusable = true
     m.list = m.top.findNode("list")
     m.list.ObserveField("itemSelected", FuncName(OnItemSelected))
+    m.stickTimer = m.top.findNode("stickTimer")
+    m.stickTimer.ObserveField("fire", FuncName(OnStickTimerFire))
     OnStatusSet()
 end function
 
@@ -33,8 +35,24 @@ function OnCommentsSet() as void
         end for
     end if
     m.list.content = content
-    if content.getChildCount() > 0
+    if m.top.stickToEnd
+        ' live chat: the newest message is the last row and stays in view as the list grows. A jump in the
+        ' same pass as the content assignment lands before the list has laid the rows out and is dropped, so
+        ' it is deferred to the stick timer instead.
+        if content.getChildCount() > 0
+            m.stickTimer.control = "stop"
+            m.stickTimer.control = "start"
+        end if
+    else if content.getChildCount() > 0
         m.list.jumpToItem = 0
+    end if
+end function
+
+function OnStickTimerFire() as void
+    ' the list has had a render pass now: the jump to the newest row (the last one) sticks.
+    content = m.list.content
+    if content <> invalid and content.getChildCount() > 0
+        m.list.jumpToItem = content.getChildCount() - 1
     end if
 end function
 

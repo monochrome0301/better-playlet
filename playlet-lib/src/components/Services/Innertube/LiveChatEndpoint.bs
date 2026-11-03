@@ -1,0 +1,217 @@
+import "pkg:/components/Services/Innertube/Context.bs"
+import "pkg:/components/Services/Innertube/NextEndpoint.bs"
+import "pkg:/components/Services/Innertube/Parser.bs"
+import "pkg:/source/services/HttpClient.bs"
+import "pkg:/source/utils/ObjectUtils.bs"
+import "pkg:/source/utils/StringUtils.bs"
+import "pkg:/source/utils/Types.bs"
+
+namespace Innertube
+
+    ' How often the player polls the chat. The server's timeoutMs is a long-poll hint; clamped to the range
+    ' the overlay can wait while still feeling live.
+    const LIVE_CHAT_DEFAULT_POLL_MS = 5000
+    const LIVE_CHAT_MIN_POLL_MS = 3000
+    const LIVE_CHAT_MAX_POLL_MS = 8000
+
+    ' The live chat continuation from the watch page, or "" when the video has no chat (not live, or disabled).
+    function FindLiveChatContinuation(payload as object) as string
+        renderer = ObjectUtils.Dig(payload, ["contents", "twoColumnWatchNextResults", "conversationBar", "liveChatRenderer"])
+        if not IsAssociativeArray(renderer)
+            renderer = ObjectUtils.Dig(payload, ["contents", "singleColumnWatchNextResults", "conversationBar", "liveChatRenderer"])
+        end if
+        if not IsAssociativeArray(renderer)
+            return ""
+        end if
+        return LiveChatContinuationToken(renderer.continuations)
+    end function
+
+    ' The first usable continuation token: a reload for the initial batch, invalidation/timed for the polls.
+    function LiveChatContinuationToken(continuations as dynamic) as string
+        if not IsArray(continuations)
+            return ""
+        end if
+        for each continuation in continuations
+            if not IsAssociativeArray(continuation)
+                continue for
+            end if
+            for each key in ["invalidationContinuationData", "timedContinuationData", "reloadContinuationData"]
+                token = ValidString(ObjectUtils.Dig(continuation, [key, "continuation"]))
+                if token <> ""
+                    return token
+                end if
+            end for
+        end for
+        return ""
+    end function
+
+    ' The watch page's live chat token, fetched on the first poll (videoId alone, no continuation).
+    function GetLiveChatContinuation(videoId as string, cancellation as object) as object
+        request = CreateNextRequest({ "videoId": videoId })
+        request.Cancellation(cancellation)
+        response = request.Await()
+        if not response.IsSuccess()
+            return { error: response.ErrorMessage() }
+        end if
+        payload = response.Json()
+        if not IsAssociativeArray(payload)
+            return { error: "Invalid watch page response" }
+        end if
+        return { continuation: FindLiveChatContinuation(payload) }
+    end function
+
+    function CreateLiveChatRequest(continuation as string) as HttpClient.Request
+        deviceInfo = CreateObject("roDeviceInfo")
+        payload = {
+            "context": Innertube.CreateContext(Innertube.ClientType.Web, deviceInfo)
+            "continuation": continuation
+        }
+        request = HttpClient.Post("https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?prettyPrint=false&alt=json").JsonBody(payload)
+        request.Headers(Innertube.CreateHeaders(Innertube.ClientType.Web))
+        return request
+    end function
+
+    ' One poll's chat messages plus the token/timeout for the next one.
+    function GetLiveChatPage(continuation as string, cancellation as object) as object
+        request = CreateLiveChatRequest(continuation)
+        request.Cancellation(cancellation)
+        response = request.Await()
+        if not response.IsSuccess()
+            return { error: response.ErrorMessage() }
+        end if
+        payload = response.Json()
+        if not IsAssociativeArray(payload)
+            return { error: "Invalid live chat response" }
+        end if
+        return ParseLiveChatResponse(payload)
+    end function
+
+    function ParseLiveChatResponse(payload as object) as object
+        chat = ObjectUtils.Dig(payload, ["continuationContents", "liveChatContinuation"])
+        if not IsAssociativeArray(chat)
+            return { error: "Invalid live chat response" }
+        end if
+
+        messages = []
+        for each action in ValidArray(chat.actions)
+            message = ParseLiveChatItem(ObjectUtils.Dig(action, ["addChatItemAction", "item"]))
+            if message <> invalid
+                messages.Push(message)
+            end if
+        end for
+
+        return {
+            messages: messages
+            continuation: LiveChatContinuationToken(chat.continuations)
+            timeoutMs: LiveChatTimeoutMs(chat.continuations)
+        }
+    end function
+
+    ' A chat item as the overlay's row: author, text and the Super Chat / membership label. Placeholders
+    ' (liveChatPlaceholderItemRenderer) and unknown items are skipped.
+    function ParseLiveChatItem(item as object) as dynamic
+        if not IsAssociativeArray(item)
+            return invalid
+        end if
+
+        renderer = item.liveChatTextMessageRenderer
+        if IsAssociativeArray(renderer)
+            return LiveChatMessage(renderer, "")
+        end if
+
+        renderer = item.liveChatPaidMessageRenderer
+        if IsAssociativeArray(renderer)
+            return LiveChatMessage(renderer, ValidString(ObjectUtils.Dig(renderer, ["purchaseAmountText", "simpleText"])))
+        end if
+
+        renderer = item.liveChatPaidStickerRenderer
+        if IsAssociativeArray(renderer)
+            return LiveChatMessage(renderer, ValidString(ObjectUtils.Dig(renderer, ["purchaseAmountText", "simpleText"])))
+        end if
+
+        renderer = item.liveChatMembershipItemRenderer
+        if IsAssociativeArray(renderer)
+            meta = ParseText(renderer.headerSubtext)
+            if meta = ""
+                meta = ParseText(renderer.headerPrimaryText)
+            end if
+            return LiveChatMessage(renderer, meta)
+        end if
+
+        ' System line ("Welcome to live chat!", subscribers-only notices): a message without an author.
+        renderer = item.liveChatViewerEngagementMessageRenderer
+        if IsAssociativeArray(renderer)
+            return {
+                author: ""
+                meta: ""
+                text: ParseLiveChatRuns(renderer.message)
+            }
+        end if
+
+        return invalid
+    end function
+
+    function LiveChatMessage(renderer as object, meta as string) as object
+        return {
+            author: ParseText(renderer.authorName)
+            meta: meta
+            text: ParseLiveChatRuns(renderer.message)
+        }
+    end function
+
+    ' Message runs carry text, and sometimes an emoji object instead of text (the emoji itself, not a glyph
+    ' the system font may have): fall back to its first shortcut or id.
+    function ParseLiveChatRuns(data as dynamic) as string
+        if not IsAssociativeArray(data)
+            return ""
+        end if
+        runs = data.runs
+        if not IsArray(runs)
+            return ParseText(data)
+        end if
+
+        text = ""
+        for each chatRun in runs
+            if not IsAssociativeArray(chatRun)
+                continue for
+            end if
+            if IsString(chatRun.text)
+                text += chatRun.text
+            else if IsAssociativeArray(chatRun.emoji)
+                shortcuts = chatRun.emoji.shortcuts
+                if IsArray(shortcuts) and shortcuts.Count() > 0
+                    text += ValidString(shortcuts[0])
+                else
+                    text += ValidString(chatRun.emoji.emojiId)
+                end if
+            end if
+        end for
+        return text
+    end function
+
+    function LiveChatTimeoutMs(continuations as dynamic) as integer
+        if IsArray(continuations)
+            for each continuation in continuations
+                data = ObjectUtils.Dig(continuation, ["invalidationContinuationData"])
+                if IsAssociativeArray(data)
+                    return ClampLiveChatPollMs(ValidInt(data.timeoutMs))
+                end if
+            end for
+        end if
+        return LIVE_CHAT_DEFAULT_POLL_MS
+    end function
+
+    function ClampLiveChatPollMs(timeoutMs as integer) as integer
+        if timeoutMs <= 0
+            return LIVE_CHAT_DEFAULT_POLL_MS
+        end if
+        if timeoutMs < LIVE_CHAT_MIN_POLL_MS
+            return LIVE_CHAT_MIN_POLL_MS
+        end if
+        if timeoutMs > LIVE_CHAT_MAX_POLL_MS
+            return LIVE_CHAT_MAX_POLL_MS
+        end if
+        return timeoutMs
+    end function
+
+end namespace

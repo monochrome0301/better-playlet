@@ -89,6 +89,7 @@ function TestSetup() as void
     for each overlayField in ["selected", "closed", "loadMore", "sortDelta"]
         m.playerMenu.unobserveField(overlayField)
         m.commentsList.unobserveField(overlayField)
+        m.liveChatList.unobserveField(overlayField)
         m.relatedVideos.unobserveField(overlayField)
     end for
     m.videoDetails.unobserveField("closed")
@@ -120,6 +121,10 @@ function TestSetup() as void
     m.commentsList.status = ""
     m.commentsList.sort = ""
     m.commentsList.comments = []
+    m.liveChatList.visible = false
+    m.liveChatList.comments = []
+    m.liveChatList.status = ""
+    m.liveChatTimer.control = "stop"
     m.commentsSorts = []
     m.commentsSortIndex = 0
     m.commentDetail.visible = false
@@ -309,6 +314,13 @@ function TestShowComments() as void
     NodeSetFocus(m.commentsList, true)
 end function
 
+' TestShowLiveChat - the live chat overlay's open transition, minus the poll job.
+function TestShowLiveChat() as void
+    m.liveChatOpen = true
+    m.liveChatList.visible = true
+    NodeSetFocus(m.liveChatList, true)
+end function
+
 ' TestSeedComments — loaded comments projected into the overlay's rows, minus the fetch job, so a spec can
 ' drive the overlay's selections (OK on a row).
 function TestSeedComments(comments as object) as void
@@ -384,6 +396,7 @@ function TestSnapshot() as object
         spinnerMode: m.spinner.mode
         menuLevel: m.menuLevel
         commentsOpen: m.commentsOpen
+        liveChatOpen: m.liveChatOpen
         brain: TestBrainSnapshot()
     }
 end function

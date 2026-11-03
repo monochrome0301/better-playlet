@@ -113,6 +113,14 @@ so opening it needs no request of its own; the video keeps playing behind the sc
 carried a recommendations continuation (`/next`'s `recommendedVideosContinuation`), the last tile loads the next
 page through the `RelatedVideosJob` job and appends it, landing focus on the first new video.
 
+## Live chat
+
+On a live stream the comments button opens the stream's live chat instead of the comments overlay, and the
+settings menu adds a "Live chat" shortcut. The chat polls `get_live_chat` while the overlay is open — the first
+poll resolves its continuation from the watch page — and appends only new messages, keeping the newest in view
+and the last 100 rows in memory. The player keeps playing behind the scrim. Chat disabled or unreachable shows
+that on the overlay; a failed poll re-resolves its token and retries.
+
 ## Seeks
 
 `ApplySeek` is the one writer of the device's `seek`. Anything outside the player seeks through the `setSeek`

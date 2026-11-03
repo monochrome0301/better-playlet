@@ -3,6 +3,7 @@ import "pkg:/components/Services/Innertube/CommentsEndpoint.bs"
 import "pkg:/components/Services/Innertube/Constants.bs"
 import "pkg:/components/Services/Innertube/Context.bs"
 import "pkg:/components/Services/Innertube/GetDrmLicenseEndpoint.bs"
+import "pkg:/components/Services/Innertube/LiveChatEndpoint.bs"
 import "pkg:/components/Services/Innertube/NextEndpoint.bs"
 import "pkg:/components/Services/Innertube/OAuth.bs"
 import "pkg:/components/Services/Innertube/PlayerEndpoint.bs"
@@ -745,6 +746,23 @@ namespace InnertubeService
 
     function GetComments(videoId as string, options = invalid as object) as object
         return Innertube.GetCommentsPage(videoId, ValidString(OptionUtils.Get(options, "continuation")), OptionUtils.Get(options, "cancellation"), ValidString(OptionUtils.Get(options, "sortToken")))
+    end function
+
+    ' One live chat poll. The first call resolves the chat's continuation from the watch page.
+    function GetLiveChat(videoId as string, options = invalid as object) as object
+        continuation = ValidString(OptionUtils.Get(options, "continuation"))
+        cancellation = OptionUtils.Get(options, "cancellation")
+        if StringUtils.IsNullOrEmpty(continuation)
+            found = Innertube.GetLiveChatContinuation(videoId, cancellation)
+            if found.error <> invalid
+                return found
+            end if
+            if found.continuation = ""
+                return { messages: [], continuation: "", disabled: true }
+            end if
+            continuation = found.continuation
+        end if
+        return Innertube.GetLiveChatPage(continuation, cancellation)
     end function
 
     function GetRelatedVideos(continuation as string, options = invalid as object) as object

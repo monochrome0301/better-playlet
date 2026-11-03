@@ -1,0 +1,18 @@
+import "pkg:/components/Services/Innertube/InnertubeService.bs"
+
+@job("LiveChatJob")
+function ExecuteJob() as void
+    input = JobGetInput()
+
+    result = InnertubeService.GetLiveChat(ValidString(input.videoId), {
+        continuation: ValidString(input.continuation)
+        cancellation: JobGetCancellation()
+    })
+
+    if result.error <> invalid
+        JobError(result.error)
+        return
+    end if
+
+    JobSuccessData(result)
+end function

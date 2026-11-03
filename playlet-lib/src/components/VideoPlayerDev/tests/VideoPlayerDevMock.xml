@@ -81,6 +81,7 @@
         <function name="TestContentJobFailed" />
         <function name="TestOpenMenu" />
         <function name="TestShowComments" />
+        <function name="TestShowLiveChat" />
         <function name="TestAppendRelatedVideos" />
     </interface>
     <children>
@@ -89,6 +90,7 @@
         <Timer id="liveBadgeHold" duration="1.6" repeat="false" />
         <Timer id="fullScreenHintTimer" duration="1" repeat="false" />
         <Timer id="liveEdgeClock" duration="1" repeat="true" />
+        <Timer id="liveChatTimer" duration="5" repeat="false" />
         <Animation id="chromeFadeIn" duration="0.5" easeFunction="linear">
             <FloatFieldInterpolator id="chromeFadeInInterp" key="[0.0, 1.0]" keyValue="[0.0, 1.0]" fieldToInterp="Chrome.opacity" />
         </Animation>
@@ -121,6 +123,7 @@
         <LargePause id="largePause" />
         <PlayerMenu id="playerMenu" visible="false" />
         <CommentList id="commentsList" visible="false" />
+        <CommentList id="liveChatList" visible="false" stickToEnd="true" />
         <CommentList id="commentReplies" visible="false" />
         <CommentDetail id="commentDetail" visible="false" />
         <VideoDetails id="videoDetails" visible="false" />

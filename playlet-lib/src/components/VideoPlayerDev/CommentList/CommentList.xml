@@ -7,6 +7,7 @@
         <field id="sort" type="string" alias="sortLabel.text" />
         <field id="sortDelta" type="integer" alwaysNotify="true" />
         <field id="comments" type="array" onChange="OnCommentsSet" />
+        <field id="stickToEnd" type="boolean" value="false" />
         <field id="focusIndex" type="integer" onChange="OnFocusIndexSet" />
         <field id="selected" type="assocarray" alwaysNotify="true" />
         <field id="closed" type="boolean" alwaysNotify="true" />
@@ -21,5 +22,6 @@
             font="font:SmallestSystemFont" color="0xBBBBBBFF" visible="false" />
         <MarkupList id="list" translation="[70,130]" itemSize="[960,116]"
             itemComponentName="CommentRow" numRows="5" vertFocusAnimationStyle="floatingFocus" />
+        <Timer id="stickTimer" duration="0.25" repeat="false" />
     </children>
 </component>

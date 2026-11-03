@@ -134,6 +134,15 @@ namespace Tests
             m.assertEqual(rows[2].title, Tr(Locale.PlaybackMenu.Speed) + ": 1.5x")
         end function
 
+        @it("adds the live chat shortcut only on live content")
+        function _()
+            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false, "", true)
+            m.assertEqual(rows.Count(), 4)
+            m.assertEqual(rows[1].value, "livechat")
+            m.assertEqual(rows[1].title, Tr(Locale.PlaybackMenu.LiveChat))
+            m.assertEqual(rows[3].value, "comments")
+        end function
+
         @describe("speed options")
 
         @it("lists YouTube's speeds, Normal for 1x, and marks the current one")

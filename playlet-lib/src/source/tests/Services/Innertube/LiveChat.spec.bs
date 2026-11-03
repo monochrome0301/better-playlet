@@ -1,0 +1,105 @@
+import "pkg:/components/Services/Innertube/LiveChatEndpoint.bs"
+
+namespace Tests
+
+    @suite
+    class LiveChatTests extends Rooibos.BaseTestSuite
+
+        function WatchPage(continuation as dynamic) as object
+            return {
+                contents: {
+                    twoColumnWatchNextResults: {
+                        conversationBar: {
+                            liveChatRenderer: {
+                                continuations: continuation
+                            }
+                        }
+                    }
+                }
+            }
+        end function
+
+        @describe("Innertube.FindLiveChatContinuation")
+
+        @it("reads the chat token from the watch page")
+        function _()
+            page = m.WatchPage([{ reloadContinuationData: { continuation: "reload-token" } }])
+            m.assertEqual(Innertube.FindLiveChatContinuation(page), "reload-token")
+
+            singleColumn = {
+                contents: {
+                    singleColumnWatchNextResults: {
+                        conversationBar: {
+                            liveChatRenderer: {
+                                continuations: [{ timedContinuationData: { continuation: "timed-token" } }]
+                            }
+                        }
+                    }
+                }
+            }
+            m.assertEqual(Innertube.FindLiveChatContinuation(singleColumn), "timed-token")
+        end function
+
+        @it("returns empty when the video has no live chat")
+        function _()
+            m.assertEqual(Innertube.FindLiveChatContinuation({ contents: {} }), "")
+            page = m.WatchPage([])
+            m.assertEqual(Innertube.FindLiveChatContinuation(page), "")
+        end function
+
+        @describe("Innertube.ParseLiveChatResponse")
+
+        @it("parses text, Super Chat, membership and system rows, skipping placeholders")
+        function _()
+            payload = {
+                continuationContents: {
+                    liveChatContinuation: {
+                        actions: [
+                            { addChatItemAction: { item: { liveChatTextMessageRenderer: { authorName: { simpleText: "@ana" }, message: { runs: [{ text: "hola " }, { text: "a todos" }] } } } } }
+                            { addChatItemAction: { item: { liveChatPaidMessageRenderer: { authorName: { simpleText: "@leo" }, message: { runs: [{ text: "great stream" }] }, purchaseAmountText: { simpleText: "$5.00" } } } } }
+                            { addChatItemAction: { item: { liveChatMembershipItemRenderer: { authorName: { simpleText: "@mika" }, headerSubtext: { runs: [{ text: "Member (1 year)" }] } } } } }
+                            { addChatItemAction: { item: { liveChatViewerEngagementMessageRenderer: { message: { runs: [{ text: "Welcome to live chat!" }] } } } } }
+                            { addChatItemAction: { item: { liveChatPlaceholderItemRenderer: { id: "placeholder" } } } }
+                        ]
+                        continuations: [{ invalidationContinuationData: { continuation: "next-token", timeoutMs: 4000 } }]
+                    }
+                }
+            }
+
+            result = Innertube.ParseLiveChatResponse(payload)
+            m.assertInvalid(result.error)
+            m.assertEqual(result.messages.Count(), 4)
+            m.assertEqual(result.messages[0].author, "@ana")
+            m.assertEqual(result.messages[0].text, "hola a todos")
+            m.assertEqual(result.messages[1].meta, "$5.00")
+            m.assertEqual(result.messages[1].text, "great stream")
+            m.assertEqual(result.messages[2].meta, "Member (1 year)")
+            m.assertEqual(result.messages[3].author, "")
+            m.assertEqual(result.messages[3].text, "Welcome to live chat!")
+            m.assertEqual(result.continuation, "next-token")
+            m.assertEqual(result.timeoutMs, 4000)
+        end function
+
+        @it("clamps the poll timeout to the overlay's range")
+        function _()
+            m.assertEqual(Innertube.ClampLiveChatPollMs(10000), Innertube.LIVE_CHAT_MAX_POLL_MS)
+            m.assertEqual(Innertube.ClampLiveChatPollMs(500), Innertube.LIVE_CHAT_MIN_POLL_MS)
+            m.assertEqual(Innertube.ClampLiveChatPollMs(0), Innertube.LIVE_CHAT_DEFAULT_POLL_MS)
+            m.assertEqual(Innertube.ClampLiveChatPollMs(4000), 4000)
+        end function
+
+        @it("renders emoji runs by shortcut")
+        function _()
+            message = { runs: [{ text: "hi " }, { emoji: { emojiId: "UCw", shortcuts: [":wave:"] } }] }
+            m.assertEqual(Innertube.ParseLiveChatRuns(message), "hi :wave:")
+        end function
+
+        @it("fails on a response without a live chat continuation")
+        function _()
+            result = Innertube.ParseLiveChatResponse({})
+            m.assertEqual(result.error, "Invalid live chat response")
+        end function
+
+    end class
+
+end namespace

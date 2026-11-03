@@ -47,6 +47,10 @@ enum CommentJobKind
     Replies = "replies"
 end enum
 
+' Live chat keeps only the recent window in the overlay; older messages are dropped.
+const LIVE_CHAT_MAX_ROWS = 100
+const LIVE_CHAT_RETRY_MS = 10000
+
 ' Init() lives in the tiny VideoPlayerDevInit.bs because the @oninit/AutoBind injection requires Init in exactly
 ' one component scope; this file is shared with the test mock (tests/VideoPlayerDevMock).
 function Initialize()
@@ -90,6 +94,12 @@ function Initialize()
     m.commentsJobKind = CommentJobKind.Page
     m.commentsJobIndex = -1
     m.commentRepliesComment = -1
+    ' live chat overlay state (live streams only).
+    m.liveChatOpen = false
+    m.liveChatRows = []
+    m.liveChatContinuation = ""
+    m.liveChatVideoId = ""
+    m.liveChatJob = invalid
     ' related-videos feed: opened by Down, listing the loaded watch page's recommendations.
     m.relatedOpen = false
     m.relatedItems = []
@@ -147,6 +157,7 @@ function Initialize()
     m.fullScreenHint = m.top.findNode("fullScreenHint")
     m.playerMenu = m.top.findNode("playerMenu")
     m.commentsList = m.top.findNode("commentsList")
+    m.liveChatList = m.top.findNode("liveChatList")
     m.commentDetail = m.top.findNode("commentDetail")
     m.commentReplies = m.top.findNode("commentReplies")
     m.videoDetails = m.top.findNode("videoDetails")
@@ -156,6 +167,7 @@ function Initialize()
     m.transportTimer = m.top.findNode("transportTimer")
     m.liveBadgeHold = m.top.findNode("liveBadgeHold")
     m.liveEdgeClock = m.top.findNode("liveEdgeClock")
+    m.liveChatTimer = m.top.findNode("liveChatTimer")
     m.fullScreenHintTimer = m.top.findNode("fullScreenHintTimer")
     m.chromeFadeIn = m.top.findNode("chromeFadeIn")
     m.chromeFadeOut = m.top.findNode("chromeFadeOut")
@@ -165,6 +177,7 @@ function Initialize()
     m.transportTimer.ObserveField("fire", FuncName(OnTransportTimerFire))
     m.liveBadgeHold.ObserveField("fire", FuncName(OnLiveBadgeHoldFire))
     m.liveEdgeClock.ObserveField("fire", FuncName(OnLiveEdgeClockFire))
+    m.liveChatTimer.ObserveField("fire", FuncName(OnLiveChatTimerFire))
     m.fullScreenHintTimer.ObserveField("fire", FuncName(OnFullScreenHintTimer))
     m.chromeFadeIn.ObserveField("state", FuncName(OnChromeFadeInState))
     m.chromeFadeOut.ObserveField("state", FuncName(OnChromeFadeOutState))
@@ -236,6 +249,7 @@ function OnNodeReady()
     m.commentsList.ObserveField("selected", FuncName(OnCommentsSelected))
     m.commentsList.ObserveField("closed", FuncName(OnCommentsClosed))
     m.commentsList.ObserveField("sortDelta", FuncName(OnCommentsSort))
+    m.liveChatList.ObserveField("closed", FuncName(OnLiveChatClosed))
     m.commentDetail.ObserveField("closed", FuncName(OnCommentDetailClosed))
     m.commentReplies.ObserveField("selected", FuncName(OnCommentRepliesSelected))
     m.commentReplies.ObserveField("closed", FuncName(OnCommentRepliesClosed))
@@ -403,7 +417,7 @@ function OnKeyEvent(key as string, press as boolean) as boolean
     ' keys, which still pause/resume so playback can be stopped without leaving the overlay first. An overlay
     ' that says open but is not on screen (a half-finished open) is healed instead of owning the remote: a
     ' swallowed Back there is an app with no way out.
-    overlayOpen = (m.commentsOpen and m.commentsList.visible) or (m.menuLevel <> PlayerOverlayLogic.Level.None and m.playerMenu.visible) or m.commentDetail.visible or m.commentReplies.visible or m.videoDetails.visible or (m.relatedOpen and m.relatedVideos.visible)
+    overlayOpen = (m.commentsOpen and m.commentsList.visible) or (m.liveChatOpen and m.liveChatList.visible) or (m.menuLevel <> PlayerOverlayLogic.Level.None and m.playerMenu.visible) or m.commentDetail.visible or m.commentReplies.visible or m.videoDetails.visible or (m.relatedOpen and m.relatedVideos.visible)
     if overlayOpen
         if press
             ' a dedicated Pause key only pauses; Play/PlayOnly are the play/pause toggle (the combined button's keys).
@@ -417,6 +431,9 @@ function OnKeyEvent(key as string, press as boolean) as boolean
     end if
     if m.commentsOpen
         OnCommentsClosed()
+    end if
+    if m.liveChatOpen
+        OnLiveChatClosed()
     end if
     if m.menuLevel <> PlayerOverlayLogic.Level.None
         CloseMenu()
@@ -663,7 +680,11 @@ function ActivateButton(index as integer) as void
         MinimizeReset()
         VideoQueueUtils.ToggleVideoPictureInPicture(m.videoQueue)
     else if index = PlayerCoordinatorLogic.PlayerButton.Comments
-        OpenComments()
+        if m.transport.isLive
+            OpenLiveChat()
+        else
+            OpenComments()
+        end if
     else if index = PlayerCoordinatorLogic.PlayerButton.Subtitles
         OpenMenu(PlayerOverlayLogic.Level.Subtitles)
     else if index = PlayerCoordinatorLogic.PlayerButton.Settings
@@ -698,7 +719,7 @@ function TakeFocusBackFrom(overlay as object) as void
 end function
 
 function OpenMenu(level = PlayerOverlayLogic.Level.Main as string) as void
-    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.commentDetail.visible or m.commentReplies.visible or m.videoDetails.visible
+    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.liveChatOpen or m.commentDetail.visible or m.commentReplies.visible or m.videoDetails.visible
         return
     end if
     SetMenuLevel(level)
@@ -786,6 +807,9 @@ function OnMenuSelected() as void
         if value = "comments"
             CloseMenu()
             OpenComments()
+        else if value = "livechat"
+            CloseMenu()
+            OpenLiveChat()
         else if value = "details"
             CloseMenu()
             OpenDetails()
@@ -862,7 +886,7 @@ function BuildMainMenuRows() as object
         speedLabel = PlayerOverlayLogic.SpeedTextFor(CurrentSpeed())
     end if
 
-    return PlayerOverlayLogic.MainRows(qualityLabel, canChangeQuality, subtitleLabel, subtitleTracks.Count() > 0, audioLabel, hasAudio, speedLabel)
+    return PlayerOverlayLogic.MainRows(qualityLabel, canChangeQuality, subtitleLabel, subtitleTracks.Count() > 0, audioLabel, hasAudio, speedLabel, m.transport.isLive)
 end function
 
 function CurrentQuality() as string
@@ -1020,7 +1044,7 @@ end function
 '===============================================================================
 function OpenComments() as void
     content = m.top.content
-    if m.commentsOpen or content = invalid or StringUtils.IsNullOrEmpty(content.videoId)
+    if m.commentsOpen or m.liveChatOpen or content = invalid or StringUtils.IsNullOrEmpty(content.videoId)
         return
     end if
 
@@ -1360,6 +1384,149 @@ function OnCommentsClosed() as void
 end function
 
 '===============================================================================
+' Live chat overlay — the live stream's chat, polled while the overlay is open. First poll resolves the
+' continuation from the watch page; each reply re-arms the poll timer with the server's timeout and appends
+' only its new messages. The player keeps playing behind the overlay.
+'===============================================================================
+function OpenLiveChat() as void
+    content = m.top.content
+    if m.liveChatOpen or not m.transport.isLive or content = invalid or StringUtils.IsNullOrEmpty(content.videoId)
+        return
+    end if
+
+    m.liveChatOpen = true
+    m.liveChatRows = []
+    m.liveChatContinuation = ""
+    m.liveChatVideoId = content.videoId
+
+    m.liveChatList.title = Tr(Locale.PlaybackMenu.LiveChat)
+    m.liveChatList.comments = []
+    m.liveChatList.status = Tr(Locale.PlaybackMenu.LiveChatLoading)
+    m.liveChatList.visible = true
+    NodeSetFocus(m.liveChatList, true)
+    FetchLiveChat()
+end function
+
+function FetchLiveChat() as void
+    if m.liveChatJob <> invalid or not m.liveChatOpen or m.onCloseCalled = true
+        return
+    end if
+    m.liveChatJob = JobSystem.CreateCallback(OnLiveChatJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.LiveChatJob, {
+        videoId: m.liveChatVideoId
+        continuation: m.liveChatContinuation
+    }, m.liveChatJob)
+end function
+
+function OnLiveChatJobDone(event as object) as void
+    JobSystem.UnobserveCallback(event.getRoSGNode())
+    m.liveChatJob = invalid
+    if m.onCloseCalled = true or not m.liveChatOpen
+        return
+    end if
+
+    info = event.getInfo()
+    if info.cancel = true
+        return
+    end if
+
+    if not info.success
+        ' a stale continuation is the usual cause: clear it so the next attempt resolves a fresh one.
+        m.liveChatContinuation = ""
+        m.liveChatList.status = Tr(Locale.PlaybackMenu.LiveChatLoadError)
+        ScheduleLiveChat(LIVE_CHAT_RETRY_MS)
+        return
+    end if
+
+    data = info.data
+    if not IsAssociativeArray(data)
+        data = {}
+    end if
+    if ValidBool(data.disabled)
+        m.liveChatList.status = Tr(Locale.PlaybackMenu.LiveChatUnavailable)
+        return
+    end if
+
+    messages = data.messages
+    if IsArray(messages) and messages.Count() > 0
+        for each message in messages
+            m.liveChatRows.Push({
+                author: ValidString(message.author)
+                text: ValidString(message.text)
+                meta: ValidString(message.meta)
+                indent: 0
+                pinned: false
+            })
+        end for
+        TrimLiveChatRows()
+        ' a fresh array each poll: SceneGraph skips onChange when the same reference is assigned.
+        m.liveChatList.comments = LiveChatRowsCopy()
+        m.liveChatList.status = ""
+    else if m.liveChatRows.Count() = 0
+        m.liveChatList.status = Tr(Locale.PlaybackMenu.LiveChatEmpty)
+    end if
+
+    m.liveChatContinuation = ValidString(data.continuation)
+    ScheduleLiveChat(ValidInt(data.timeoutMs))
+end function
+
+' Keep only the newest messages: the overlay shows a window, and an unbounded array would grow all stream.
+function TrimLiveChatRows() as void
+    overflow = m.liveChatRows.Count() - LIVE_CHAT_MAX_ROWS
+    if overflow <= 0
+        return
+    end if
+    rows = []
+    for i = overflow to m.liveChatRows.Count() - 1
+        rows.Push(m.liveChatRows[i])
+    end for
+    m.liveChatRows = rows
+end function
+
+function LiveChatRowsCopy() as object
+    rows = []
+    for each row in m.liveChatRows
+        rows.Push(row)
+    end for
+    return rows
+end function
+
+function ScheduleLiveChat(delayMs as integer) as void
+    if not m.liveChatOpen
+        return
+    end if
+    if delayMs <= 0
+        delayMs = LIVE_CHAT_RETRY_MS
+    end if
+    ' a fired one-shot Timer keeps control = "start", so assigning "start" again would not raise a change
+    ' event and the poll chain would die here. stop first to make the start a real field change.
+    m.liveChatTimer.control = "stop"
+    m.liveChatTimer.duration = delayMs / 1000.0
+    m.liveChatTimer.control = "start"
+end function
+
+function OnLiveChatTimerFire() as void
+    FetchLiveChat()
+end function
+
+function OnLiveChatClosed() as void
+    if not m.liveChatOpen
+        return
+    end if
+    m.liveChatOpen = false
+    m.liveChatTimer.control = "stop"
+    if m.liveChatJob <> invalid
+        m.liveChatJob.cancel = true
+        JobSystem.UnobserveCallback(m.liveChatJob)
+        m.liveChatJob = invalid
+    end if
+    ' focus leaves the overlay before it is hidden: hiding the focused node can strand the scene's focus.
+    TakeFocusBackFrom(m.liveChatList)
+    m.liveChatList.visible = false
+    ArmAutoHide()
+end function
+
+'===============================================================================
 ' Video details overlay — description, the game it is about, plus the stats the loaded metadata carries.
 '===============================================================================
 function OpenDetails() as void
@@ -1581,7 +1748,7 @@ end function
 ' action reuse the ChannelView jobs, writing their result onto a small node the coordinator observes.
 '===============================================================================
 function OpenChannelMenu() as void
-    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.videoDetails.visible
+    if m.menuLevel <> PlayerOverlayLogic.Level.None or m.commentsOpen or m.liveChatOpen or m.videoDetails.visible
         return
     end if
     channelId = CurrentChannelId()
@@ -2745,6 +2912,7 @@ function OnClose() as void
     m.commentsList.unobserveField("selected")
     m.commentsList.unobserveField("closed")
     m.commentsList.unobserveField("sortDelta")
+    m.liveChatList.unobserveField("closed")
     m.videoDetails.unobserveField("closed")
     m.videoDetails.unobserveField("selected")
     m.channelStatusNode.UnobserveField("isSubscribed")
@@ -2761,6 +2929,7 @@ function OnClose() as void
     m.transportTimer.unobserveField("fire")
     m.liveBadgeHold.unobserveField("fire")
     m.liveEdgeClock.unobserveField("fire")
+    m.liveChatTimer.unobserveField("fire")
     m.fullScreenHintTimer.unobserveField("fire")
     m.chromeFadeIn.unobserveField("state")
     m.chromeFadeOut.unobserveField("state")
@@ -2770,6 +2939,7 @@ function OnClose() as void
     m.transportTimer.control = "stop"
     m.liveBadgeHold.control = "stop"
     m.liveEdgeClock.control = "stop"
+    m.liveChatTimer.control = "stop"
     m.fullScreenHintTimer.control = "stop"
     m.clock.dispose = true
 
@@ -2787,6 +2957,12 @@ function OnClose() as void
         m.commentsJob.cancel = true
         JobSystem.UnobserveCallback(m.commentsJob)
         m.commentsJob = invalid
+    end if
+
+    if m.liveChatJob <> invalid
+        m.liveChatJob.cancel = true
+        JobSystem.UnobserveCallback(m.liveChatJob)
+        m.liveChatJob = invalid
     end if
 
     if m.relatedJob <> invalid
