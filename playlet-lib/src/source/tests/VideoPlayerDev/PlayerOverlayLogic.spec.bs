@@ -277,6 +277,7 @@ namespace Tests
                 likes: "12"
                 publishedTime: "2 days ago"
                 hearted: false
+                pinned: false
                 replies: ""
                 replyToken: ""
                 replyRows: []
@@ -316,6 +317,20 @@ namespace Tests
             m.assertTrue(rows[0].meta.InStr(Tr(Locale.PlaybackMenu.ViewReplies)) > 0)
             m.assertEqual(rows[1].kind, "comment")
             m.assertEqual(rows[2].kind, "more")
+        end function
+
+        @it("leads with the pinned comment and keeps its index")
+        function _()
+            comments = [
+                m.Comment({ author: "@a" })
+                m.Comment({ author: "@pinned", pinned: true })
+            ]
+            rows = PlayerOverlayLogic.CommentRows(comments, false)
+            m.assertEqual(rows.Count(), 2)
+            m.assertEqual(rows[0].author, "@pinned")
+            m.assertEqual(rows[0].commentIndex, 1)
+            m.assertEqual(rows[0].pinned, true)
+            m.assertEqual(rows[1].author, "@a")
         end function
 
         @it("offers the replies hint only on comments that carry a replies token")

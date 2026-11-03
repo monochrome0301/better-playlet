@@ -17,6 +17,8 @@ function OnContentSet() as void
     author.rawText = ValidString(content.author)
     meta.text = ValidString(content.meta)
     text.rawText = ValidString(content.text)
+    m.top.findNode("pinLabel").rawText = "📌"
+    m.top.findNode("pinLabel").visible = ValidBool(content.pinned)
     Repaint()
 end function
 
@@ -33,4 +35,5 @@ function SetLabelColors(authorColor as string, metaColor as string, textColor as
     m.top.findNode("authorLabel").color = authorColor
     m.top.findNode("metaLabel").color = metaColor
     m.top.findNode("textLabel").color = textColor
+    m.top.findNode("pinLabel").color = authorColor
 end function

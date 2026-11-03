@@ -9,6 +9,8 @@
     <children>
         <EmojiLabel id="authorLabel" translation="[16,6]" width="760" height="30"
             baseFont="font:SmallestBoldSystemFont" baseSize="18" color="0xFEFEFEFF" />
+        <EmojiLabel id="pinLabel" translation="[896,6]" width="48" height="30" horizAlign="right"
+            baseFont="font:SmallestBoldSystemFont" baseSize="18" color="0xFEFEFEFF" visible="false" />
         <Label id="metaLabel" translation="[16,34]" width="760" height="24"
             font="font:SmallestSystemFont" color="0xAAAAAAFF" />
         <EmojiLabel id="textLabel" translation="[16,58]" width="920" height="50"

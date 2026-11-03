@@ -28,6 +28,7 @@ function OnCommentsSet() as void
                 meta: ValidString(comment.meta)
                 text: ValidString(comment.text)
                 indent: ValidInt(comment.indent)
+                pinned: ValidBool(comment.pinned)
             })
         end for
     end if

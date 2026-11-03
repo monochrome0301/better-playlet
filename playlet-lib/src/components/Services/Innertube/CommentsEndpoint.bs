@@ -10,6 +10,9 @@ namespace Innertube
     ' engagementToolbarStateEntityPayload.heartState seen when the video's creator hearted a comment.
     const HEARTED_TOOLBAR_STATE = "TOOLBAR_HEART_STATE_HEARTED"
 
+    ' commentThreadRenderer.renderingPriority of the creator's pinned comment (language independent).
+    const PINNED_RENDERING_PRIORITY = "RENDERING_PRIORITY_PINNED_COMMENT"
+
     ' One page of comments: the video's top-level comments (empty continuation resolves the token from the watch
     ' page first) or one comment's replies (the token straight from that comment's thread). sortToken, when set,
     ' is the sort's own reload token and replaces the continuation.
@@ -273,6 +276,7 @@ namespace Innertube
                     likes: ValidString(toolbar.likeCountNotliked)
                     replies: ValidString(toolbar.replyCount)
                     hearted: ToolbarHearted(toolbar, toolbarStates[ValidString(viewModel.toolbarStateKey)])
+                    pinned: CommentPinned(thread, viewModel)
                     replyContinuation: FindRepliesContinuation(thread)
                 }
             end if
@@ -291,6 +295,7 @@ namespace Innertube
             likes: ParseText(ObjectUtils.Dig(renderer, ["voteCount"]))
             replies: ValidString(renderer.replyCount)
             hearted: ClassicHearted(renderer)
+            pinned: CommentPinned(thread, invalid)
             replyContinuation: FindRepliesContinuation(thread)
         }
     end function
@@ -313,6 +318,18 @@ namespace Innertube
             end if
         end for
         return false
+    end function
+
+    ' The creator's pinned comment: the thread's rendering priority, or the localized "Pinned by ..." text on
+    ' the view model (nested or flat) or the classic renderer.
+    function CommentPinned(thread as object, viewModel as object) as boolean
+        if ValidString(ObjectUtils.Dig(thread, ["renderingPriority"])) = PINNED_RENDERING_PRIORITY
+            return true
+        end if
+        if ValidString(ObjectUtils.Dig(viewModel, ["pinnedText"])) <> ""
+            return true
+        end if
+        return ValidString(ObjectUtils.Dig(thread, ["commentViewModel", "pinnedText"])) <> "" or ValidString(ObjectUtils.Dig(thread, ["comment", "commentRenderer", "pinnedText"])) <> ""
     end function
 
     function ParseCommentCount(countText as object) as string

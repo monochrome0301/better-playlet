@@ -1150,6 +1150,7 @@ function CommentRowData(comment as object) as object
         likes: ValidString(comment.likes)
         publishedTime: ValidString(comment.publishedTime)
         hearted: ValidBool(comment.hearted)
+        pinned: ValidBool(comment.pinned)
         replies: ValidString(comment.replies)
         replyToken: ValidString(comment.replyContinuation)
         replyRows: []

@@ -94,6 +94,31 @@ namespace Tests
             m.assertEqual(result.sorts[1].selected, false)
         end function
 
+        @it("marks the creator-pinned comment from its priority or pinned text")
+        function _()
+            payload = m.Parse(`{
+                "frameworkUpdates": {"entityBatchUpdate": {"mutations": [
+                    {"payload": {"commentEntityPayload": {"key": "k1", "properties": {"content": {"content": "pinned"}}, "author": {"displayName": "@a"}, "toolbar": {}}}},
+                    {"payload": {"commentEntityPayload": {"key": "k2", "properties": {"content": {"content": "text"}}, "author": {"displayName": "@b"}, "toolbar": {}}}},
+                    {"payload": {"commentEntityPayload": {"key": "k3", "properties": {"content": {"content": "plain"}}, "author": {"displayName": "@c"}, "toolbar": {}}}}
+                ]}},
+                "onResponseReceivedEndpoints": [{"reloadContinuationItemsCommand": {"continuationItems": [
+                    {"commentThreadRenderer": {
+                        "renderingPriority": "RENDERING_PRIORITY_PINNED_COMMENT",
+                        "commentViewModel": {"commentViewModel": {"commentKey": "k1"}}
+                    }},
+                    {"commentThreadRenderer": {"commentViewModel": {"commentViewModel": {"commentKey": "k2", "pinnedText": "Pinned by @b"}}}},
+                    {"commentThreadRenderer": {"commentViewModel": {"commentViewModel": {"commentKey": "k3"}}}}
+                ]}}]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.comments[0].pinned, true)
+            m.assertEqual(result.comments[1].pinned, true)
+            m.assertEqual(result.comments[2].pinned, false)
+        end function
+
         @it("falls back to the classic commentRenderer")
         function _()
             payload = m.Parse(`{
