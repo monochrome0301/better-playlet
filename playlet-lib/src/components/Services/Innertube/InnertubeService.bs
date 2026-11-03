@@ -744,7 +744,7 @@ namespace InnertubeService
     end function
 
     function GetComments(videoId as string, options = invalid as object) as object
-        return Innertube.GetCommentsPage(videoId, ValidString(OptionUtils.Get(options, "continuation")), OptionUtils.Get(options, "cancellation"))
+        return Innertube.GetCommentsPage(videoId, ValidString(OptionUtils.Get(options, "continuation")), OptionUtils.Get(options, "cancellation"), ValidString(OptionUtils.Get(options, "sortToken")))
     end function
 
     function GetRelatedVideos(continuation as string, options = invalid as object) as object

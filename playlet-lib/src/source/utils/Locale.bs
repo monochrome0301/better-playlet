@@ -394,6 +394,7 @@ namespace Locale
         LoadingComments = "Loading comments..."
         CommentsLoadError = "Failed to load comments"
         CommentsDisabled = "Comments are disabled"
+        CommentsSortHint = "← → to change"
         ViewReplies = "View replies"
         HideReplies = "Hide replies"
         Replies = "Replies"

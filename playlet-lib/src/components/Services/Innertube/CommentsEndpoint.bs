@@ -11,9 +11,12 @@ namespace Innertube
     const HEARTED_TOOLBAR_STATE = "TOOLBAR_HEART_STATE_HEARTED"
 
     ' One page of comments: the video's top-level comments (empty continuation resolves the token from the watch
-    ' page first) or one comment's replies (the token straight from that comment's thread).
-    function GetCommentsPage(videoId as string, continuation as string, cancellation as object) as object
-        if StringUtils.IsNullOrEmpty(continuation)
+    ' page first) or one comment's replies (the token straight from that comment's thread). sortToken, when set,
+    ' is the sort's own reload token and replaces the continuation.
+    function GetCommentsPage(videoId as string, continuation as string, cancellation as object, sortToken = "" as string) as object
+        if not StringUtils.IsNullOrEmpty(sortToken)
+            continuation = sortToken
+        else if StringUtils.IsNullOrEmpty(continuation)
             nextRequest = CreateNextRequest({ "videoId": videoId })
             nextRequest.Cancellation(cancellation)
             nextResponse = nextRequest.Await()
@@ -113,6 +116,7 @@ namespace Innertube
             continuation: ""
             count: ""
             disabled: false
+            sorts: []
         }
 
         ' Comment bodies live in frameworkUpdates entities, keyed by the commentViewModel on each thread; the
@@ -172,7 +176,56 @@ namespace Innertube
             result.continuation = ValidString(ObjectUtils.Dig(payload, ["continuationContents", "commentSectionContinuation", "continuations", 0, "nextContinuationData", "continuation"]))
         end if
 
+        result.sorts = ParseCommentSorts(payload)
         return result
+    end function
+
+    ' The comments sort options ({ title, token, selected }), read from any comments header in the payload: the
+    ' first page's, or the reload page a sort switch answers with.
+    function ParseCommentSorts(payload as object) as object
+        sorts = []
+        commands = payload.onResponseReceivedEndpoints
+        if not IsArray(commands)
+            return sorts
+        end if
+        for each command in commands
+            for each key in ["reloadContinuationItemsCommand", "appendContinuationItemsCommand", "appendContinuationItemsAction"]
+                items = ObjectUtils.Dig(command, [key, "continuationItems"])
+                if not IsArray(items)
+                    continue for
+                end if
+                for each item in items
+                    subMenuItems = ObjectUtils.Dig(item, ["commentsHeaderRenderer", "sortMenu", "sortFilterSubMenuRenderer", "subMenuItems"])
+                    if not IsArray(subMenuItems)
+                        continue for
+                    end if
+                    for each subMenu in subMenuItems
+                        ' the sort switch token ships as a legacy reload continuation or as a command.
+                        token = ""
+                        for each path in [
+                                ["serviceEndpoint", "reloadContinuationData", "continuation"]
+                                ["continuation", "reloadContinuationData", "continuation"]
+                                ["serviceEndpoint", "continuationCommand", "token"]
+                                ["navigationEndpoint", "continuationCommand", "token"]
+                            ]
+                            token = ValidString(ObjectUtils.Dig(subMenu, path))
+                            if token <> ""
+                                exit for
+                            end if
+                        end for
+                        if token <> ""
+                            sorts.Push({
+                                title: ParseText(subMenu.title)
+                                token: token
+                                selected: ValidBool(subMenu.selected)
+                            })
+                        end if
+                    end for
+                    return sorts
+                end for
+            end for
+        end for
+        return sorts
     end function
 
     function ParseCommentEntities(payload as object) as object

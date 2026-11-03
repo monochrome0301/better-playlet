@@ -1205,6 +1205,10 @@
         <translation>Comments are disabled</translation>
     </message>
     <message>
+        <source>← → to change</source>
+        <translation>← → to change</translation>
+    </message>
+    <message>
         <source>View replies</source>
         <translation>View replies</translation>
     </message>

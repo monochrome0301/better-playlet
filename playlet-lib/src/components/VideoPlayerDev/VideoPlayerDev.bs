@@ -84,6 +84,8 @@ function Initialize()
     m.commentsCount = 0
     m.commentsContinuation = ""
     m.commentsHasMore = false
+    m.commentsSorts = []
+    m.commentsSortIndex = 0
     m.commentsVideoId = ""
     m.commentsJobKind = CommentJobKind.Page
     m.commentsJobIndex = -1
@@ -233,6 +235,7 @@ function OnNodeReady()
     m.playerMenu.ObserveField("closed", FuncName(OnMenuClosed))
     m.commentsList.ObserveField("selected", FuncName(OnCommentsSelected))
     m.commentsList.ObserveField("closed", FuncName(OnCommentsClosed))
+    m.commentsList.ObserveField("sortDelta", FuncName(OnCommentsSort))
     m.commentDetail.ObserveField("closed", FuncName(OnCommentDetailClosed))
     m.commentReplies.ObserveField("selected", FuncName(OnCommentRepliesSelected))
     m.commentReplies.ObserveField("closed", FuncName(OnCommentRepliesClosed))
@@ -1027,17 +1030,21 @@ function OpenComments() as void
     m.commentsCount = 0
     m.commentsContinuation = ""
     m.commentsHasMore = false
+    m.commentsSorts = []
+    m.commentsSortIndex = 0
     m.commentsVideoId = content.videoId
 
     m.commentsList.title = Tr(Locale.PlaybackMenu.Comments)
     m.commentsList.comments = []
+    UpdateCommentsSortLabel()
     m.commentsList.visible = true
     NodeSetFocus(m.commentsList, true)
     FetchComments("", CommentJobKind.Page, -1)
 end function
 
 ' Fetch the next page of comments (kind Page) or one comment's replies (kind Replies, commentIndex set).
-function FetchComments(continuation as string, kind as string, commentIndex as integer) as void
+' sortToken reloads the top-level section with that sort instead of continuing the current one.
+function FetchComments(continuation as string, kind as string, commentIndex as integer, sortToken = "" as string) as void
     if m.commentsJob <> invalid
         m.commentsJob.cancel = true
         JobSystem.UnobserveCallback(m.commentsJob)
@@ -1053,6 +1060,7 @@ function FetchComments(continuation as string, kind as string, commentIndex as i
     JobSystem.QueueJob(m.jobQueue, Jobs.VideoCommentsJob, {
         videoId: m.commentsVideoId
         continuation: continuation
+        sortToken: sortToken
     }, m.commentsJob)
 end function
 
@@ -1102,6 +1110,18 @@ function OnCommentsJobDone(event as object) as void
     count = ValidString(data.count)
     if count <> ""
         m.commentsList.title = Tr(Locale.PlaybackMenu.Comments) + " (" + count + ")"
+    end if
+
+    ' the first page (and a sort reload) carries the sort options; a load-more page does not.
+    sorts = data.sorts
+    if IsArray(sorts) and sorts.Count() > 0
+        m.commentsSorts = sorts
+        m.commentsSortIndex = 0
+        for i = 0 to sorts.Count() - 1
+            if ValidBool(sorts[i].selected)
+                m.commentsSortIndex = i
+            end if
+        end for
     end if
 
     ' the new page lands where the load-more row was (the last row), so focus follows it onto the first new comment.
@@ -1160,11 +1180,42 @@ function ShowCommentRows(focusIndex as integer) as void
     m.commentsRows = rows
     m.commentsList.comments = rows
     m.commentsList.focusIndex = focusIndex
+    UpdateCommentsSortLabel()
     if m.commentsCount = 0 and not m.commentsHasMore
         m.commentsList.status = Tr(Locale.PlaybackMenu.NoComments)
     else
         m.commentsList.status = ""
     end if
+end function
+
+' The sort line above the rows: the active sort's own title (YouTube localizes it) plus the remote hint.
+function UpdateCommentsSortLabel() as void
+    if m.commentsSorts.Count() = 0
+        m.commentsList.sort = ""
+        return
+    end if
+    sort = m.commentsSorts[m.commentsSortIndex]
+    m.commentsList.sort = ValidString(sort.title) + " · " + Tr(Locale.PlaybackMenu.CommentsSortHint)
+end function
+
+' Left/Right picks the previous/next sort and reloads the section from that sort's own token.
+function OnCommentsSort(event as object) as void
+    if m.commentsJob <> invalid or m.commentsSorts.Count() < 2
+        return
+    end if
+    index = PlayerOverlayLogic.NextCommentSortIndex(m.commentsSortIndex, ValidInt(event.getData()), m.commentsSorts.Count())
+    if index = m.commentsSortIndex
+        return
+    end if
+    m.commentsSortIndex = index
+    m.commentsData = []
+    m.commentsRows = []
+    m.commentsCount = 0
+    m.commentsContinuation = ""
+    m.commentsHasMore = false
+    m.commentsList.comments = []
+    UpdateCommentsSortLabel()
+    FetchComments("", CommentJobKind.Page, -1, ValidString(m.commentsSorts[index].token))
 end function
 
 function OnCommentsSelected() as void
@@ -2692,6 +2743,7 @@ function OnClose() as void
     m.playerMenu.unobserveField("closed")
     m.commentsList.unobserveField("selected")
     m.commentsList.unobserveField("closed")
+    m.commentsList.unobserveField("sortDelta")
     m.videoDetails.unobserveField("closed")
     m.videoDetails.unobserveField("selected")
     m.channelStatusNode.UnobserveField("isSubscribed")

@@ -63,5 +63,14 @@ function OnKeyEvent(key as string, press as boolean) as boolean
         m.top.closed = true
         return true
     end if
+    ' the coordinator owns the sorts; the list only reports the direction.
+    if key = RemoteKeys.Left
+        m.top.sortDelta = -1
+        return true
+    end if
+    if key = RemoteKeys.Right
+        m.top.sortDelta = 1
+        return true
+    end if
     return false
 end function

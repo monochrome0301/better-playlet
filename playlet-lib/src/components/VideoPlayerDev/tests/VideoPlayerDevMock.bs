@@ -86,7 +86,7 @@ function TestSetup() as void
 
     ' the overlay components survive across tests; their field observers would stack per TestSetup (one handler run
     ' per prior setup on every selection). Drop them before OnNodeReady re-registers exactly one.
-    for each overlayField in ["selected", "closed", "loadMore"]
+    for each overlayField in ["selected", "closed", "loadMore", "sortDelta"]
         m.playerMenu.unobserveField(overlayField)
         m.commentsList.unobserveField(overlayField)
         m.relatedVideos.unobserveField(overlayField)
@@ -118,7 +118,10 @@ function TestSetup() as void
     m.playerMenu.visible = false
     m.commentsList.visible = false
     m.commentsList.status = ""
+    m.commentsList.sort = ""
     m.commentsList.comments = []
+    m.commentsSorts = []
+    m.commentsSortIndex = 0
     m.commentDetail.visible = false
     m.commentReplies.visible = false
     m.commentReplies.comments = []

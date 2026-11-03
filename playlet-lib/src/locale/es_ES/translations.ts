@@ -1657,6 +1657,10 @@
         <translation>Los comentarios están deshabilitados</translation>
     </message>
     <message>
+        <source>← → to change</source>
+        <translation>← → para cambiar</translation>
+    </message>
+    <message>
         <source>No Invidious Instance</source>
         <translation>No hay instancia de Invidious</translation>
     </message>

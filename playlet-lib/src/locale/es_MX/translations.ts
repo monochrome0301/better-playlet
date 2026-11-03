@@ -1541,6 +1541,10 @@
         <translation>Los comentarios están deshabilitados</translation>
     </message>
     <message>
+        <source>← → to change</source>
+        <translation>← → para cambiar</translation>
+    </message>
+    <message>
         <source>Press OK to skip</source>
         <translation>Presiona OK para saltar</translation>
     </message>

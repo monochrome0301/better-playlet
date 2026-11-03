@@ -69,6 +69,31 @@ namespace Tests
             m.assertEqual(result.continuation, "next-token")
         end function
 
+        @it("reads the sort options from the comments header")
+        function _()
+            payload = m.Parse(`{
+                "onResponseReceivedEndpoints": [{"reloadContinuationItemsCommand": {"continuationItems": [
+                    {"commentsHeaderRenderer": {
+                        "countText": {"simpleText": "5 Comments"},
+                        "sortMenu": {"sortFilterSubMenuRenderer": {"subMenuItems": [
+                            {"title": {"simpleText": "Top comments"}, "selected": true, "serviceEndpoint": {"reloadContinuationData": {"continuation": "top-token"}}},
+                            {"title": {"simpleText": "Newest first"}, "selected": false, "serviceEndpoint": {"reloadContinuationData": {"continuation": "new-token"}}}
+                        ]}}
+                    }}
+                ]}}]
+            }`)
+
+            result = Innertube.ParseCommentsResponse(payload)
+
+            m.assertEqual(result.sorts.Count(), 2)
+            m.assertEqual(result.sorts[0].title, "Top comments")
+            m.assertEqual(result.sorts[0].token, "top-token")
+            m.assertEqual(result.sorts[0].selected, true)
+            m.assertEqual(result.sorts[1].title, "Newest first")
+            m.assertEqual(result.sorts[1].token, "new-token")
+            m.assertEqual(result.sorts[1].selected, false)
+        end function
+
         @it("falls back to the classic commentRenderer")
         function _()
             payload = m.Parse(`{

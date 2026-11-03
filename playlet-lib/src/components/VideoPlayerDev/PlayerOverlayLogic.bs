@@ -525,6 +525,14 @@ namespace PlayerOverlayLogic
         }
     end function
 
+    ' The sort index a Left/Right step lands on, wrapping around the available sorts.
+    function NextCommentSortIndex(index as integer, delta as integer, count as integer) as integer
+        if count <= 0
+            return 0
+        end if
+        return (index + delta + count) mod count
+    end function
+
     ' A comment the row can open replies for: a continuation token still to fetch, or replies already loaded.
     function CommentHasReplies(comment as object) as boolean
         return ValidString(comment.replyToken) <> "" or ValidArray(comment.replyRows).Count() > 0

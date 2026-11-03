@@ -286,6 +286,14 @@ namespace Tests
             return comment
         end function
 
+        @it("steps through the comment sorts, wrapping both ways")
+        function _()
+            m.assertEqual(PlayerOverlayLogic.NextCommentSortIndex(0, 1, 2), 1)
+            m.assertEqual(PlayerOverlayLogic.NextCommentSortIndex(1, 1, 2), 0)
+            m.assertEqual(PlayerOverlayLogic.NextCommentSortIndex(0, -1, 2), 1)
+            m.assertEqual(PlayerOverlayLogic.NextCommentSortIndex(0, 1, 0), 0)
+        end function
+
         @it("projects a comment with likes, age and the creator-heart marker")
         function _()
             rows = PlayerOverlayLogic.CommentRows([m.Comment({ hearted: true })], false)
