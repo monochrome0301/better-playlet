@@ -1,0 +1,7 @@
+<component name="DeArrowCasualCategoryContent" extends="ContentNode">
+    <interface>
+        <field id="category" type="string" />
+        <field id="categoryTitle" type="string" />
+        <field id="threshold" type="integer" />
+    </interface>
+</component>

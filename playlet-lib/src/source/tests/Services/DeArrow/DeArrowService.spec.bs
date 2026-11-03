@@ -1,0 +1,336 @@
+import "pkg:/components/Services/DeArrow/DeArrowService.bs"
+import "pkg:/source/tests/HttpTestServer.bs"
+import "pkg:/source/tests/LoggingGlobals.bs"
+
+namespace Tests
+
+    @suite
+    class DeArrowServiceTests extends Rooibos.BaseTestSuite
+
+        protected override function setup()
+            m.server = Tests.StartHttpTestServer()
+        end function
+
+        protected override function tearDown()
+            Tests.StopHttpTestServer(m.server)
+            m.server = invalid
+        end function
+
+        protected override function beforeEach()
+            Tests.SetUpLoggingGlobals()
+            GetGlobalAA().dearrowBrandingCache = {}
+        end function
+
+        protected override function afterEach()
+            GetGlobalAA().dearrowBrandingCache = {}
+        end function
+
+        @describe("DeArrow.SanitizeTitle")
+
+        @it("rewrites ‹ back to < and strips format markers")
+        function _()
+            m.assertEqual(DeArrow.SanitizeTitle("Hello ‹world"), "Hello <world")
+            m.assertEqual(DeArrow.SanitizeTitle(">clickbait title"), "clickbait title")
+            m.assertEqual(DeArrow.SanitizeTitle("the >big announcement"), "the big announcement")
+            m.assertEqual(DeArrow.SanitizeTitle("  >a >b title  "), "a b title")
+            m.assertEqual(DeArrow.SanitizeTitle("plain title"), "plain title")
+        end function
+
+        @describe("DeArrow.PickTitle")
+
+        @it("picks the top title when it is locked")
+        function _()
+            titles = [{ title: "Locked title", original: false, votes: -2, locked: true }]
+            m.assertEqual(DeArrow.PickTitle(titles).title, "Locked title")
+        end function
+
+        @it("picks the top title when it has non-negative votes")
+        function _()
+            titles = [{ title: "Voted title", original: false, votes: 3, locked: false }]
+            m.assertEqual(DeArrow.PickTitle(titles).title, "Voted title")
+        end function
+
+        @it("keeps the original when the top title has negative votes")
+        function _()
+            titles = [{ title: "Downvoted", original: false, votes: -1, locked: false }]
+            m.assertInvalid(DeArrow.PickTitle(titles))
+        end function
+
+        @it("keeps the original when the top title is the original one")
+        function _()
+            titles = [{ title: "Original", original: true, votes: 100, locked: false }]
+            m.assertInvalid(DeArrow.PickTitle(titles))
+        end function
+
+        @it("keeps the original when there are no titles")
+        function _()
+            m.assertInvalid(DeArrow.PickTitle([]))
+            m.assertInvalid(DeArrow.PickTitle(invalid))
+        end function
+
+        @describe("DeArrow.CasualThresholds")
+
+        @it("defaults every category to 1")
+        function _()
+            thresholds = DeArrow.CasualThresholds({})
+            m.assertEqual(thresholds.Count(), 5)
+            for each category in DeArrow.CASUAL_CATEGORIES
+                m.assertEqual(thresholds[category], 1)
+            end for
+        end function
+
+        @it("reads the user's thresholds")
+        function _()
+            thresholds = DeArrow.CasualThresholds({ "dearrow.casual_thresholds": { funny: 3, other: 0 } })
+            m.assertEqual(thresholds.funny, 3)
+            m.assertEqual(thresholds.other, 0)
+            m.assertEqual(thresholds.creative, 1)
+        end function
+
+        @describe("DeArrow.IsCasual")
+
+        @it("is casual when a category reaches its threshold")
+        function _()
+            branding = { casualVotes: [{ id: "funny", count: 2 }] }
+            m.assertTrue(DeArrow.IsCasual(branding, "original", {}))
+        end function
+
+        @it("is not casual below the threshold")
+        function _()
+            branding = { casualVotes: [{ id: "funny", count: 1 }] }
+            m.assertFalse(DeArrow.IsCasual(branding, "original", { "dearrow.casual_thresholds": { funny: 2 } }))
+        end function
+
+        @it("ignores votes for a different title")
+        function _()
+            branding = { casualVotes: [{ id: "funny", count: 5, title: "some other title" }] }
+            m.assertFalse(DeArrow.IsCasual(branding, "original", {}))
+        end function
+
+        @it("accepts votes matching the original title case-insensitively")
+        function _()
+            branding = { casualVotes: [{ id: "funny", count: 5, title: "  Original " }] }
+            m.assertTrue(DeArrow.IsCasual(branding, "ORIGINAL", {}))
+        end function
+
+        @describe("DeArrow.ResolveBranding")
+
+        @it("changes nothing without branding data and no known duration")
+        function _()
+            result = DeArrow.ResolveBranding(invalid, "original", {}, "video1")
+            m.assertEqual(result.state, "none")
+            m.assertFalse(result.casual)
+            m.assertEqual(result.title, "original")
+            m.assertEqual(result.thumbnailTime, -1.0)
+        end function
+
+        @it("always uses a random frame when there is no community thumbnail")
+        function _()
+            ' not even in DeArrow's database: the seeded frame with the caller's duration
+            result = DeArrow.ResolveBranding(invalid, "original", {}, "video1", 600.0)
+            m.assertEqual(result.state, "thumbnail")
+            m.assertEqual(result.thumbnailTime, DeArrow.ResolveBranding(invalid, "original", {}, "video1", 600.0).thumbnailTime)
+            m.assertTrue(result.thumbnailTime >= 0 and result.thumbnailTime < 600.0)
+
+            ' in the database but no submitted thumbnail: the server's randomTime with the response's duration
+            branding = { titles: [], thumbnails: [], casualVotes: [], randomTime: 0.5, videoDuration: 100.0 }
+            result = DeArrow.ResolveBranding(branding, "original", {}, "video1")
+            m.assertEqual(result.state, "thumbnail")
+            m.assertEqual(result.thumbnailTime, 50.0)
+
+            ' response without a duration falls back to the caller's
+            branding = { titles: [], thumbnails: [], casualVotes: [], randomTime: 0.5, videoDuration: invalid }
+            result = DeArrow.ResolveBranding(branding, "original", {}, "video1", 200.0)
+            m.assertEqual(result.thumbnailTime, 100.0)
+        end function
+
+        @it("applies the classic title and thumbnail")
+        function _()
+            branding = {
+                titles: [{ title: "Community title", original: false, votes: 10, locked: false }]
+                thumbnails: [{ timestamp: 42.5, original: false, votes: 10, locked: false }]
+                casualVotes: []
+                randomTime: invalid
+                videoDuration: 100.0
+            }
+            result = DeArrow.ResolveBranding(branding, "original", { "dearrow.mode": "classic" }, "video1")
+            m.assertEqual(result.state, "title_thumbnail")
+            m.assertFalse(result.casual)
+            m.assertEqual(result.title, "Community title")
+            m.assertEqual(result.thumbnailTime, 42.5)
+        end function
+
+        @it("keeps the original title in casual mode but still replaces the thumbnail")
+        function _()
+            branding = {
+                titles: [{ title: "Community title", original: false, votes: 10, locked: false }]
+                thumbnails: [{ timestamp: 42.5, original: false, votes: 10, locked: false }]
+                casualVotes: [{ id: "funny", count: 5 }]
+                randomTime: invalid
+                videoDuration: 100.0
+            }
+            prefs = { "dearrow.mode": "casual" }
+            result = DeArrow.ResolveBranding(branding, "original", prefs, "video1")
+            m.assertEqual(result.state, "thumbnail")
+            m.assertTrue(result.casual)
+            m.assertEqual(result.title, "original")
+            m.assertEqual(result.thumbnailTime, 42.5)
+        end function
+
+        @it("applies the classic title when casual mode is off")
+        function _()
+            branding = {
+                titles: [{ title: "Community title", original: false, votes: 10, locked: false }]
+                thumbnails: []
+                casualVotes: [{ id: "funny", count: 5 }]
+                randomTime: invalid
+                videoDuration: 100.0
+            }
+            result = DeArrow.ResolveBranding(branding, "original", { "dearrow.mode": "classic" }, "video1")
+            m.assertEqual(result.state, "title")
+            m.assertFalse(result.casual)
+            m.assertEqual(result.title, "Community title")
+        end function
+
+        @it("can keep the original thumbnail in casual mode")
+        function _()
+            branding = {
+                titles: []
+                thumbnails: [{ timestamp: 42.5, original: false, votes: 10, locked: false }]
+                casualVotes: [{ id: "funny", count: 5 }]
+                randomTime: invalid
+                videoDuration: 100.0
+            }
+            prefs = { "dearrow.mode": "casual", "dearrow.show_original_thumb_when_casual": true }
+            result = DeArrow.ResolveBranding(branding, "original", prefs, "video1")
+            m.assertEqual(result.state, "none")
+            m.assertTrue(result.casual)
+            m.assertEqual(result.thumbnailTime, -1.0)
+        end function
+
+        @it("can keep the original thumbnail when replacement is disabled")
+        function _()
+            branding = {
+                titles: []
+                thumbnails: [{ timestamp: 42.5, original: false, votes: 10, locked: false }]
+                casualVotes: []
+                randomTime: invalid
+                videoDuration: 100.0
+            }
+            prefs = { "dearrow.replace_thumbnails": false }
+            result = DeArrow.ResolveBranding(branding, "original", prefs, "video1")
+            m.assertEqual(result.state, "none")
+            m.assertEqual(result.thumbnailTime, -1.0)
+        end function
+
+        @it("falls back to the server's randomTime for the thumbnail")
+        function _()
+            branding = {
+                titles: []
+                thumbnails: [{ timestamp: 42.5, original: true, votes: 10, locked: false }]
+                casualVotes: []
+                randomTime: 0.5
+                videoDuration: 100.0
+            }
+            result = DeArrow.ResolveBranding(branding, "original", {}, "video1")
+            m.assertEqual(result.state, "thumbnail")
+            m.assertEqual(result.thumbnailTime, 50.0)
+        end function
+
+        @it("falls back to the seeded random frame when the server has no randomTime")
+        function _()
+            branding = {
+                titles: []
+                thumbnails: []
+                casualVotes: []
+                randomTime: invalid
+                videoDuration: 100.0
+            }
+            first = DeArrow.ResolveBranding(branding, "original", {}, "video1")
+            second = DeArrow.ResolveBranding(branding, "original", {}, "video1")
+            other = DeArrow.ResolveBranding(branding, "original", {}, "video2")
+
+            m.assertEqual(first.state, "thumbnail")
+            m.assertEqual(first.thumbnailTime, second.thumbnailTime)
+            m.assertNotEqual(first.thumbnailTime, other.thumbnailTime)
+        end function
+
+        @describe("DeArrow.Service")
+
+        @it("reads the branding from the server and caches it")
+        function _()
+            service = new DeArrow.Service(Tests.HttpTestServerUrl("/dearrow"), Tests.HttpTestServerUrl("/thumbs"))
+            body = `{"titles":[{"title":"Community title","original":false,"votes":10,"locked":false}],`
+            body += `"thumbnails":[{"timestamp":42.5,"original":false,"votes":10,"locked":false}],`
+            body += `"casualVotes":[],"randomTime":null,"videoDuration":100.0}`
+            m.server.routes = { "/dearrow/api/branding": { status: 200, body: body } }
+
+            branding = service.GetBranding("video1")
+            m.assertEqual(branding.titles[0].title, "Community title")
+            m.assertEqual(branding.videoDuration, 100.0)
+            m.assertInvalid(branding.randomTime)
+            m.assertEqual(Tests.HttpTestServerHits(m.server, "/dearrow/api/branding?videoID=video1&fetchAll=true"), 1)
+
+            ' the in-memory cache serves the second request without a hit
+            branding = service.GetBranding("video1")
+            m.assertEqual(branding.titles[0].title, "Community title")
+            m.assertEqual(Tests.HttpTestServerHits(m.server, "/dearrow/api/branding?videoID=video1&fetchAll=true"), 1)
+        end function
+
+        @it("has no branding when the server has no data or fails")
+        function _()
+            service = new DeArrow.Service(Tests.HttpTestServerUrl("/dearrow"), Tests.HttpTestServerUrl("/thumbs"))
+            m.server.routes = { "/dearrow/api/branding": { status: 404 } }
+            m.assertInvalid(service.GetBranding("video2"))
+
+            m.server.routes = { "/dearrow/api/branding": { status: 500 } }
+            m.assertInvalid(service.GetBranding("video3"))
+        end function
+
+        @it("asks for nothing without a video id")
+        function _()
+            service = new DeArrow.Service(Tests.HttpTestServerUrl("/dearrow"), Tests.HttpTestServerUrl("/thumbs"))
+            m.server.routes = { "/dearrow/api/branding": { status: 200, body: "{}" } }
+            m.assertInvalid(service.GetBranding(""))
+            m.assertEqual(Tests.HttpTestServerHits(m.server, "/dearrow/api/branding"), 0)
+        end function
+
+        @it("builds the thumbnail url against the thumbnail server")
+        function _()
+            service = new DeArrow.Service(Tests.HttpTestServerUrl("/dearrow"), Tests.HttpTestServerUrl("/thumbs"))
+            url = service.GetThumbnailUrl("video1", 42.5)
+            m.assertTrue(url.StartsWith(Tests.HttpTestServerUrl("/thumbs") + "/api/v1/getThumbnail?videoID=video1&time=42.5"))
+        end function
+
+        @it("sends the original thumbnail as the redirect fallback")
+        function _()
+            service = new DeArrow.Service(Tests.HttpTestServerUrl("/dearrow"), Tests.HttpTestServerUrl("/thumbs"))
+            fallback = "https://i.ytimg.com/vi/video1/hqdefault.jpg"
+            url = service.GetThumbnailUrl("video1", 42.5, fallback)
+            m.assertTrue(url.StartsWith(Tests.HttpTestServerUrl("/thumbs") + "/api/v1/getThumbnail?videoID=video1&time=42.5&redirectUrl="))
+            m.assertTrue(url.EndsWith(fallback.EncodeUriComponent()))
+        end function
+
+        @it("builds an i.ytimg.com fallback from the video id")
+        function _()
+            m.assertEqual(DeArrow.OriginalThumbnailUrl("video1"), "https://i.ytimg.com/vi/video1/hqdefault.jpg")
+        end function
+
+        @describe("Alea")
+
+        @it("is deterministic per seed")
+        function _()
+            first = Alea.Create("dQw4w9WgXcQ")
+            second = Alea.Create("dQw4w9WgXcQ")
+            other = Alea.Create("aaaaaaaaaaa")
+            for i = 0 to 9
+                a = first.Next()
+                m.assertEqual(a, second.Next())
+                m.assertTrue(a >= 0 and a < 1)
+            end for
+            m.assertNotEqual(first.Next(), other.Next())
+        end function
+
+    end class
+
+end namespace

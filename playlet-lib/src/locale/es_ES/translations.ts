@@ -1437,6 +1437,98 @@
         <translation>Seleccione la opción para %1</translation>
     </message>
     <message>
+        <source>DeArrow</source>
+        <translation>DeArrow</translation>
+    </message>
+    <message>
+        <source>DeArrow preferences</source>
+        <translation>Preferencias de DeArrow</translation>
+    </message>
+    <message>
+        <source>Replace clickbait titles and thumbnails with community submissions from dearrow.ajay.app. This sends the video id to that third-party service.</source>
+        <translation>Reemplazar títulos y miniaturas clickbait con envíos de la comunidad de dearrow.ajay.app. Esto envía el id del video a ese servicio de terceros.</translation>
+    </message>
+    <message>
+        <source>Mode</source>
+        <translation>Modo</translation>
+    </message>
+    <message>
+        <source>Classic replaces the title with the community's best submission. Casual keeps the original title when the community marks it as funny, creative, clever or descriptive.</source>
+        <translation>Clásico reemplaza el título con la mejor contribución de la comunidad. Casual mantiene el título original cuando la comunidad lo marca como gracioso, creativo, ingenioso o descriptivo.</translation>
+    </message>
+    <message>
+        <source>Classic</source>
+        <translation>Clásico</translation>
+    </message>
+    <message>
+        <source>Casual</source>
+        <translation>Casual</translation>
+    </message>
+    <message>
+        <source>Casual categories</source>
+        <translation>Categorías casual</translation>
+    </message>
+    <message>
+        <source>How many votes each casual category needs to keep the original title</source>
+        <translation>Cuantos votos necesita cada categoría casual para mantener el título original</translation>
+    </message>
+    <message>
+        <source>Replace thumbnails</source>
+        <translation>Reemplazar miniaturas</translation>
+    </message>
+    <message>
+        <source>Use community thumbnails instead of the original ones</source>
+        <translation>Usar miniaturas de la comunidad en lugar de las originales</translation>
+    </message>
+    <message>
+        <source>Show icon</source>
+        <translation>Mostrar icono</translation>
+    </message>
+    <message>
+        <source>Show a marker on videos where DeArrow changed the title or thumbnail</source>
+        <translation>Mostrar un marcador en los videos donde DeArrow cambió el título o la miniatura</translation>
+    </message>
+    <message>
+        <source>Show original thumbnail in casual mode</source>
+        <translation>Mostrar la miniatura original en modo casual</translation>
+    </message>
+    <message>
+        <source>Keep the original thumbnail when the community marks the title as funny, creative, clever or descriptive</source>
+        <translation>Mantener la miniatura original cuando la comunidad marca el título como gracioso, creativo, ingenioso o descriptivo</translation>
+    </message>
+    <message>
+        <source>Funny</source>
+        <translation>Gracioso</translation>
+    </message>
+    <message>
+        <source>Creative</source>
+        <translation>Creativo</translation>
+    </message>
+    <message>
+        <source>Clever</source>
+        <translation>Ingenioso</translation>
+    </message>
+    <message>
+        <source>Descriptive</source>
+        <translation>Descriptivo</translation>
+    </message>
+    <message>
+        <source>Other</source>
+        <translation>Otro</translation>
+    </message>
+    <message>
+        <source>Disabled</source>
+        <translation>Desactivado</translation>
+    </message>
+    <message>
+        <source>%1 votes</source>
+        <translation>%1 votos</translation>
+    </message>
+    <message>
+        <source>Select votes needed for %1</source>
+        <translation>Seleccione los votos necesarios para %1</translation>
+    </message>
+    <message>
         <source>Press OK to skip</source>
         <translation>Presiona OK para saltar</translation>
     </message>

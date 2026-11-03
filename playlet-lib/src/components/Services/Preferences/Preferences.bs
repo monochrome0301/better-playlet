@@ -18,6 +18,7 @@ function Init()
     AddNodeFields()
     LoadUserPreferencesFromRegistry()
     AddNodeFieldsObservers()
+    SyncDeArrowGlobals()
 end function
 
 function LoadPreferencesFile()
@@ -52,6 +53,25 @@ function AddNodeFieldsObservers()
     for each key in prefsFields
         m.top.observeField(key, FuncName(SaveUserPreferencesToRegistry))
     end for
+
+    ' List cells read DeArrow off the global node: they have no preferences binding.
+    for each key in ["dearrow.enabled", "dearrow.mode", "dearrow.casual_thresholds", "dearrow.replace_thumbnails", "dearrow.show_icon", "dearrow.show_original_thumb_when_casual"]
+        m.top.observeField(key, FuncName(SyncDeArrowGlobals))
+    end for
+end function
+
+function SyncDeArrowGlobals() as void
+    if not m.global.hasField("dearrowPrefs")
+        m.global.addField("dearrowPrefs", "assocarray", false)
+    end if
+    m.global.dearrowPrefs = {
+        "dearrow.enabled": m.top["dearrow.enabled"]
+        "dearrow.mode": m.top["dearrow.mode"]
+        "dearrow.casual_thresholds": m.top["dearrow.casual_thresholds"]
+        "dearrow.replace_thumbnails": m.top["dearrow.replace_thumbnails"]
+        "dearrow.show_icon": m.top["dearrow.show_icon"]
+        "dearrow.show_original_thumb_when_casual": m.top["dearrow.show_original_thumb_when_casual"]
+    }
 end function
 
 function LoadUserPreferencesFromRegistry()

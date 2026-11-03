@@ -1,0 +1,42 @@
+import "pkg:/components/Services/DeArrow/DeArrowService.bs"
+import "pkg:/source/utils/Types.bs"
+
+@job("DeArrowJob")
+function ExecuteJob() as void
+    input = JobGetInput()
+
+    videoId = ValidString(input.videoId)
+    originalTitle = ValidString(input.originalTitle)
+    originalThumbnail = ValidString(input.originalThumbnail)
+    lengthSeconds = ValidFloat(input.lengthSeconds)
+    prefs = ValidAssociativeArray(input.prefs)
+
+    result = {
+        videoId: videoId
+        state: "none"
+        casual: false
+        title: originalTitle
+        thumbnailUri: ""
+    }
+
+    if videoId <> ""
+        ' the thumbnail server redirects its own failures to the original i.ytimg.com thumbnail
+        redirectUrl = DeArrow.OriginalThumbnailUrl(videoId)
+        if originalThumbnail.StartsWith("https://i.ytimg.com/")
+            redirectUrl = originalThumbnail
+        end if
+
+        service = new DeArrow.Service()
+        branding = service.GetBranding(videoId, JobGetCancellation())
+        resolved = DeArrow.ResolveBranding(branding, originalTitle, prefs, videoId, lengthSeconds)
+        result.state = resolved.state
+        result.casual = resolved.casual
+        result.title = resolved.title
+        if resolved.thumbnailTime >= 0
+            result.thumbnailUri = service.GetThumbnailUrl(videoId, resolved.thumbnailTime, redirectUrl)
+        end if
+    end if
+
+    ' No data is not a failure: the caller keeps the original title and thumbnail.
+    JobSuccessData(result)
+end function

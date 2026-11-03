@@ -11,6 +11,7 @@
   import MintPoTokenControl from "./SettingControls/MintPoTokenControl.svelte";
   import EditQualityControl from "./SettingControls/EditQualityControl.svelte";
   import SponsorBlockCategoriesControl from "./SettingControls/SponsorBlockCategoriesControl.svelte";
+  import DeArrowCasualCategoriesControl from "./SettingControls/DeArrowCasualCategoriesControl.svelte";
   import { translate } from "lib/Stores";
 
   const textSizes = ["text-2xl", "text-lg", "text-base", "text-sm", "text-xs"];
@@ -42,6 +43,7 @@
     PlayletLibVersionControl,
     EditQualityControl,
     SponsorBlockCategoriesControl,
+    DeArrowCasualCategoriesControl,
   };
 </script>
 

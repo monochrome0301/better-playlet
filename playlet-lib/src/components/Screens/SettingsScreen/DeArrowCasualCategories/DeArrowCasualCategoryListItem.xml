@@ -1,0 +1,24 @@
+<component name="DeArrowCasualCategoryListItem" extends="Group">
+    <interface>
+        <field id="itemContent" type="node" onChange="OnContentSet" />
+
+        <field id="categoryTitle" type="string" alias="categoryLabel.text" />
+        <field id="thresholdText" type="string" alias="thresholdLabel.text" />
+    </interface>
+    <children>
+        <Label id="categoryLabel"
+            font="font:SmallestSystemFont"
+            width="320"
+            height="32"
+            vertAlign="center"
+            horizAlign="left"
+            translation="[40, 0]" />
+        <Label id="thresholdLabel"
+            width="320"
+            height="32"
+            font="font:SmallestSystemFont"
+            vertAlign="center"
+            horizAlign="right"
+            translation="[310, 0]" />
+    </children>
+</component>

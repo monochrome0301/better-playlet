@@ -3,6 +3,7 @@ import "pkg:/components/ContentNode/ProfileContentAuthTokenUtils.types.bs"
 import "pkg:/components/Dialog/DialogUtils.bs"
 import "pkg:/components/JobSystem/Jobs.bs"
 import "pkg:/components/JobSystem/JobSystem.bs"
+import "pkg:/components/Services/DeArrow/DeArrowCell.bs"
 import "pkg:/components/Services/Innertube/Constants.bs"
 import "pkg:/components/Services/Invidious/InvidiousToContentNode.bs"
 import "pkg:/components/VideoFeed/FeedLoadState.bs"
@@ -66,10 +67,13 @@ function Initialize()
     m.videoContentJob = invalid
     m.sponsorBlockSegmentsJob = invalid
     m.returnYouTubeDislikeJob = invalid
+    m.dearrowJob = invalid
     m.markVideoWatchedJob = invalid
     m.commentsJob = invalid
     ' the last Return YouTube Dislike estimate for the loaded video (invalid = none yet).
     m.rydVotes = invalid
+    ' the last DeArrow branding for the loaded video (invalid = none yet).
+    m.dearrowResult = invalid
     m.watchTimeMarker = -1
     m.reportWatchTime = false
     m.onCloseCalled = false
@@ -162,6 +166,7 @@ function Initialize()
     m.commentReplies = m.top.findNode("commentReplies")
     m.videoDetails = m.top.findNode("videoDetails")
     m.relatedVideos = m.top.findNode("relatedVideos")
+    m.dearrowIcon = m.top.findNode("dearrowIcon")
 
     m.autoHide = m.top.findNode("autoHide")
     m.transportTimer = m.top.findNode("transportTimer")
@@ -1536,10 +1541,16 @@ function OpenDetails() as void
     if title = "" and content <> invalid and content.hasField("title")
         title = ValidString(content.title)
     end if
+    ' DeArrow's community title wins over the metadata one.
+    dearrowResult = m.dearrowResult
+    if DeArrowCell.HasTitle(ValidString(ValidAssociativeArray(dearrowResult).state)) and ValidString(dearrowResult.title) <> ""
+        title = dearrowResult.title
+    end if
     m.videoDetails.title = title
     m.videoDetails.description = PlayerOverlayLogic.DetailsDescription(metadata)
     m.videoDetails.links = PlayerOverlayLogic.DescriptionLinkRows(metadata)
     m.videoDetails.game = PlayerOverlayLogic.DetailsGame(metadata)
+    m.videoDetails.dearrowIcon = DeArrowIconUri()
     m.videoDetails.visible = true
     UpdateDetailsStats()
     NodeSetFocus(m.videoDetails, true)
@@ -2583,6 +2594,22 @@ function OnVideoContentJobDone(event as object) as void
         LogDebug("queued ReturnYouTubeDislikeJob")
     end if
 
+    ' DeArrow: community title + thumbnail. The pref gates it (the video id goes to sponsor.ajay.app),
+    ' the job keeps the request off the render thread, and no data just keeps the original title.
+    m.dearrowResult = invalid
+    UpdateOverlayDeArrowIcon()
+    if not isLive and IsAssociativeArray(m.preferences) and m.preferences["dearrow.enabled"] = true and not StringUtils.IsNullOrEmpty(ValidString(content.videoId))
+        m.dearrowJob = JobSystem.CreateCallback(OnDeArrowJobDone)
+        JobSystem.QueueJob(m.jobQueue, Jobs.DeArrowJob, {
+            videoId: content.videoId
+            originalTitle: ValidString(content.title)
+            originalThumbnail: ValidString(content.thumbnail)
+            lengthSeconds: content.lengthSeconds
+            prefs: m.preferences
+        }, m.dearrowJob)
+        LogDebug("queued DeArrowJob")
+    end if
+
     UpdateOverlayMeta()
     SeekToInitialPosition(content)
     PlayAfterPreviousPlayerHasStopped()
@@ -2625,6 +2652,61 @@ function OnReturnYouTubeDislikeJobDone(event as object) as void
 
     m.rydVotes = info.data.votes
     UpdateDetailsStats()
+end function
+
+' Keep the last branding for the open overlays; a late reply for a replaced video is dropped.
+function OnDeArrowJobDone(event as object) as void
+    JobSystem.UnobserveCallback(event.getRoSGNode())
+    m.dearrowJob = invalid
+
+    info = event.getInfo()
+    if not info.success or info.cancel = true or m.onCloseCalled = true or not IsAssociativeArray(info.data)
+        return
+    end if
+    content = m.top.content
+    if content = invalid or ValidString(info.data.videoId) <> ValidString(content.videoId)
+        return
+    end if
+
+    m.dearrowResult = info.data
+    UpdateOverlayMeta()
+    UpdateDetailsDeArrow()
+end function
+
+' The icon reflects what DeArrow changed on this video, when the pref wants it drawn.
+function DeArrowIconUri() as string
+    showIcon = m.preferences = invalid or m.preferences["dearrow.show_icon"] <> false
+    if not showIcon or not IsAssociativeArray(m.dearrowResult)
+        return ""
+    end if
+    state = ValidString(m.dearrowResult.state)
+    if state = "" or state = "none"
+        return ""
+    end if
+    if m.dearrowResult.casual = true
+        return "pkg:/images/dearrow-casual.png"
+    end if
+    return "pkg:/images/dearrow.png"
+end function
+
+function UpdateOverlayDeArrowIcon() as void
+    if m.dearrowIcon = invalid
+        return
+    end if
+    iconUri = DeArrowIconUri()
+    m.dearrowIcon.visible = iconUri <> ""
+    m.dearrowIcon.uri = iconUri
+end function
+
+' Pushes the DeArrow title + icon into the details overlay (open or not — it re-reads on open).
+function UpdateDetailsDeArrow() as void
+    dearrowResult = m.dearrowResult
+    if DeArrowCell.HasTitle(ValidString(ValidAssociativeArray(dearrowResult).state)) and ValidString(dearrowResult.title) <> "" and m.videoDetails <> invalid
+        m.videoDetails.title = dearrowResult.title
+    end if
+    if m.videoDetails <> invalid
+        m.videoDetails.dearrowIcon = DeArrowIconUri()
+    end if
 end function
 
 ' Report the video as watched to the account: a one-shot history ping plus, for YouTube profiles, a watch-time
@@ -2767,6 +2849,11 @@ function UpdateOverlayMeta() as void
         return
     end if
     title = ValidString(content.title)
+    ' DeArrow's community title replaces the original once its job answers.
+    dearrowResult = m.dearrowResult
+    if DeArrowCell.HasTitle(ValidString(ValidAssociativeArray(dearrowResult).state)) and ValidString(dearrowResult.title) <> ""
+        title = dearrowResult.title
+    end if
     secondaryTitle = ValidString(content.secondaryTitle)
     m.titleLabel.rawText = title
     m.secondaryTitleLabel.rawText = secondaryTitle
@@ -2774,6 +2861,7 @@ function UpdateOverlayMeta() as void
     ' the loading overlay shows the same title + secondary title while loading.
     m.spinner.title = title
     m.spinner.secondaryTitle = secondaryTitle
+    UpdateOverlayDeArrowIcon()
 end function
 
 '-------------------------------------------------------------------------------
@@ -2978,6 +3066,11 @@ function OnClose() as void
     if m.returnYouTubeDislikeJob <> invalid
         m.returnYouTubeDislikeJob.cancel = true
         m.returnYouTubeDislikeJob = invalid
+    end if
+    if m.dearrowJob <> invalid
+        m.dearrowJob.cancel = true
+        JobSystem.UnobserveCallback(m.dearrowJob)
+        m.dearrowJob = invalid
     end if
     if m.sponsorblock <> invalid
         m.sponsorblock.Dispose()

@@ -965,6 +965,98 @@
         <translation>Select option for %1</translation>
     </message>
     <message>
+        <source>DeArrow</source>
+        <translation>DeArrow</translation>
+    </message>
+    <message>
+        <source>DeArrow preferences</source>
+        <translation>DeArrow preferences</translation>
+    </message>
+    <message>
+        <source>Replace clickbait titles and thumbnails with community submissions from dearrow.ajay.app. This sends the video id to that third-party service.</source>
+        <translation>Replace clickbait titles and thumbnails with community submissions from dearrow.ajay.app. This sends the video id to that third-party service.</translation>
+    </message>
+    <message>
+        <source>Mode</source>
+        <translation>Mode</translation>
+    </message>
+    <message>
+        <source>Classic replaces the title with the community's best submission. Casual keeps the original title when the community marks it as funny, creative, clever or descriptive.</source>
+        <translation>Classic replaces the title with the community's best submission. Casual keeps the original title when the community marks it as funny, creative, clever or descriptive.</translation>
+    </message>
+    <message>
+        <source>Classic</source>
+        <translation>Classic</translation>
+    </message>
+    <message>
+        <source>Casual</source>
+        <translation>Casual</translation>
+    </message>
+    <message>
+        <source>Casual categories</source>
+        <translation>Casual categories</translation>
+    </message>
+    <message>
+        <source>How many votes each casual category needs to keep the original title</source>
+        <translation>How many votes each casual category needs to keep the original title</translation>
+    </message>
+    <message>
+        <source>Replace thumbnails</source>
+        <translation>Replace thumbnails</translation>
+    </message>
+    <message>
+        <source>Use community thumbnails instead of the original ones</source>
+        <translation>Use community thumbnails instead of the original ones</translation>
+    </message>
+    <message>
+        <source>Show icon</source>
+        <translation>Show icon</translation>
+    </message>
+    <message>
+        <source>Show a marker on videos where DeArrow changed the title or thumbnail</source>
+        <translation>Show a marker on videos where DeArrow changed the title or thumbnail</translation>
+    </message>
+    <message>
+        <source>Show original thumbnail in casual mode</source>
+        <translation>Show original thumbnail in casual mode</translation>
+    </message>
+    <message>
+        <source>Keep the original thumbnail when the community marks the title as funny, creative, clever or descriptive</source>
+        <translation>Keep the original thumbnail when the community marks the title as funny, creative, clever or descriptive</translation>
+    </message>
+    <message>
+        <source>Funny</source>
+        <translation>Funny</translation>
+    </message>
+    <message>
+        <source>Creative</source>
+        <translation>Creative</translation>
+    </message>
+    <message>
+        <source>Clever</source>
+        <translation>Clever</translation>
+    </message>
+    <message>
+        <source>Descriptive</source>
+        <translation>Descriptive</translation>
+    </message>
+    <message>
+        <source>Other</source>
+        <translation>Other</translation>
+    </message>
+    <message>
+        <source>Disabled</source>
+        <translation>Disabled</translation>
+    </message>
+    <message>
+        <source>%1 votes</source>
+        <translation>%1 votes</translation>
+    </message>
+    <message>
+        <source>Select votes needed for %1</source>
+        <translation>Select votes needed for %1</translation>
+    </message>
+    <message>
         <source>Search History</source>
         <translation>Search History</translation>
     </message>

@@ -10,7 +10,7 @@
         <field id="durationRectVisible" type="boolean" alias="durationRect.visible" />
     </interface>
     <children>
-        <Poster
+        <DeArrowThumbnailPoster
             id="thumbnailPoster"
             loadDisplayMode="scaleToZoom"
             width="160"
@@ -32,7 +32,14 @@
                     font="font:SmallestSystemFont"
                     translation="[8, 0]" />
             </Rectangle>
-        </Poster>
+            <Poster
+                id="dearrowIcon"
+                uri=""
+                width="26"
+                height="26"
+                visible="false"
+                translation="[130, 6]" />
+        </DeArrowThumbnailPoster>
         <Poster
             id="highlightPoster"
             blendColor="0xFF1C30"

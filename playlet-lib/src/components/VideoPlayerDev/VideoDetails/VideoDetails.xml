@@ -11,9 +11,13 @@
         <field id="selected" type="assocarray" alwaysNotify="true" />
         <field id="attribution" type="string" alias="attributionLabel.text" />
         <field id="closed" type="boolean" alwaysNotify="true" />
+        <!-- DeArrow marker: "" hides the poster -->
+        <field id="dearrowIcon" type="string" onChange="OnDeArrowIconSet" />
     </interface>
     <children>
         <Rectangle id="scrim" width="1280" height="720" color="0x000000" opacity="0.9" />
+        <!-- DeArrow marker, left of the title -->
+        <Poster id="dearrowIconPoster" uri="" width="34" height="34" visible="false" translation="[116, 64]" />
         <EmojiLabel id="titleLabel" translation="[160,70]" width="960" height="44" baseFont="font:MediumBoldSystemFont" baseSize="24" color="0xFEFEFEFF" wrap="false" />
         <Label id="statsLabel" translation="[160,116]" width="960" height="32" font="font:SmallestSystemFont" color="0xBBBBBBFF" />
         <!-- One page of the description at a time (Up/Down page it). A Label never draws focus feedback, so the

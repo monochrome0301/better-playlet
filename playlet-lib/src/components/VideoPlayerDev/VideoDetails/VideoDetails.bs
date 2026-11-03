@@ -44,6 +44,17 @@ function OnTitleSet() as void
     end if
 end function
 
+' The coordinator hands the icon uri once its DeArrow job answers; "" hides it.
+function OnDeArrowIconSet() as void
+    dearrowIconPoster = m.top.findNode("dearrowIconPoster")
+    if dearrowIconPoster = invalid
+        return
+    end if
+    uri = ValidString(m.top.dearrowIcon)
+    dearrowIconPoster.visible = uri <> ""
+    dearrowIconPoster.uri = uri
+end function
+
 function OnLinksSet() as void
     content = CreateObject("roSGNode", "ContentNode")
     links = m.top.links

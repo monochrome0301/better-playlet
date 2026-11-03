@@ -1,0 +1,17 @@
+import "pkg:/source/utils/Locale.bs"
+import "pkg:/source/utils/Types.bs"
+
+function OnContentSet() as void
+    content = m.top.itemContent
+    if content = invalid
+        return
+    end if
+
+    m.top.categoryTitle = content.categoryTitle
+    threshold = ValidInt(content.threshold)
+    if threshold <= 0
+        m.top.thresholdText = Tr(Locale.DeArrow.CategoryDisabled)
+    else
+        m.top.thresholdText = Tr(Locale.DeArrow.VotesNeeded).Replace("%1", threshold.ToStr())
+    end if
+end function

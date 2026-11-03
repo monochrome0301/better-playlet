@@ -27,5 +27,10 @@
         <!-- videoInfo is from web client -->
         <field id="videoInfo" type="string" />
         <field id="percentDurationWatched" type="float" />
+        <!-- DeArrow community branding: "none"|"title"|"thumbnail"|"title_thumbnail"; empty = not resolved yet -->
+        <field id="dearrowState" type="string" />
+        <field id="dearrowCasual" type="boolean" />
+        <!-- community thumbnail url, kept apart from `thumbnail` so the original survives as fallback -->
+        <field id="dearrowThumbnail" type="string" />
     </interface>
 </component>

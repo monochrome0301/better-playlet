@@ -315,6 +315,22 @@ namespace Locale
         CategoriesDescription = "Configure which segments to skip"
         SelectOptionFor = "Select option for %1"
 
+        DeArrow = "DeArrow"
+        DeArrowPreferences = "DeArrow preferences"
+        DeArrowEnabledDescription = "Replace clickbait titles and thumbnails with community submissions from dearrow.ajay.app. This sends the video id to that third-party service."
+        Mode = "Mode"
+        ModeDescription = "Classic replaces the title with the community's best submission. Casual keeps the original title when the community marks it as funny, creative, clever or descriptive."
+        Classic = "Classic"
+        Casual = "Casual"
+        CasualCategories = "Casual categories"
+        CasualCategoriesDescription = "How many votes each casual category needs to keep the original title"
+        ReplaceThumbnails = "Replace thumbnails"
+        ReplaceThumbnailsDescription = "Use community thumbnails instead of the original ones"
+        ShowDeArrowIcon = "Show icon"
+        ShowDeArrowIconDescription = "Show a marker on videos where DeArrow changed the title or thumbnail"
+        ShowOriginalThumbnailInCasualMode = "Show original thumbnail in casual mode"
+        ShowOriginalThumbnailInCasualModeDescription = "Keep the original thumbnail when the community marks the title as funny, creative, clever or descriptive"
+
         SearchHistory = "Search History"
         SearchHistoryPreferences = "Search history preferences"
         EnableSearchHistory = "Enable search history"
@@ -444,6 +460,18 @@ namespace Locale
         ChapterTitle = "Chapter"
         MusicOffTopicTitle = "Music: Non-Music Section"
         MusicOffTopicShortTitle = "Non-Music"
+    end enum
+
+    @locale
+    enum DeArrow
+        Funny = "Funny"
+        Creative = "Creative"
+        Clever = "Clever"
+        Descriptive = "Descriptive"
+        Other = "Other"
+        CategoryDisabled = "Disabled"
+        VotesNeeded = "%1 votes"
+        SelectThresholdFor = "Select votes needed for %1"
     end enum
 
     @locale

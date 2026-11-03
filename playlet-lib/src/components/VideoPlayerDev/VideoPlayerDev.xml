@@ -102,6 +102,8 @@
                         color="0xFEFEFEFF" horizAlign="left" vertAlign="top" wrap="false"
                         baseFont="font:SystemFontFile" baseSize="24" />
                 </LayoutGroup>
+                <!-- DeArrow marker: set once the branding job answers; invisible when DeArrow did not change anything -->
+                <Poster id="dearrowIcon" uri="" width="30" height="30" visible="false" translation="[978, 44]" />
                 <Clock id="clock" />
             </Group>
 

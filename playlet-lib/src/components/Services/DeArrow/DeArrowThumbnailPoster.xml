@@ -1,0 +1,8 @@
+<component name="DeArrowThumbnailPoster" extends="Poster">
+    <!-- A Poster that recovers from a failed load: DeArrow's thumbnail server answers 204/redirects
+         while a thumbnail is still being generated, which leaves a plain Poster blank. When the load
+         fails, the original thumbnail (fallbackUri) is loaded instead. -->
+    <interface>
+        <field id="fallbackUri" type="uri" />
+    </interface>
+</component>

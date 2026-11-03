@@ -1,0 +1,280 @@
+import "pkg:/source/services/HttpClient.bs"
+import "pkg:/source/utils/Alea.bs"
+import "pkg:/source/utils/Logging.bs"
+import "pkg:/source/utils/Types.bs"
+
+' DeArrow (dearrow.ajay.app): community-submitted titles and thumbnails, served by sponsor.ajay.app.
+' The video id leaves the device in the clear to a third party (like Return YouTube Dislike),
+' so every consumer asks only when the "dearrow.enabled" pref is on.
+namespace DeArrow
+
+    const DEFAULT_SERVER = "https://sponsor.ajay.app"
+    const DEFAULT_THUMBNAIL_SERVER = "https://dearrow-thumb.ajay.app"
+    const BRANDING_ENDPOINT = "/api/branding"
+    const THUMBNAIL_ENDPOINT = "/api/v1/getThumbnail"
+    const CACHE_SECONDS = 60 * 60 * 24
+    ' casual categories, in display order; the vote count is upvotes minus downvotes (positive only)
+    const CASUAL_CATEGORIES = ["funny", "creative", "clever", "descriptive", "other"]
+
+    class Service
+
+        ' Server addresses are only passed by tests; the real app uses the public APIs.
+        function new(serverAddress = DeArrow.DEFAULT_SERVER as string, thumbnailServerAddress = DeArrow.DEFAULT_THUMBNAIL_SERVER as string)
+            m.serverAddress = serverAddress
+            m.thumbnailServerAddress = thumbnailServerAddress
+        end function
+
+        ' Branding for one video, or invalid when the server has no data for it.
+        function GetBranding(videoId as string, cancellation = invalid as dynamic) as object
+            if StringUtils.IsNullOrEmpty(videoId)
+                return invalid
+            end if
+
+            cache = DeArrow.MemoryCache()
+            if cache.DoesExist(videoId)
+                return cache[videoId]
+            end if
+
+            url = `${m.serverAddress}${DeArrow.BRANDING_ENDPOINT}?videoID=${videoId.EncodeUriComponent()}&fetchAll=true`
+            response = HttpClient.Get(url).CacheForSeconds(DeArrow.CACHE_SECONDS).RetryCount(0).NoTelemetry().Cancellation(cancellation).Await()
+            if not response.IsSuccess()
+                ' A 404 is normal (no branding for the video); only a server failure is worth a log line.
+                if not response.IsCancelled() and response.StatusCode() >= 500
+                    LogErrorNoTelemetry("DeArrow server error:", response.StatusCode())
+                end if
+                return invalid
+            end if
+
+            branding = DeArrow.ParseBranding(response.Json())
+            cache[videoId] = branding
+            return branding
+        end function
+
+        ' The thumbnail server answers 204 (no image) when it cannot serve a thumbnail (not generated
+        ' yet, time past the video's end, queue full) — a Poster pointed at it would just stay blank.
+        ' With redirectUrl it redirects errors to that original thumbnail instead, so the cell always
+        ' ends up with a loadable image.
+        function GetThumbnailUrl(videoId as string, time as float, redirectUrl = "" as string) as string
+            url = `${m.thumbnailServerAddress}${DeArrow.THUMBNAIL_ENDPOINT}?videoID=${videoId.EncodeUriComponent()}&time=${time.ToStr()}`
+            if redirectUrl <> ""
+                url += `&redirectUrl=${redirectUrl.EncodeUriComponent()}`
+            end if
+            return url
+        end function
+
+    end class
+
+    ' In-memory cache on the task that runs the jobs: dedupes requests while one task churns through
+    ' many cells. The 24h disk cache (CacheForSeconds) covers the rest.
+    function MemoryCache() as object
+        globalAA = GetGlobalAA()
+        if globalAA.dearrowBrandingCache = invalid
+            globalAA.dearrowBrandingCache = {}
+        end if
+        return globalAA.dearrowBrandingCache
+    end function
+
+    function ParseBranding(json as dynamic) as object
+        if not IsAssociativeArray(json)
+            return invalid
+        end if
+        return {
+            titles: ValidArray(json.titles)
+            thumbnails: ValidArray(json.thumbnails)
+            casualVotes: ValidArray(json.casualVotes)
+            ' null means "no suggestion", so keep it distinct from 0
+            randomTime: DeArrow.NumberOrNull(json.randomTime)
+            videoDuration: ValidFloat(json.videoDuration)
+        }
+    end function
+
+    function NumberOrNull(value as dynamic) as dynamic
+        if IsNumber(value)
+            return value
+        end if
+        return invalid
+    end function
+
+    ' The whole decide-what-to-show step, pure so the spec can test it without HTTP.
+    ' fallbackDuration is the caller's video length in seconds (content.lengthSeconds), used when the
+    ' branding response does not carry one. Returns { state: "none"|"title"|"thumbnail"|"title_thumbnail",
+    '           casual: boolean, title: string, thumbnailTime: float (-1 when the original thumbnail stays) }.
+    function ResolveBranding(branding as dynamic, originalTitle as string, prefs as object, videoId as string, fallbackDuration = 0 as float) as object
+        result = {
+            state: "none"
+            casual: false
+            title: originalTitle
+            thumbnailTime: -1.0
+        }
+        ' no branding at all still gets the random-frame treatment below
+        if not IsAssociativeArray(branding)
+            branding = { titles: [], thumbnails: [], casualVotes: [], randomTime: invalid, videoDuration: 0.0 }
+        end if
+
+        isCasualMode = IsAssociativeArray(prefs) and prefs["dearrow.mode"] = "casual"
+        result.casual = isCasualMode and DeArrow.IsCasual(branding, originalTitle, prefs)
+
+        if not result.casual
+            titleEntry = DeArrow.PickTitle(branding.titles)
+            if titleEntry <> invalid
+                result.title = DeArrow.SanitizeTitle(ValidString(titleEntry.title))
+                result.state = "title"
+            end if
+        end if
+
+        replaceThumbnails = true
+        showOriginalWhenCasual = false
+        if IsAssociativeArray(prefs)
+            replaceThumbnails = prefs["dearrow.replace_thumbnails"] <> false
+            showOriginalWhenCasual = prefs["dearrow.show_original_thumb_when_casual"] = true
+        end if
+        if replaceThumbnails and not (result.casual and showOriginalWhenCasual)
+            thumbnailTime = DeArrow.PickThumbnailTime(branding, videoId, fallbackDuration)
+            if thumbnailTime >= 0
+                result.thumbnailTime = thumbnailTime
+                if result.state = "title"
+                    result.state = "title_thumbnail"
+                else
+                    result.state = "thumbnail"
+                end if
+            end if
+        end if
+
+        return result
+    end function
+
+    ' The server sorts titles (locked first, then votes descending), so only the top one matters:
+    ' if it is not good enough, no fallback applies — same as the extension.
+    function PickTitle(titles as object) as dynamic
+        if not IsArray(titles) or titles.Count() = 0
+            return invalid
+        end if
+        entry = titles[0]
+        if not IsAssociativeArray(entry) or ValidBool(entry.original)
+            return invalid
+        end if
+        if not ValidBool(entry.locked) and ValidInt(entry.votes) < 0
+            return invalid
+        end if
+        if StringUtils.IsNullOrEmpty(ValidString(entry.title))
+            return invalid
+        end if
+        return entry
+    end function
+
+    function IsCasual(branding as object, originalTitle as string, prefs as object) as boolean
+        casualVotes = branding.casualVotes
+        if not IsArray(casualVotes)
+            return false
+        end if
+        thresholds = DeArrow.CasualThresholds(prefs)
+        normalizedOriginal = DeArrow.NormalizeTitle(originalTitle)
+        for each vote in casualVotes
+            if not IsAssociativeArray(vote)
+                continue for
+            end if
+            category = ValidString(vote.id)
+            if not thresholds.DoesExist(category)
+                continue for
+            end if
+            ' a vote carrying its own title is about another title, not this video's
+            if not StringUtils.IsNullOrEmpty(ValidString(vote.title)) and DeArrow.NormalizeTitle(vote.title) <> normalizedOriginal
+                continue for
+            end if
+            if ValidInt(vote.count) >= ValidInt(thresholds[category])
+                return true
+            end if
+        end for
+        return false
+    end function
+
+    ' Every category present, so callers can index without DoesExist dances.
+    function CasualThresholds(prefs as object) as object
+        thresholds = {}
+        for each category in DeArrow.CASUAL_CATEGORIES
+            thresholds[category] = 1
+        end for
+        if IsAssociativeArray(prefs) and IsAssociativeArray(prefs["dearrow.casual_thresholds"])
+            for each category in DeArrow.CASUAL_CATEGORIES
+                if thresholds.DoesExist(category)
+                    thresholds[category] = ValidInt(prefs["dearrow.casual_thresholds"][category])
+                end if
+            end for
+        end if
+        return thresholds
+    end function
+
+    ' thumbnails[0] is the community's best thumbnail; without one, a deterministic "random" frame —
+    ' always, whether the video is in DeArrow's database or not.
+    function PickThumbnailTime(branding as object, videoId as string, fallbackDuration = 0 as float) as float
+        thumbnails = branding.thumbnails
+        if IsArray(thumbnails) and thumbnails.Count() > 0
+            entry = thumbnails[0]
+            if IsAssociativeArray(entry) and not ValidBool(entry.original)
+                if ValidBool(entry.locked) or ValidInt(entry.votes) >= 0
+                    timestamp = ValidFloat(entry.timestamp)
+                    if timestamp >= 0
+                        return timestamp
+                    end if
+                end if
+            end if
+        end if
+
+        ' randomTime is a fraction of the video; pulled back from the very end before scaling.
+        ' Without one from the server, the seeded PRNG picks the frame, so every client agrees.
+        fraction = branding.randomTime
+        if not IsNumber(fraction) or fraction < 0
+            fraction = Alea.Create(videoId).Next()
+        end if
+        if fraction > 0.9
+            fraction -= 0.9
+        end if
+        ' the branding response's duration wins; the caller's (content.lengthSeconds) covers the
+        ' responses that ship without one — only live/upcoming videos have neither.
+        videoDuration = ValidFloat(branding.videoDuration)
+        if videoDuration <= 0
+            videoDuration = fallbackDuration
+        end if
+        if videoDuration <= 0
+            return -1.0
+        end if
+        return fraction * videoDuration
+    end function
+
+    ' The extension rewrites the title a little: ‹ stands in for <, and a leading `>` per word
+    ' marks formatting that only makes sense in the extension's rendering.
+    function SanitizeTitle(title as string) as string
+        title = title.Replace("‹", "<")
+        regex = CreateObject("roRegex", "(^|\s)>(\S)", "")
+        title = regex.ReplaceAll(title, "$1$2")
+        return title.Trim()
+    end function
+
+    ' Always an i.ytimg.com url, so the thumbnail server's redirect fallback accepts it; hqdefault
+    ' exists for every video.
+    function OriginalThumbnailUrl(videoId as string) as string
+        return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+    end function
+
+    function NormalizeTitle(title as string) as string
+        return ValidString(title).Trim().ToLower()
+    end function
+
+    ' Cells read the synced snapshot off the global node (they have no preferences binding).
+    ' Missing or empty means DeArrow is off.
+    function PrefsSnapshot(globalNode as dynamic) as object
+        if globalNode = invalid or not globalNode.hasField("dearrowPrefs")
+            return {}
+        end if
+        prefs = globalNode.dearrowPrefs
+        if not IsAssociativeArray(prefs)
+            return {}
+        end if
+        return prefs
+    end function
+
+    function IsEnabled(globalNode as dynamic) as boolean
+        return DeArrow.PrefsSnapshot(globalNode)["dearrow.enabled"] = true
+    end function
+
+end namespace

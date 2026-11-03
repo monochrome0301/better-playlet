@@ -1,0 +1,118 @@
+import "pkg:/components/JobSystem/Jobs.bs"
+import "pkg:/components/JobSystem/JobSystem.bs"
+import "pkg:/components/Services/DeArrow/DeArrowService.bs"
+import "pkg:/source/utils/Types.bs"
+
+' Shared async decoration for cells that show a video: feed rows, the related-videos grid and the
+' queue. Titles "appear" when the data lands, like the extension. A cell wires it up from
+' OnContentSet with `DeArrowCell.HandleContentSet(m, content, FuncName(OnDeArrowChanged), FuncName(OnDeArrowJobDone))`
+' and implements the UI side in an ApplyDeArrow() — the fields live on the shared VideoContentNode,
+' the nodes that project them don't.
+namespace DeArrowCell
+
+    function HandleContentSet(cell as object, content as dynamic, changedCallbackName as string, jobDoneCallbackName as string) as void
+        DeArrowCell.Unobserve(cell)
+
+        if content = invalid or not content.hasField("dearrowState") or StringUtils.IsNullOrEmpty(ValidString(content.videoId))
+            return
+        end if
+        if not DeArrow.IsEnabled(cell.global)
+            return
+        end if
+
+        cell._dearrowContent = content
+        if StringUtils.IsNullOrEmpty(content.dearrowState)
+            jobQueue = cell.top.getScene().findNode("JobQueue")
+            if jobQueue = invalid
+                return
+            end if
+            callback = JobSystem.CreateCallback()
+            callback.observeFieldScoped("done", jobDoneCallbackName, ["success", "cancel", "error", "data"])
+            cell._dearrowJobCallback = callback
+            input = {
+                videoId: content.videoId
+                originalTitle: ValidString(content.title)
+                originalThumbnail: ValidString(content.thumbnail)
+                lengthSeconds: content.lengthSeconds
+                prefs: DeArrow.PrefsSnapshot(cell.global)
+            }
+            JobSystem.QueueJob(jobQueue, Jobs.DeArrowJob, input, callback)
+        end if
+        content.ObserveField("dearrowState", changedCallbackName)
+    end function
+
+    ' The job's answer lands on the content node (not the cell): recycled cells redraw from whatever
+    ' node they hold now, and nodes keep their branding when they move between cells.
+    function OnJobDone(cell as object, event as object) as void
+        callback = cell._dearrowJobCallback
+        if callback <> invalid
+            JobSystem.UnobserveCallback(callback)
+            cell._dearrowJobCallback = invalid
+        end if
+        content = cell._dearrowContent
+        cell._dearrowContent = invalid
+        if content = invalid or not IsNode(content)
+            return
+        end if
+
+        info = event.getInfo()
+        ' Without data, "none" stops the cell from asking again on the next recycle.
+        if not IsAssociativeArray(info) or not info.success or info.cancel = true or not IsAssociativeArray(info.data)
+            content.dearrowState = "none"
+            return
+        end if
+
+        data = info.data
+        state = ValidString(data.state)
+        if (state = "title" or state = "title_thumbnail") and ValidString(data.title) <> ""
+            content.title = data.title
+        end if
+        ' The community thumbnail lands on its own field: `thumbnail` keeps the original, which the
+        ' cell uses as fallback when the thumbnail server cannot serve its (async generated) image.
+        if (state = "thumbnail" or state = "title_thumbnail") and ValidString(data.thumbnailUri) <> ""
+            content.dearrowThumbnail = data.thumbnailUri
+        end if
+        content.dearrowCasual = data.casual = true
+        content.dearrowState = state
+    end function
+
+    function Unobserve(cell as object) as void
+        content = cell._dearrowContent
+        if content <> invalid and IsNode(content)
+            content.UnobserveField("dearrowState")
+        end if
+        cell._dearrowContent = invalid
+        callback = cell._dearrowJobCallback
+        if callback <> invalid
+            JobSystem.UnobserveCallback(callback)
+            cell._dearrowJobCallback = invalid
+        end if
+    end function
+
+    function IconUri(content as dynamic, globalNode as dynamic) as string
+        if content = invalid or not content.hasField("dearrowState")
+            return ""
+        end if
+        state = ValidString(content.dearrowState)
+        if state = "" or state = "none"
+            return ""
+        end if
+        prefs = DeArrow.PrefsSnapshot(globalNode)
+        if prefs["dearrow.show_icon"] = false
+            return ""
+        end if
+        if content.dearrowCasual = true
+            return "pkg:/images/dearrow-casual.png"
+        end if
+        return "pkg:/images/dearrow.png"
+    end function
+
+    function HasThumbnail(state as string) as boolean
+        return state = "thumbnail" or state = "title_thumbnail"
+    end function
+
+    function HasTitle(state as string) as boolean
+        return state = "title" or state = "title_thumbnail"
+    end function
+
+end namespace

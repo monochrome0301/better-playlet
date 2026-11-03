@@ -1,0 +1,86 @@
+' Port of the "alea" PRNG (Johannes Baagøe, MIT). Small and fast, and deterministic for a string
+' seed — DeArrow seeds it with the video id, so every client picks the same "random" frame.
+
+namespace Alea
+
+    function Create(seed as string) as object
+        generator = new Alea.Generator()
+        generator.Seed(seed)
+        return generator
+    end function
+
+    class Generator
+
+        s0 as float
+        s1 as float
+        s2 as float
+        c as float
+
+        function next() as float
+            t = 2091639.0 * m.s0 + m.c * 2.3283064365386963e-10
+            m.s0 = m.s1
+            m.s1 = m.s2
+            carry = Int(t)
+            m.c = carry
+            m.s2 = t - carry
+            return m.s2
+        end function
+
+        function Seed(seed as string) as void
+            n = 4022864029.0
+            n = Alea.Mash(n, " ")
+            m.s0 = Alea.MashResult(n)
+            n = Alea.Mash(n, " ")
+            m.s1 = Alea.MashResult(n)
+            n = Alea.Mash(n, " ")
+            m.s2 = Alea.MashResult(n)
+
+            n = Alea.Mash(n, seed)
+            m.s0 = m.s0 - Alea.MashResult(n)
+            if m.s0 < 0
+                m.s0 += 1.0
+            end if
+            n = Alea.Mash(n, seed)
+            m.s1 = m.s1 - Alea.MashResult(n)
+            if m.s1 < 0
+                m.s1 += 1.0
+            end if
+            n = Alea.Mash(n, seed)
+            m.s2 = m.s2 - Alea.MashResult(n)
+            if m.s2 < 0
+                m.s2 += 1.0
+            end if
+            m.c = 1.0
+        end function
+
+    end class
+
+    function Mash(n as double, data as string) as double
+        for i = 0 to data.Len() - 1
+            n += data.Mid(i, 1).GetAscii()
+            h = 0.02519603282416938 * n
+            n = Alea.Unsigned32(h)
+            h = h - n
+            h = h * n
+            n = Alea.Unsigned32(h)
+            h = h - n
+            n += h * 4294967296.0
+        end for
+        return n
+    end function
+
+    function MashResult(n as double) as float
+        return Alea.Unsigned32(n) * 2.3283064365386963e-10
+    end function
+
+    ' JavaScript's `x >>> 0` for a non-negative double.
+    function Unsigned32(value as double) as double
+        times = Int(value / 4294967296.0)
+        unsigned = value - times * 4294967296.0
+        if unsigned < 0
+            unsigned += 4294967296.0
+        end if
+        return unsigned
+    end function
+
+end namespace

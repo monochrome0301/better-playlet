@@ -1,3 +1,5 @@
+import "pkg:/components/Services/DeArrow/DeArrowCell.bs"
+import "pkg:/components/Services/DeArrow/DeArrowService.bs"
 import "pkg:/source/utils/Locale.bs"
 import "pkg:/source/utils/MathUtils.bs"
 import "pkg:/source/utils/StringUtils.bs"
@@ -5,12 +7,14 @@ import "pkg:/source/utils/TimeUtils.bs"
 import "pkg:/source/utils/Types.bs"
 
 function Init()
+    m.thumbnail = m.top.FindNode("thumbnail")
     m.titleLabel = m.top.FindNode("titleLabel")
     m.durationRect = m.top.FindNode("durationRect")
     m.durationLabel = m.top.FindNode("durationLabel")
     m.smallestSystemFont = m.top.FindNode("smallestSystemFont")
     m.smallestBoldSystemFont = m.top.FindNode("smallestBoldSystemFont")
     m.progressRect = m.top.FindNode("progressRect")
+    m.dearrowIcon = m.top.FindNode("dearrowIcon")
 end function
 
 function OnContentSet() as void
@@ -72,6 +76,44 @@ function OnContentSet() as void
         else
             m.top.durationRectVisible = false
         end if
+    end if
+
+    DeArrowCell.HandleContentSet(m, content, FuncName(OnDeArrowChanged), FuncName(OnDeArrowJobDone))
+    ApplyDeArrow()
+end function
+
+function OnDeArrowChanged(event as object) as void
+    content = event.getRoSGNode()
+    if m.top.itemContent = invalid or not m.top.itemContent.isSameNode(content)
+        return
+    end if
+    ApplyDeArrow()
+end function
+
+function OnDeArrowJobDone(event as object) as void
+    DeArrowCell.OnJobDone(m, event)
+end function
+
+' Re-projects the DeArrow fields the content node carries; runs both when the content is first set
+' (possibly already resolved) and when a job answer lands.
+function ApplyDeArrow() as void
+    content = m.top.itemContent
+    iconUri = DeArrowCell.IconUri(content, m.global)
+    if m.dearrowIcon <> invalid
+        m.dearrowIcon.visible = iconUri <> ""
+        m.dearrowIcon.uri = iconUri
+    end if
+    if content = invalid or not content.hasField("dearrowState")
+        return
+    end if
+    state = ValidString(content.dearrowState)
+    if DeArrowCell.HasTitle(state)
+        m.titleLabel.rawText = ValidString(content.title)
+    end if
+    if DeArrowCell.HasThumbnail(state)
+        ' the community thumbnail goes in directly, the original stays as the poster's load fallback
+        m.thumbnail.fallbackUri = ValidString(content.thumbnail)
+        m.thumbnail.uri = ValidString(content.dearrowThumbnail)
     end if
 end function
 

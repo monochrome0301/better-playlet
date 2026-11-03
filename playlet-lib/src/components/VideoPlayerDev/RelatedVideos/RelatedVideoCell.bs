@@ -1,3 +1,5 @@
+import "pkg:/components/Services/DeArrow/DeArrowCell.bs"
+import "pkg:/components/Services/DeArrow/DeArrowService.bs"
 import "pkg:/source/utils/EmojiText.bs"
 import "pkg:/source/utils/Types.bs"
 
@@ -15,6 +17,7 @@ function FindNodes() as void
     m.durationLabel = m.top.findNode("durationLabel")
     m.loadMoreRect = m.top.findNode("loadMoreRect")
     m.loadMoreLabel = m.top.findNode("loadMoreLabel")
+    m.dearrowIcon = m.top.findNode("dearrowIcon")
 end function
 
 function OnContentSet() as void
@@ -54,6 +57,52 @@ function OnContentSet() as void
     duration = ValidString(content.lengthText)
     m.durationRect.visible = duration <> ""
     m.durationLabel.text = duration
+
+    DeArrowCell.HandleContentSet(m, content, FuncName(OnDeArrowChanged), FuncName(OnDeArrowJobDone))
+    ApplyDeArrow()
+end function
+
+function OnDeArrowChanged(event as object) as void
+    if m.titleLabel = invalid or m.dearrowIcon = invalid
+        FindNodes()
+    end if
+    content = event.getRoSGNode()
+    if m.top.itemContent = invalid or not m.top.itemContent.isSameNode(content)
+        return
+    end if
+    ApplyDeArrow()
+end function
+
+function OnDeArrowJobDone(event as object) as void
+    DeArrowCell.OnJobDone(m, event)
+end function
+
+' Re-projects the DeArrow fields the content node carries; runs both when the content is first set
+' (possibly already resolved) and when a job answer lands.
+function ApplyDeArrow() as void
+    content = m.top.itemContent
+    iconUri = DeArrowCell.IconUri(content, m.global)
+    if m.dearrowIcon <> invalid
+        m.dearrowIcon.visible = iconUri <> ""
+        m.dearrowIcon.uri = iconUri
+    end if
+    if content = invalid or not content.hasField("dearrowState")
+        return
+    end if
+    state = ValidString(content.dearrowState)
+    if not DeArrowCell.HasTitle(state)
+        return
+    end if
+    title = ValidString(content.title)
+    m.titleLabel.rawText = title
+    m.titleLabel.text = EmojiText.Markup(title)
+    ' the meta line follows the title's height, which a replaced title can change
+    titleHeight = m.titleLabel.localBoundingRect().height
+    m.metaLabel.translation = [0, 204 + titleHeight + 2]
+    if DeArrowCell.HasThumbnail(state)
+        m.thumbnail.fallbackUri = ValidString(content.thumbnail)
+        m.thumbnail.uri = ValidString(content.dearrowThumbnail)
+    end if
 end function
 
 ' The one-line meta under the title, as far as the recommendation carries each part. Lockup recommendations

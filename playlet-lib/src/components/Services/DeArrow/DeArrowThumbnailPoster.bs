@@ -1,0 +1,24 @@
+import "pkg:/source/utils/Logging.bs"
+import "pkg:/source/utils/Types.bs"
+
+function Init()
+    m.top.ObserveField("loadStatus", FuncName(OnLoadStatusChange))
+end function
+
+' When the community thumbnail cannot be loaded, silently fall back to the original one. Guarded
+' against looping when the fallback itself fails to load (the Poster then shows failedBitmapUri).
+' A recycled cell re-sets uri and fallbackUri from its content node, which retries the community
+' thumbnail with fresh state.
+function OnLoadStatusChange() as void
+    if m.top.loadStatus <> "failed"
+        return
+    end if
+    fallback = ValidString(m.top.fallbackUri)
+    uri = ValidString(m.top.uri)
+    if fallback = "" or uri = fallback
+        LogDebug("DeArrow thumbnail failed with no fallback left:", uri)
+        return
+    end if
+    LogDebug("DeArrow thumbnail failed, falling back to the original")
+    m.top.uri = fallback
+end function
