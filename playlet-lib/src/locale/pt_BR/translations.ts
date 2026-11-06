@@ -1441,6 +1441,26 @@
         <translation>Normal</translation>
     </message>
     <message>
+        <source>Chapters</source>
+        <translation>Capítulos</translation>
+    </message>
+    <message>
+        <source>Loop</source>
+        <translation>Repetir</translation>
+    </message>
+    <message>
+        <source>On</source>
+        <translation>Ligado</translation>
+    </message>
+    <message>
+        <source>Sleep timer</source>
+        <translation>Temporizador de desligamento</translation>
+    </message>
+    <message>
+        <source>%1 min</source>
+        <translation>%1 min</translation>
+    </message>
+    <message>
         <source>Comments</source>
         <translation>Comentários</translation>
     </message>

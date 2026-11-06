@@ -122,6 +122,11 @@ function Initialize()
     m.channelStatusNode.ObserveField("isSubscribed", FuncName(OnChannelSubscriptionStatus))
     ' a setSeek that arrived while the content loads (ms, -1 = none): the content-load seek goes there instead.
     m.loadingSetSeekMs = -1
+    ' the loaded VOD's YouTube chapters (normalized [{title, startMs}]); live has none.
+    m.chapters = []
+    ' menu session state: replay the video at its end, and the sleep timer's armed duration (0 = off).
+    m.loopEnabled = false
+    m.sleepTimerMinutes = 0
 
     m.errorDialogNode = invalid
     m.ignoreNextFinished = false ' a retry replay -> swallow the next "finished" edge
@@ -173,6 +178,7 @@ function Initialize()
     m.liveBadgeHold = m.top.findNode("liveBadgeHold")
     m.liveEdgeClock = m.top.findNode("liveEdgeClock")
     m.liveChatTimer = m.top.findNode("liveChatTimer")
+    m.sleepTimer = m.top.findNode("sleepTimer")
     m.fullScreenHintTimer = m.top.findNode("fullScreenHintTimer")
     m.chromeFadeIn = m.top.findNode("chromeFadeIn")
     m.chromeFadeOut = m.top.findNode("chromeFadeOut")
@@ -183,6 +189,7 @@ function Initialize()
     m.liveBadgeHold.ObserveField("fire", FuncName(OnLiveBadgeHoldFire))
     m.liveEdgeClock.ObserveField("fire", FuncName(OnLiveEdgeClockFire))
     m.liveChatTimer.ObserveField("fire", FuncName(OnLiveChatTimerFire))
+    m.sleepTimer.ObserveField("fire", FuncName(OnSleepTimerFire))
     m.fullScreenHintTimer.ObserveField("fire", FuncName(OnFullScreenHintTimer))
     m.chromeFadeIn.ObserveField("state", FuncName(OnChromeFadeInState))
     m.chromeFadeOut.ObserveField("state", FuncName(OnChromeFadeOutState))
@@ -396,10 +403,15 @@ function PushTransportToRenderers() as void
     m.buttonRow.transportMode = mode
 
     ' SponsorBlock chapter label: the segment title while the cursor sits inside a segment (no-op + "" when off
-    ' / no segments).
+    ' / no segments). Outside a segment, the YouTube chapter under the cursor.
+    chapterText = ""
     if m.sponsorblock.HasSegments()
-        m.trickPlayBar.chapterText = m.sponsorblock.ChapterTextForCursor(m.transport.cursorMs)
+        chapterText = m.sponsorblock.ChapterTextForCursor(m.transport.cursorMs)
     end if
+    if chapterText = ""
+        chapterText = PlayerOverlayLogic.ChapterTitleForCursor(m.chapters, m.transport.cursorMs)
+    end if
+    m.trickPlayBar.chapterText = chapterText
 end function
 
 ' Apply a seek (ms): the one writer of the device's `seek`. The live "jump to edge" sentinel maps to the
@@ -756,6 +768,15 @@ function SetMenuLevel(level as string) as void
     else if level = PlayerOverlayLogic.Level.Speed
         m.playerMenu.title = Tr(Locale.PlaybackMenu.Speed)
         m.menuRows = PlayerOverlayLogic.BuildSpeedOptions(CurrentSpeed())
+    else if level = PlayerOverlayLogic.Level.Chapters
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.Chapters)
+        m.menuRows = PlayerOverlayLogic.BuildChaptersOptions(m.chapters, m.transport.cursorMs)
+    else if level = PlayerOverlayLogic.Level.SleepTimer
+        m.playerMenu.title = Tr(Locale.PlaybackMenu.SleepTimer)
+        m.menuRows = PlayerOverlayLogic.BuildSleepTimerOptions(m.sleepTimerMinutes)
+    else if level = PlayerOverlayLogic.Level.PlaylistPicker
+        m.playerMenu.title = Tr(Locale.Playlists.SelectPlaylist)
+        m.menuRows = PlayerOverlayLogic.BuildPlaylistOptions(m.playlists)
     else if level = PlayerOverlayLogic.Level.Channel
         m.playerMenu.title = CurrentChannelName()
         m.menuRows = PlayerOverlayLogic.ChannelRows(CurrentProfile() <> invalid, m.channelSubscribed)
@@ -771,6 +792,7 @@ end function
 
 function CloseMenu() as void
     m.menuLevel = PlayerOverlayLogic.Level.None
+    m.playlistPickerRequested = false
     ' focus leaves the overlay before it is hidden: hiding the focused node can strand the scene's focus.
     if not m.commentsOpen
         TakeFocusBackFrom(m.playerMenu)
@@ -818,6 +840,11 @@ function OnMenuSelected() as void
         else if value = "details"
             CloseMenu()
             OpenDetails()
+        else if value = "loop"
+            m.loopEnabled = not m.loopEnabled
+            SetMenuLevel(PlayerOverlayLogic.Level.Main)
+        else if value = PlayerOverlayLogic.Level.PlaylistPicker
+            OpenPlaylistPicker()
         else
             SetMenuLevel(value)
         end if
@@ -850,6 +877,22 @@ function OnMenuSelected() as void
     else if m.menuLevel = PlayerOverlayLogic.Level.Speed
         ApplySpeed(value)
         SetMenuLevel(PlayerOverlayLogic.Level.Main)
+    else if m.menuLevel = PlayerOverlayLogic.Level.Chapters
+        ' the row value is the chapter start (ms, stringified): jump and close the menu with the seek.
+        CloseMenu()
+        m.transport.ForceIdleSeek(value.ToInt(), true)
+        ApplyTransport()
+    else if m.menuLevel = PlayerOverlayLogic.Level.SleepTimer
+        ApplySleepTimer(value)
+        SetMenuLevel(PlayerOverlayLogic.Level.Main)
+    else if m.menuLevel = PlayerOverlayLogic.Level.PlaylistPicker
+        if value = "new"
+            CloseMenu()
+            OpenNewPlaylistDialog()
+        else
+            CloseMenu()
+            SaveCurrentVideoToPlaylist(value)
+        end if
     end if
 end function
 
@@ -891,7 +934,34 @@ function BuildMainMenuRows() as object
         speedLabel = PlayerOverlayLogic.SpeedTextFor(CurrentSpeed())
     end if
 
-    return PlayerOverlayLogic.MainRows(qualityLabel, canChangeQuality, subtitleLabel, subtitleTracks.Count() > 0, audioLabel, hasAudio, speedLabel, m.transport.isLive)
+    ' the row shows the chapter the cursor sits in (the first one's title before it starts); hidden entirely
+    ' when the video has no chapters.
+    hasChapters = m.chapters.Count() > 0
+    chaptersLabel = ""
+    if hasChapters
+        chaptersLabel = PlayerOverlayLogic.ChapterTitleForCursor(m.chapters, m.transport.cursorMs)
+        if chaptersLabel = ""
+            chaptersLabel = ValidString(m.chapters[0].title)
+        end if
+    end if
+
+    ' Loop is a VOD control like Speed: a live stream has no end to replay.
+    showLoop = not m.transport.isLive
+    loopLabel = Tr(Locale.PlaybackMenu.Off)
+    if m.loopEnabled
+        loopLabel = Tr(Locale.PlaybackMenu.On)
+    end if
+
+    sleepLabel = Tr(Locale.PlaybackMenu.Off)
+    if m.sleepTimerMinutes > 0
+        sleepLabel = PlayerOverlayLogic.SleepTimerText(m.sleepTimerMinutes)
+    end if
+
+    ' Saving to playlists needs an authenticated YouTube account.
+    profile = CurrentProfile()
+    showPlaylist = profile <> invalid and profile.type = "youtube"
+
+    return PlayerOverlayLogic.MainRows(qualityLabel, canChangeQuality, subtitleLabel, subtitleTracks.Count() > 0, audioLabel, hasAudio, speedLabel, chaptersLabel, hasChapters, loopLabel, showLoop, sleepLabel, m.transport.isLive, showPlaylist)
 end function
 
 function CurrentQuality() as string
@@ -940,6 +1010,31 @@ function MatchAvailableTrack(available as object, track as object) as object
         end for
     end if
     return track
+end function
+
+' Arm (or clear) the sleep timer from the menu row's minute value ("0" = off). stop-then-start so a
+' re-arm mid-count restarts cleanly. Session-scoped: it survives the next video in the queue, and dies
+' with the player.
+function ApplySleepTimer(value as string) as void
+    minutes = ValidInt(value)
+    m.sleepTimerMinutes = minutes
+    m.sleepTimer.control = "stop"
+    if minutes <= 0
+        return
+    end if
+    m.sleepTimer.duration = minutes * 60
+    m.sleepTimer.control = "start"
+end function
+
+' The sleep timer fired: pause. The large-pause renderer (already keyed off the state change) marks it;
+' the timer is spent, so the label is back to Off until it is armed again.
+function OnSleepTimerFire() as void
+    if m.onCloseCalled = true
+        return
+    end if
+    m.sleepTimerMinutes = 0
+    LogInfo("sleep timer fired -> pause")
+    m.top.control = VideoControl.Pause
 end function
 
 function ApplyQuality(quality as string) as void
@@ -2544,6 +2639,11 @@ function OnVideoContentJobDone(event as object) as void
 
     metadata = content.metadata
 
+    ' the watch page's (or Invidious') chapters: the bar draws the ticks, the menu lists them, the bar label
+    ' falls back to the chapter title. Cleared first so a chapterless next video doesn't keep the old ticks.
+    m.chapters = PlayerOverlayLogic.NormalizeChapters(ValidArray(metadata.chapters))
+    m.trickPlayBar.chapters = m.chapters
+
     ' The scrub step + bif tiles come from the native Video.thumbnailTiles field, which the OS populates after
     ' the manifest loads (OnThumbnailTiles) — start with the defaults + a cleared bif and let OnThumbnailTiles
     ' fill them in for VOD.
@@ -2892,6 +2992,15 @@ end function
 ' EOF / close lifecycle.
 '-------------------------------------------------------------------------------
 function OnPlaybackFinished() as void
+    ' loop replays in place instead of advancing the queue (and skips the "up next" dialog with it).
+    if m.loopEnabled and not m.transport.isLive
+        LogInfo("loop enabled -> replay from 0")
+        m.playbackTelemetry.OnFinished()
+        m.transport.ForceIdleSeek(0, true)
+        ApplyTransport()
+        m.top.control = VideoControl.Play
+        return
+    end if
     ' before PlayNext/ClosePlayer: either can close this player, and send its summary, synchronously.
     m.playbackTelemetry.OnFinished()
     LogDebug("playback finished -> PlayNext or close")
@@ -3018,6 +3127,7 @@ function OnClose() as void
     m.liveBadgeHold.unobserveField("fire")
     m.liveEdgeClock.unobserveField("fire")
     m.liveChatTimer.unobserveField("fire")
+    m.sleepTimer.unobserveField("fire")
     m.fullScreenHintTimer.unobserveField("fire")
     m.chromeFadeIn.unobserveField("state")
     m.chromeFadeOut.unobserveField("state")
@@ -3028,6 +3138,7 @@ function OnClose() as void
     m.liveBadgeHold.control = "stop"
     m.liveEdgeClock.control = "stop"
     m.liveChatTimer.control = "stop"
+    m.sleepTimer.control = "stop"
     m.fullScreenHintTimer.control = "stop"
     m.clock.dispose = true
 
@@ -3090,4 +3201,192 @@ function OnClose() as void
     end try
 
     m.top.content = invalid
+end function
+
+'-------------------------------------------------------------------------------
+' Save to playlist — the Main menu row opens the picker level; the playlists are
+' fetched once per player instance and cached in m.playlists.
+'-------------------------------------------------------------------------------
+
+function OpenPlaylistPicker() as void
+    profile = CurrentProfile()
+    if profile = invalid or profile.type <> "youtube"
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.ContextMenu.SaveToPlaylist)
+            message: Tr(Locale.Playlists.NotLoggedIn)
+        })
+        return
+    end if
+
+    if m.playlists <> invalid
+        SetMenuLevel(PlayerOverlayLogic.Level.PlaylistPicker)
+        return
+    end if
+
+    ' fetch the playlists, then reopen the menu at the picker level; CloseMenu clears the flag so a
+    ' late response cannot pop the menu back open after the user backed out.
+    m.playlistPickerRequested = true
+    if m.playlistListJob <> invalid
+        m.playlistListJob.cancel = true
+        JobSystem.UnobserveCallback(m.playlistListJob)
+    end if
+    m.playlistListJob = JobSystem.CreateCallback(OnPlaylistListJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.PlaylistListJob, {
+        profile: profile
+    }, m.playlistListJob)
+end function
+
+function OnPlaylistListJobDone(event as object) as void
+    callback = event.getRoSGNode()
+    JobSystem.UnobserveCallback(callback)
+    if callback = m.playlistListJob
+        m.playlistListJob = invalid
+    end if
+
+    if callback.cancel
+        return
+    end if
+
+    if callback.error <> invalid
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.Playlists.LoadError)
+            message: callback.error
+        })
+        return
+    end if
+
+    m.playlists = callback.data
+    if m.playlistPickerRequested
+        m.playlistPickerRequested = false
+        SetMenuLevel(PlayerOverlayLogic.Level.PlaylistPicker)
+    end if
+end function
+
+function SaveCurrentVideoToPlaylist(playlistId as string) as void
+    videoId = CurrentPlaylistVideoId()
+    profile = CurrentProfile()
+    if videoId = "" or profile = invalid
+        return
+    end if
+
+    if m.playlistAddJob <> invalid
+        m.playlistAddJob.cancel = true
+        JobSystem.UnobserveCallback(m.playlistAddJob)
+    end if
+    m.playlistAddJob = JobSystem.CreateCallback(OnPlaylistAddJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.PlaylistAddVideoJob, {
+        profile: profile
+        playlistId: playlistId
+        playlistTitle: PlaylistTitleForId(playlistId)
+        videoId: videoId
+    }, m.playlistAddJob)
+end function
+
+function OnPlaylistAddJobDone(event as object) as void
+    callback = event.getRoSGNode()
+    JobSystem.UnobserveCallback(callback)
+    if callback = m.playlistAddJob
+        m.playlistAddJob = invalid
+    end if
+
+    if callback.cancel
+        return
+    end if
+
+    if callback.error <> invalid
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.ContextMenu.SaveToPlaylist)
+            message: callback.error
+        })
+        return
+    end if
+
+    ConfirmPlaylistSaved(callback.data.title)
+end function
+
+function OpenNewPlaylistDialog() as void
+    keyboardDialog = CreateObject("roSGNode", "StandardKeyboardDialog")
+    keyboardDialog.title = Tr(Locale.Playlists.CreatePlaylist)
+    keyboardDialog.message = [Tr(Locale.Playlists.PlaylistNamePrompt)]
+    keyboardDialog.buttons = [Tr(Locale.Buttons.OK), Tr(Locale.Buttons.Cancel)]
+    keyboardDialog.observeField("buttonSelected", FuncName(OnNewPlaylistKeyboardDone))
+
+    m.top.getScene().dialog = keyboardDialog
+end function
+
+function OnNewPlaylistKeyboardDone(event as object) as void
+    keyboard = event.getRoSGNode()
+    buttonSelected = keyboard.buttonSelected
+    text = keyboard.text
+    keyboard.close = true
+    if buttonSelected <> 0 or text = ""
+        return
+    end if
+
+    profile = CurrentProfile()
+    videoId = CurrentPlaylistVideoId()
+    if profile = invalid
+        return
+    end if
+
+    if m.playlistCreateJob <> invalid
+        m.playlistCreateJob.cancel = true
+        JobSystem.UnobserveCallback(m.playlistCreateJob)
+    end if
+    m.playlistCreateJob = JobSystem.CreateCallback(OnPlaylistCreateJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.PlaylistCreateJob, {
+        profile: profile
+        title: text
+        videoId: videoId
+    }, m.playlistCreateJob)
+end function
+
+function OnPlaylistCreateJobDone(event as object) as void
+    callback = event.getRoSGNode()
+    JobSystem.UnobserveCallback(callback)
+    if callback = m.playlistCreateJob
+        m.playlistCreateJob = invalid
+    end if
+
+    if callback.cancel
+        return
+    end if
+
+    if callback.error <> invalid
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.Playlists.CreatePlaylist)
+            message: callback.error
+        })
+        return
+    end if
+
+    ' the cached list no longer contains the new playlist
+    m.playlists = invalid
+    ConfirmPlaylistSaved(callback.data.title)
+end function
+
+function ConfirmPlaylistSaved(playlistTitle as string) as void
+    DialogUtils.ShowDialogEx({
+        title: Tr(Locale.ContextMenu.SaveToPlaylist)
+        message: Tr(Locale.Playlists.AddedToPlaylist).Replace("%1", `"${playlistTitle}"`)
+    })
+end function
+
+function PlaylistTitleForId(playlistId as string) as string
+    if IsArray(m.playlists)
+        for each playlist in m.playlists
+            if IsAssociativeArray(playlist) and playlist.playlistId = playlistId
+                return ValidString(playlist.title)
+            end if
+        end for
+    end if
+    return ""
+end function
+
+function CurrentPlaylistVideoId() as string
+    content = m.top.content
+    if content = invalid or not content.hasField("videoId")
+        return ""
+    end if
+    return ValidString(content.videoId)
 end function

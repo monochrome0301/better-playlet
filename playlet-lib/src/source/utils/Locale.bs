@@ -384,6 +384,11 @@ namespace Locale
         Audio = "Audio"
         Speed = "Speed"
         NormalSpeed = "Normal"
+        Chapters = "Chapters"
+        Loop = "Loop"
+        On = "On"
+        SleepTimer = "Sleep timer"
+        Minutes = "%1 min"
         Comments = "Comments"
         VideoDescription = "Video description"
         Links = "Links"
@@ -544,6 +549,31 @@ namespace Locale
         RefreshBookmarks = "Refresh Bookmarks"
         RemoveFromBookmarks = "Remove from %1 bookmarks"
         AddToBookmark = "Add to %1 bookmark"
+        SaveToPlaylist = "Save to playlist"
+        RemoveFromPlaylist = "Remove from playlist"
+    end enum
+
+    @locale
+    enum Playlists
+        SelectPlaylist = "Select a playlist"
+        NewPlaylist = "New playlist…"
+        CreatePlaylist = "Create playlist"
+        PlaylistNamePrompt = "Enter a name for the new playlist"
+        AddedToPlaylist = "Added to %1"
+        RemovedFromPlaylist = "Removed from playlist"
+        NotLoggedIn = "You need to log in with your YouTube account to manage playlists"
+        LoadError = "Failed to load playlists"
+    end enum
+
+    @locale
+    enum History
+        Category = "History"
+        CategoryDescription = "Watch history preferences"
+        OpenWatchHistory = "Open watch history"
+        OpenWatchHistoryDescription = "Your YouTube watch history. Requires being logged in with a YouTube account"
+        NotLoggedIn = "You need to log in with your YouTube account to see your watch history."
+        LoadError = "Failed to load watch history"
+        NoHistory = "No watch history yet."
     end enum
 
     @locale

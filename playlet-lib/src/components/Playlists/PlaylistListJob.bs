@@ -1,0 +1,34 @@
+import "pkg:/components/ContentNode/ProfileContentAuthTokenUtils.bs"
+import "pkg:/components/Playlists/PlaylistEditUtils.bs"
+import "pkg:/components/Services/Innertube/InnertubeService.bs"
+
+@job("PlaylistListJob")
+function ExecuteJob() as void
+    input = JobGetInput()
+    profile = input.profile
+
+    if JobIsCancelled()
+        JobCancel()
+        return
+    end if
+
+    cancellation = JobGetCancellation()
+
+    auth = ProfileContentAuthTokenUtils.EnsureFreshAccessToken(profile)
+    if auth.state <> ProfileContentAuthTokenUtils.AccessTokenState.Ok
+        JobError("No usable access token to load playlists: " + auth.state)
+        return
+    end if
+
+    result = InnertubeService.GetPlaylists({
+        accessToken: auth.token
+        onBehalfOfUser: auth.activeIdentifyToken
+        cancellation: cancellation
+    })
+    if result.error <> invalid
+        JobError("Failed to load playlists: " + ToString(result.error))
+        return
+    end if
+
+    JobSuccessData(PlaylistEdit.PlaylistsFromFeeds(result.feeds))
+end function

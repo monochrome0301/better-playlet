@@ -1193,6 +1193,26 @@
         <translation>Normal</translation>
     </message>
     <message>
+        <source>Chapters</source>
+        <translation>Chapters</translation>
+    </message>
+    <message>
+        <source>Loop</source>
+        <translation>Loop</translation>
+    </message>
+    <message>
+        <source>On</source>
+        <translation>On</translation>
+    </message>
+    <message>
+        <source>Sleep timer</source>
+        <translation>Sleep timer</translation>
+    </message>
+    <message>
+        <source>%1 min</source>
+        <translation>%1 min</translation>
+    </message>
+    <message>
         <source>Comments</source>
         <translation>Comments</translation>
     </message>
@@ -1847,6 +1867,74 @@
     <message>
         <source>Export full state</source>
         <translation>Export full state</translation>
+    </message>
+    <message>
+        <source>Save to playlist</source>
+        <translation>Save to playlist</translation>
+    </message>
+    <message>
+        <source>Remove from playlist</source>
+        <translation>Remove from playlist</translation>
+    </message>
+    <message>
+        <source>Select a playlist</source>
+        <translation>Select a playlist</translation>
+    </message>
+    <message>
+        <source>New playlist…</source>
+        <translation>New playlist…</translation>
+    </message>
+    <message>
+        <source>Create playlist</source>
+        <translation>Create playlist</translation>
+    </message>
+    <message>
+        <source>Enter a name for the new playlist</source>
+        <translation>Enter a name for the new playlist</translation>
+    </message>
+    <message>
+        <source>Added to %1</source>
+        <translation>Added to %1</translation>
+    </message>
+    <message>
+        <source>Removed from playlist</source>
+        <translation>Removed from playlist</translation>
+    </message>
+    <message>
+        <source>You need to log in with your YouTube account to manage playlists</source>
+        <translation>You need to log in with your YouTube account to manage playlists</translation>
+    </message>
+    <message>
+        <source>Failed to load playlists</source>
+        <translation>Failed to load playlists</translation>
+    </message>
+    <message>
+        <source>You need to log in with your YouTube account to see your watch history.</source>
+        <translation>You need to log in with your YouTube account to see your watch history.</translation>
+    </message>
+    <message>
+        <source>Failed to load watch history</source>
+        <translation>Failed to load watch history</translation>
+    </message>
+    <message>
+        <source>No watch history yet.</source>
+        <translation>No watch history yet.</translation>
+    </message>
+    <message>
+        <source>History</source>
+        <translation>History</translation>
+    </message>
+    <message>
+        <source>Watch history preferences</source>
+        <translation>Watch history preferences</translation>
+    </message>
+    <message>
+        <source>Open watch history</source>
+        <translation>Open watch history</translation>
+    </message>
+    <message>
+        <source>Your YouTube watch history. Requires being logged in with a YouTube account</source>
+        <translation>Your YouTube watch history. Requires being logged in with a YouTube account</translation>
     </message>
 </context>
 </TS>

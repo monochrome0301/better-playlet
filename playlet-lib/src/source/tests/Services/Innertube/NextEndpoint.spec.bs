@@ -138,7 +138,7 @@ namespace Tests
             m.assertEqual(links[1].label, "UCabc")
         end function
 
-        @it("reads the game the video is about from the structured description")
+        @it("reads the game the video is about from the structured description, skipping the people mentioned")
         function _()
             payload = m.Payload(invalid, invalid)
             payload["engagementPanels"] = [{
@@ -146,12 +146,30 @@ namespace Tests
                     content: {
                         structuredDescriptionContentRenderer: {
                             items: [{
+                                ' the people-mentioned section uses the same card shape with a square image;
+                                ' the game parser must not mistake its first entry for the game.
+                                videoAttributesSectionViewModel: {
+                                    headerTitle: "People mentioned"
+                                    headerSubtitle: "2 people"
+                                    videoAttributeViewModels: [{
+                                        videoAttributeViewModel: {
+                                            title: "El Rubius"
+                                            subtitle: "Spanish YouTuber"
+                                            imageStyle: "VIDEO_ATTRIBUTE_IMAGE_STYLE_SQUARE"
+                                            orientation: "VIDEO_ATTRIBUTE_ORIENTATION_VERTICAL"
+                                            image: { sources: [{ url: "https://person" }] }
+                                        }
+                                    }]
+                                }
+                            }, {
                                 videoAttributesSectionViewModel: {
                                     headerTitle: "Games"
                                     videoAttributeViewModels: [{
                                         videoAttributeViewModel: {
                                             title: "Super Mario World"
                                             subtitle: "1990"
+                                            imageStyle: "VIDEO_ATTRIBUTE_IMAGE_STYLE_PORTRAIT"
+                                            orientation: "VIDEO_ATTRIBUTE_ORIENTATION_HORIZONTAL"
                                             image: { sources: [{ url: "https://small" }, { url: "https://big" }] }
                                         }
                                     }]

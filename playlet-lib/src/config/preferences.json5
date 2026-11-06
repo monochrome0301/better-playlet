@@ -115,6 +115,21 @@
     ],
   },
   {
+    displayText: "History",
+    key: "history",
+    description: "Watch history preferences",
+    visibility: "tv",
+    children: [
+      {
+        displayText: "Open watch history",
+        key: "history.screen",
+        description: "Your YouTube watch history. Requires being logged in with a YouTube account",
+        visibility: "tv",
+        rokuComponent: "HistoryControl",
+      },
+    ],
+  },
+  {
     displayText: "Backend",
     key: "backend",
     description: "Backend preferences",

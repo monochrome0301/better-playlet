@@ -200,6 +200,11 @@ namespace Innertube
             parsedResponse["game"] = game
         end if
 
+        chapters = ParseChapters(payload)
+        if chapters.Count() > 0
+            parsedResponse["chapters"] = chapters
+        end if
+
         contents = ObjectUtils.Dig(payload, ["contents", "twoColumnWatchNextResults", "results", "results", "contents"])
         if not IsArray(contents)
             return
@@ -249,6 +254,58 @@ namespace Innertube
         end for
     end function
 
+    ' The watch page's chapters: the "Chapters" engagement panel lists one macroMarkersListItemRenderer per
+    ' chapter, whose watchEndpoint carries the exact start time. YouTube's own ordering is start-first; a
+    ' response without that endpoint (no chapters, or auto-chapters served another way) yields nothing.
+    function ParseChapters(payload as object) as object
+        panels = ObjectUtils.Dig(payload, ["engagementPanels"])
+        if not IsArray(panels)
+            return []
+        end if
+
+        chapters = []
+        for each panel in panels
+            items = ObjectUtils.Dig(panel, ["engagementPanelSectionListRenderer", "content", "macroMarkersListRenderer", "contents"])
+            if not IsArray(items)
+                continue for
+            end if
+            for each item in items
+                renderer = ObjectUtils.Dig(item, ["macroMarkersListItemRenderer"])
+                if not IsAssociativeArray(renderer)
+                    continue for
+                end if
+                title = ParseText(renderer["title"])
+                if title = ""
+                    continue for
+                end if
+                ' the watchEndpoint's startTimeSeconds is exact; the "0:00" label is the fallback.
+                startMs = ValidInt(ObjectUtils.Dig(renderer, ["navigationEndpoint", "watchEndpoint", "startTimeSeconds"])) * 1000
+                if startMs = 0
+                    startMs = ParseTimestampText(ParseText(renderer["timeDescription"]))
+                end if
+                chapters.Push({ title: title, startMs: startMs })
+            end for
+            ' several panels can carry markers (hand-written + auto chapters); the first filled one wins.
+            if chapters.Count() > 0
+                return chapters
+            end if
+        end for
+        return chapters
+    end function
+
+    ' "M:SS" / "H:MM:SS" (the chapter list's time label) as ms, 0 when unparseable.
+    function ParseTimestampText(text as string) as integer
+        totalMs = 0
+        for each part in text.Split(":")
+            digit = ValidInt(part)
+            if digit < 0
+                return 0
+            end if
+            totalMs = totalMs * 60 + digit
+        end for
+        return totalMs * 1000
+    end function
+
     ' The game the video is about: the structured description's "Games" section carries its name, year and cover.
     function ParseGame(payload as object) as object
         panels = ObjectUtils.Dig(payload, ["engagementPanels"])
@@ -271,6 +328,9 @@ namespace Innertube
                     if not IsAssociativeArray(game)
                         continue for
                     end if
+                    if IsPersonAttribute(game)
+                        continue for
+                    end if
                     title = ValidString(game.title)
                     if title = ""
                         continue for
@@ -285,6 +345,16 @@ namespace Innertube
             end for
         end for
         return invalid
+    end function
+
+    ' The structured description also lists the people mentioned in the video as avatar cards (square image,
+    ' vertical orientation); the game's cover is a portrait image on a horizontal card. The section header cannot
+    ' be used to tell them apart because it comes back localized ("Juegos" vs "Games"), so the card's own shape
+    ' is the signal: skipping the person shape keeps "Juegos" from showing whoever YouTube mentions first.
+    function IsPersonAttribute(game as object) as boolean
+        imageStyle = ValidString(game.imageStyle)
+        orientation = ValidString(game.orientation)
+        return imageStyle = "VIDEO_ATTRIBUTE_IMAGE_STYLE_SQUARE" or orientation = "VIDEO_ATTRIBUTE_ORIENTATION_VERTICAL"
     end function
 
     ' The largest cover source; YouTube lists them smallest first.

@@ -764,6 +764,7 @@ namespace Innertube
             "lengthText": lengthText
             "lengthSeconds": lengthSeconds
             "videoInfo": videoInfo
+            "setVideoId": ValidString(nodeData["setVideoId"])
         }
 
         PushFeedItem(video, context)

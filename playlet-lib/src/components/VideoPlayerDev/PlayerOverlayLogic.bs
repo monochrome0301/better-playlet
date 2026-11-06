@@ -19,6 +19,9 @@ namespace PlayerOverlayLogic
         Audio = "audio"
         Speed = "speed"
         Channel = "channel"
+        Chapters = "chapters"
+        SleepTimer = "sleepTimer"
+        PlaylistPicker = "playlistPicker"
     end enum
 
     ' [x] marks the active option; fixed width so the labels line up in a LabelList.
@@ -247,10 +250,141 @@ namespace PlayerOverlayLogic
         return options
     end function
 
+    ' --- Chapters ---
+
+    ' The watch page's chapter list as menu rows: "M:SS title", value = start (ms, stringified like every
+    ' row value). The chapter the cursor sits in carries the [x] mark.
+    function BuildChaptersOptions(chapters as object, cursorMs as integer) as object
+        options = []
+        if not IsArray(chapters)
+            return options
+        end if
+        selectedIndex = SelectedChapterIndex(chapters, cursorMs)
+        for i = 0 to chapters.Count() - 1
+            chapter = chapters[i]
+            if not IsAssociativeArray(chapter)
+                continue for
+            end if
+            startMs = ValidInt(chapter.startMs)
+            options.Push(Option(TimeLabel(startMs) + " " + ValidString(chapter.title), startMs.ToStr(), i = selectedIndex))
+        end for
+        return options
+    end function
+
+    ' The index of the chapter under the cursor (ms), -1 when none (empty list, or before the first).
+    function SelectedChapterIndex(chapters as object, cursorMs as integer) as integer
+        if not IsArray(chapters)
+            return -1
+        end if
+        selected = -1
+        for i = 0 to chapters.Count() - 1
+            chapter = chapters[i]
+            if IsAssociativeArray(chapter) and ValidInt(chapter.startMs) <= cursorMs
+                selected = i
+            end if
+        end for
+        return selected
+    end function
+
+    ' The chapter title under the cursor (ms), "" when none. The bar shows it when SponsorBlock has no
+    ' segment title there.
+    function ChapterTitleForCursor(chapters as object, cursorMs as integer) as string
+        index = SelectedChapterIndex(chapters, cursorMs)
+        if index = -1
+            return ""
+        end if
+        return ValidString(chapters[index].title)
+    end function
+
+    ' The watch page's chapter array plus Invidious's ({title, start} seconds) normalized to {title, startMs},
+    ' sorted by start, deduped. Entries without a title or a non-negative start are dropped.
+    function NormalizeChapters(raw as dynamic) as object
+        chapters = []
+        if not IsArray(raw)
+            return chapters
+        end if
+        seenStarts = {}
+        for each entry in raw
+            if not IsAssociativeArray(entry)
+                continue for
+            end if
+            title = ValidString(entry.title)
+            startMs = ValidInt(entry.startMs)
+            if startMs = 0
+                startMs = ValidInt(entry.start) * 1000
+            end if
+            if title = "" or seenStarts.DoesExist(startMs.ToStr())
+                continue for
+            end if
+            seenStarts[startMs.ToStr()] = true
+            chapters.Push({ title: title, startMs: startMs })
+        end for
+        ' insertion sort by start (the list is short and near-sorted from YouTube)
+        for i = 1 to chapters.Count() - 1
+            item = chapters[i]
+            j = i - 1
+            while j >= 0 and ValidInt(chapters[j].startMs) > ValidInt(item.startMs)
+                chapters[j + 1] = chapters[j]
+                j = j - 1
+            end while
+            chapters[j + 1] = item
+        end for
+        return chapters
+    end function
+
+    ' The chapter list rows' time, in the bar's own style (MM:SS, H:MM:SS past an hour) so the two agree.
+    function TimeLabel(ms as integer) as string
+        totalSeconds = ms \ 1000
+        if totalSeconds < 0
+            totalSeconds = 0
+        end if
+        hours = totalSeconds \ 3600
+        minutes = (totalSeconds \ 60) mod 60
+        seconds = (totalSeconds mod 60).ToStr("%02d")
+        if hours > 0
+            return hours.ToStr() + ":" + minutes.ToStr("%02d") + ":" + seconds
+        end if
+        return minutes.ToStr("%02d") + ":" + seconds
+    end function
+
+    ' --- Sleep timer ---
+
+    function SleepTimerChoices() as object
+        return [5, 10, 15, 20, 30, 45, 60]
+    end function
+
+    function SleepTimerText(minutes as integer) as string
+        return Tr(Locale.PlaybackMenu.Minutes).Replace("%1", minutes.ToStr())
+    end function
+
+    ' Off + the fixed minute choices; value = the minute count (stringified), "0" = off.
+    function BuildSleepTimerOptions(selectedMinutes as integer) as object
+        options = [Option(Tr(Locale.PlaybackMenu.Off), "0", selectedMinutes = 0)]
+        for each minutes in SleepTimerChoices()
+            options.Push(Option(SleepTimerText(minutes), minutes.ToStr(), minutes = selectedMinutes))
+        end for
+        return options
+    end function
+
+    ' One row per saved playlist plus the "New playlist…" entry; no row is marked selected because
+    ' the menu is a picker (save to one of them), not a state toggle.
+    function BuildPlaylistOptions(playlists as object) as object
+        rows = []
+        if IsArray(playlists)
+            for each playlist in playlists
+                if IsAssociativeArray(playlist)
+                    rows.Push(Option(ValidString(playlist.title), ValidString(playlist.playlistId), false))
+                end if
+            end for
+        end if
+        rows.Push(Option(Tr(Locale.Playlists.NewPlaylist), "new", false))
+        return rows
+    end function
+
     ' NOTE: the quality flag is NOT named hasQuality: case-insensitively that collides with the HasQuality function
     ' above, and the compiler then mangles the reference to the function instead of the parameter (if <function>
     ' throws at runtime, killing BuildMainMenuRows and silently keeping the menu closed).
-    function MainRows(qualityLabel as string, showQuality as boolean, subtitleLabel as string, hasSubtitles as boolean, audioLabel as string, hasAudio as boolean, speedLabel as string, showLiveChat = false as boolean) as object
+    function MainRows(qualityLabel as string, showQuality as boolean, subtitleLabel as string, hasSubtitles as boolean, audioLabel as string, hasAudio as boolean, speedLabel as string, chaptersLabel as string, showChapters as boolean, loopLabel as string, showLoop as boolean, sleepLabel as string, showLiveChat = false as boolean, showPlaylist = false as boolean) as object
         rows = []
         if showQuality
             rows.Push({ title: Tr(Locale.PlaybackMenu.Quality) + ": " + qualityLabel, value: Level.Quality })
@@ -263,6 +397,16 @@ namespace PlayerOverlayLogic
         end if
         if speedLabel <> ""
             rows.Push({ title: Tr(Locale.PlaybackMenu.Speed) + ": " + speedLabel, value: Level.Speed })
+        end if
+        if showChapters
+            rows.Push({ title: Tr(Locale.PlaybackMenu.Chapters) + ": " + chaptersLabel, value: Level.Chapters })
+        end if
+        if showLoop
+            rows.Push({ title: Tr(Locale.PlaybackMenu.Loop) + ": " + loopLabel, value: "loop" })
+        end if
+        rows.Push({ title: Tr(Locale.PlaybackMenu.SleepTimer) + ": " + sleepLabel, value: Level.SleepTimer })
+        if showPlaylist
+            rows.Push({ title: Tr(Locale.ContextMenu.SaveToPlaylist), value: Level.PlaylistPicker })
         end if
         if showLiveChat
             rows.Push({ title: Tr(Locale.PlaybackMenu.LiveChat), value: "livechat" })

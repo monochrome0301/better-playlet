@@ -1,0 +1,55 @@
+import "pkg:/components/Services/Innertube/Context.bs"
+import "pkg:/source/services/HttpClient.bs"
+
+namespace Innertube
+
+    ' Mutates a user playlist (add/remove videos). `actions` is the list of InnerTube edit actions to
+    ' apply in a single request; build them with CreateAddVideoToPlaylistAction/CreateRemoveVideoFromPlaylistAction.
+    function CreateEditPlaylistRequest(playlistId as string, actions as object, options = invalid as object) as HttpClient.Request
+        deviceInfo = CreateObject("roDeviceInfo")
+
+        payload = {
+            "context": Innertube.CreateContext(Innertube.ClientType.Tv, deviceInfo, options)
+            "playlistId": playlistId
+            "actions": actions
+        }
+
+        request = HttpClient.Post("https://www.youtube.com/youtubei/v1/browse/edit_playlist?prettyPrint=false&alt=json").JsonBody(payload)
+        request.Headers(Innertube.CreateHeaders(Innertube.ClientType.Tv))
+
+        return request
+    end function
+
+    function CreateAddVideoToPlaylistAction(videoId as string) as object
+        return {
+            "action": "ACTION_ADD_VIDEO"
+            "addedVideoId": videoId
+        }
+    end function
+
+    ' Entries added after ~2016 are keyed by their per-entry setVideoId (from the playlist page), not the
+    ' plain videoId; pass the setVideoId when one is known, otherwise the videoId (still works for e.g. WL).
+    function CreateRemoveVideoFromPlaylistAction(removedVideoId as string) as object
+        return {
+            "action": "ACTION_REMOVE_VIDEO"
+            "removedVideoId": removedVideoId
+        }
+    end function
+
+    ' Creates a new playlist. The response's "playlistId" is the created playlist.
+    function CreateCreatePlaylistRequest(title as string, privacyStatus as string, options = invalid as object) as HttpClient.Request
+        deviceInfo = CreateObject("roDeviceInfo")
+
+        payload = {
+            "context": Innertube.CreateContext(Innertube.ClientType.Tv, deviceInfo, options)
+            "title": title
+            "privacyStatus": privacyStatus
+        }
+
+        request = HttpClient.Post("https://www.youtube.com/youtubei/v1/playlist/create?prettyPrint=false&alt=json").JsonBody(payload)
+        request.Headers(Innertube.CreateHeaders(Innertube.ClientType.Tv))
+
+        return request
+    end function
+
+end namespace

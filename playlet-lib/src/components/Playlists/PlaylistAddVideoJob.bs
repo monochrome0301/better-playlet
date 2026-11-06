@@ -1,0 +1,38 @@
+import "pkg:/components/ContentNode/ProfileContentAuthTokenUtils.bs"
+import "pkg:/components/Services/Innertube/InnertubeService.bs"
+
+@job("PlaylistAddVideoJob")
+function ExecuteJob() as void
+    input = JobGetInput()
+    profile = input.profile
+    playlistId = input.playlistId
+    videoId = input.videoId
+
+    if JobIsCancelled()
+        JobCancel()
+        return
+    end if
+
+    cancellation = JobGetCancellation()
+
+    auth = ProfileContentAuthTokenUtils.EnsureFreshAccessToken(profile)
+    if auth.state <> ProfileContentAuthTokenUtils.AccessTokenState.Ok
+        JobError("No usable access token to edit playlists: " + auth.state)
+        return
+    end if
+
+    result = InnertubeService.AddVideoToPlaylist(playlistId, videoId, {
+        accessToken: auth.token
+        onBehalfOfUser: auth.activeIdentifyToken
+        cancellation: cancellation
+    })
+    if result.error <> invalid
+        JobError("Failed to add video to playlist: " + ToString(result.error))
+        return
+    end if
+
+    JobSuccessData({
+        playlistId: playlistId
+        title: input.playlistTitle
+    })
+end function

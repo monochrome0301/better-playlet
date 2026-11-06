@@ -279,6 +279,33 @@ namespace Tests
             m.assertEqual(actual, expected%)
         end function
 
-    end class
+        @describe("TrickPlayBar — chapter ticks")
 
+        @it("draws one tick per chapter start (except 0:00) and clears on new content")
+        function _()
+            m.top.chapters = [
+                { title: "Intro", startMs: 0 }
+                { title: "Half", startMs: 100000 } ' 50% of 200s -> x = 572
+                { title: "Late", startMs: 200000 } ' the end -> no tick
+            ]
+            ticks = m.top.findNode("chapterTicks")
+            m.assertEqual(ticks.getChildCount(), 1)
+            m.assertEqual(ticks.getChild(0).translation[0], 571.0)
+            m.assertTrue(ticks.visible)
+
+            m.top.chapters = []
+            m.assertEqual(ticks.getChildCount(), 0)
+            m.assertFalse(ticks.visible)
+        end function
+
+        @it("hides the ticks on live")
+        function _()
+            m.top.chapters = [{ title: "Intro", startMs: 100000 }]
+            m.assertTrue(m.top.findNode("chapterTicks").visible)
+
+            m.top.isLive = true
+            m.assertFalse(m.top.findNode("chapterTicks").visible)
+        end function
+
+    end class
 end namespace

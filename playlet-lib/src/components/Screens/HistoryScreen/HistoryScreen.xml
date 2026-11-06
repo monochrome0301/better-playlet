@@ -1,0 +1,46 @@
+<component name="HistoryScreen" extends="Group" includes="AutoBind,Focus,ContextMenuProvider">
+    <interface>
+        <field id="navBar" type="node" bind="/NavBar" />
+        <field id="profilesService" type="node" bind="/ProfilesService" />
+        <field id="jobQueue" type="node" bind="/JobQueue" />
+        <function name="Refresh" />
+    </interface>
+    <children>
+        <Group id="notLoggedIn" visible="false">
+            <LayoutGroup vertAlignment="center" itemSpacings="[25,25]" translation="[145,360]">
+                <Label
+                    width="920"
+                    horizAlign="center"
+                    font="font:SmallSystemFont"
+                    text="You need to log in with your YouTube account to see your watch history."
+                    wrap="true" />
+            </LayoutGroup>
+        </Group>
+        <Group id="noHistory" visible="false">
+            <Label
+                width="920"
+                horizAlign="center"
+                font="font:SmallSystemFont"
+                text="No watch history yet."
+                translation="[145,360]"
+                wrap="true" />
+        </Group>
+        <Group id="yesHistory" visible="false">
+            <VideoRowList
+                itemComponentName="RowCell"
+                id="rowList"
+                translation="[0,50]"
+                numRows="2"
+                rowitemSize="[[350,196]]"
+                rowItemSpacing="[[25,0]]"
+                itemSize="[1280,326]"
+                itemSpacing="[0,65]"
+                rowLabelOffset="[[90,20]]"
+                focusXOffset="[90]"
+                showRowLabel="[true]"
+                rowFocusAnimationStyle="floatingfocus"
+                variableWidthItems="true"
+                focusBitmapUri="pkg:/images/focus-glow-padding-30.$$RES$$.9.png" />
+        </Group>
+    </children>
+</component>

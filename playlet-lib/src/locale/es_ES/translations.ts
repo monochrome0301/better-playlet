@@ -1677,6 +1677,26 @@
         <translation>Normal</translation>
     </message>
     <message>
+        <source>Chapters</source>
+        <translation>Capítulos</translation>
+    </message>
+    <message>
+        <source>Loop</source>
+        <translation>Repetir</translation>
+    </message>
+    <message>
+        <source>On</source>
+        <translation>Encendido</translation>
+    </message>
+    <message>
+        <source>Sleep timer</source>
+        <translation>Temporizador de apagado</translation>
+    </message>
+    <message>
+        <source>%1 min</source>
+        <translation>%1 min</translation>
+    </message>
+    <message>
         <source>Comments</source>
         <translation>Comentarios</translation>
     </message>
@@ -1827,6 +1847,74 @@
     <message>
         <source>Export full state</source>
         <translation>Exportar estado completo</translation>
+    </message>
+    <message>
+        <source>Save to playlist</source>
+        <translation>Guardar en playlist</translation>
+    </message>
+    <message>
+        <source>Remove from playlist</source>
+        <translation>Quitar de la playlist</translation>
+    </message>
+    <message>
+        <source>Select a playlist</source>
+        <translation>Selecciona una playlist</translation>
+    </message>
+    <message>
+        <source>New playlist…</source>
+        <translation>Nueva playlist…</translation>
+    </message>
+    <message>
+        <source>Create playlist</source>
+        <translation>Crear playlist</translation>
+    </message>
+    <message>
+        <source>Enter a name for the new playlist</source>
+        <translation>Introduce un nombre para la nueva playlist</translation>
+    </message>
+    <message>
+        <source>Added to %1</source>
+        <translation>Añadida a %1</translation>
+    </message>
+    <message>
+        <source>Removed from playlist</source>
+        <translation>Quitada de la playlist</translation>
+    </message>
+    <message>
+        <source>You need to log in with your YouTube account to manage playlists</source>
+        <translation>Necesitas iniciar sesión con tu cuenta de YouTube para gestionar playlists</translation>
+    </message>
+    <message>
+        <source>Failed to load playlists</source>
+        <translation>Error al cargar las playlists</translation>
+    </message>
+    <message>
+        <source>You need to log in with your YouTube account to see your watch history.</source>
+        <translation>Necesitas iniciar sesión con tu cuenta de YouTube para ver tu historial.</translation>
+    </message>
+    <message>
+        <source>Failed to load watch history</source>
+        <translation>Error al cargar el historial</translation>
+    </message>
+    <message>
+        <source>No watch history yet.</source>
+        <translation>Todavía no hay historial.</translation>
+    </message>
+    <message>
+        <source>History</source>
+        <translation>Historial</translation>
+    </message>
+    <message>
+        <source>Watch history preferences</source>
+        <translation>Preferencias del historial</translation>
+    </message>
+    <message>
+        <source>Open watch history</source>
+        <translation>Abrir historial</translation>
+    </message>
+    <message>
+        <source>Your YouTube watch history. Requires being logged in with a YouTube account</source>
+        <translation>Tu historial de YouTube. Requiere iniciar sesión con una cuenta de YouTube</translation>
     </message>
 </context>
 </TS>

@@ -1,0 +1,145 @@
+import "pkg:/components/ContentNode/ProfileContentAuthTokenUtils.bs"
+import "pkg:/components/ContextMenu/ContextMenuUtils.bs"
+import "pkg:/components/Dialog/DialogUtils.bs"
+import "pkg:/components/JobSystem/Jobs.bs"
+import "pkg:/components/JobSystem/JobSystem.bs"
+import "pkg:/components/Navigation/Navigation.bs"
+import "pkg:/source/utils/FocusManagement.bs"
+import "pkg:/source/utils/Locale.bs"
+import "pkg:/source/utils/RemoteKeys.bs"
+import "pkg:/source/utils/Types.bs"
+
+function Init()
+    m.notLoggedIn = m.top.findNode("notLoggedIn")
+    m.noHistory = m.top.findNode("noHistory")
+    m.yesHistory = m.top.findNode("yesHistory")
+    m.rowList = m.top.FindNode("rowList")
+    m.rowList.screen = m.top
+    m.isDirty = true
+
+    m.top.ObserveField("visible", FuncName(OnVisibleChange))
+end function
+
+function OnNodeReady()
+    SetNavigation(invalid, RemoteKeys.Back, m.navBar)
+    SetNavigation(invalid, RemoteKeys.Left, m.navBar)
+
+    m.rowList@.BindNode()
+end function
+
+function OnFocusChange() as void
+    if not m.top.focus
+        return
+    end if
+
+    if m.yesHistory.visible
+        NodeSetFocus(m.rowList, true)
+    else
+        NodeSetFocus(m.navBar, true)
+    end if
+end function
+
+function OnVisibleChange()
+    if m.top.visible and m.isDirty
+        LoadHistory()
+    end if
+end function
+
+function Refresh(_unused as dynamic)
+    m.isDirty = true
+    if m.top.visible
+        LoadHistory()
+    end if
+end function
+
+' The watch history comes from the authenticated YouTube account: without a logged-in profile the
+' screen stays on a "you need to log in" notice instead of attempting the request.
+function LoadHistory() as void
+    m.isDirty = false
+
+    profile = invalid
+    if m.profilesService <> invalid
+        profile = m.profilesService.currentProfile
+    end if
+
+    if profile = invalid or profile.type <> "youtube" or profile.authState = ProfileContentAuthTokenUtils.ProfileAuthState.NeedsReauth
+        ShowState("notLoggedIn")
+        return
+    end if
+
+    if m.historyJob <> invalid
+        m.historyJob.cancel = true
+        JobSystem.UnobserveCallback(m.historyJob)
+    end if
+    m.historyJob = JobSystem.CreateCallback(OnHistoryJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.HistoryFeedJob, {
+        profile: profile
+    }, m.historyJob)
+end function
+
+function OnHistoryJobDone(event as object) as void
+    callback = event.getRoSGNode()
+    JobSystem.UnobserveCallback(callback)
+    if callback = m.historyJob
+        m.historyJob = invalid
+    end if
+
+    if callback.cancel
+        return
+    end if
+
+    if callback.error <> invalid
+        ShowState("noHistory")
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.History.LoadError)
+            message: callback.error
+        })
+        return
+    end if
+
+    feeds = callback.data
+    if GetFeedItemCount(feeds) = 0
+        ShowState("noHistory")
+        return
+    end if
+
+    ShowState("yesHistory")
+    m.rowList.feeds = feeds
+end function
+
+function GetFeedItemCount(feeds as object) as integer
+    if not IsArray(feeds)
+        return 0
+    end if
+
+    count = 0
+    for each feed in feeds
+        if IsAssociativeArray(feed) and IsArray(feed.items)
+            count += feed.items.Count()
+        end if
+    end for
+    return count
+end function
+
+function ShowState(state as string) as void
+    m.notLoggedIn.visible = state = "notLoggedIn"
+    m.noHistory.visible = state = "noHistory"
+    m.yesHistory.visible = state = "yesHistory"
+    m.top.focusable = state = "yesHistory"
+
+    if state <> "yesHistory" and m.rowList.hasFocus()
+        NodeSetFocus(m.navBar, true)
+    end if
+end function
+
+function OnKeyEvent(key as string, press as boolean) as boolean
+    if NavigationKeyHandler(key, press).handled
+        return true
+    end if
+    return false
+end function
+
+function GetContextMenuOptionsForItem(_rowItem as object) as object
+    refreshItem = ContextMenuUtils.CreateOption(Tr(Locale.Buttons.Refresh), m.top, "Refresh", [invalid])
+    return [refreshItem]
+end function

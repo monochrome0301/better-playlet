@@ -1,5 +1,8 @@
 import "pkg:/components/ChannelView/ChannelUtils.bs"
 import "pkg:/components/ContextMenu/ContextMenuUtils.bs"
+import "pkg:/components/Dialog/DialogUtils.bs"
+import "pkg:/components/JobSystem/Jobs.bs"
+import "pkg:/components/JobSystem/JobSystem.bs"
 import "pkg:/components/Navigation/LongPress.bs"
 import "pkg:/components/Services/Invidious/InvidiousToContentNode.bs"
 import "pkg:/components/VideoFeed/FeedLoadState.bs"
@@ -185,6 +188,10 @@ function GetContextMenuOptionsForItem(video as object) as object
         ContextMenuUtils.CreateOption(Tr(Locale.ContextMenu.QueueVideo), m.videoQueue, "FuncAddToQueueVideo", [video]),
     ]
 
+    if CanEditPlaylists()
+        options.push(ContextMenuUtils.CreateOption(Tr(Locale.ContextMenu.RemoveFromPlaylist), m.top, "RemoveVideoFromPlaylist", [video]))
+    end if
+
     playlistAuthorId = playlist.authorId
     videoAuthorId = video.authorId
 
@@ -263,4 +270,95 @@ function OnLoadingChanged(event as object)
         m.busySpinner.visible = false
         m.busySpinner.control = "stop"
     end if
+end function
+
+'-------------------------------------------------------------------------------
+' Remove from playlist — context-menu action; on success the row is dropped from
+' the grid without a reload. Removal keys on the entry's setVideoId when the
+' playlist page provided one, otherwise the plain videoId.
+'-------------------------------------------------------------------------------
+
+function CanEditPlaylists() as boolean
+    profile = invalid
+    if m.profilesService <> invalid
+        profile = m.profilesService.currentProfile
+    end if
+    return profile <> invalid and profile.type = "youtube"
+end function
+
+function RemoveVideoFromPlaylist(video as object) as void
+    playlist = m.list.content
+    if playlist = invalid or video = invalid
+        return
+    end if
+
+    profile = invalid
+    if m.profilesService <> invalid
+        profile = m.profilesService.currentProfile
+    end if
+    if profile = invalid or profile.type <> "youtube"
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.ContextMenu.RemoveFromPlaylist)
+            message: Tr(Locale.Playlists.NotLoggedIn)
+        })
+        return
+    end if
+
+    playlistId = ValidString(playlist.playlistId)
+    removedVideoId = ""
+    if video.hasField("setVideoId")
+        removedVideoId = ValidString(video.setVideoId)
+    end if
+    if removedVideoId = ""
+        removedVideoId = ValidString(video.videoId)
+    end if
+
+    if playlistId = "" or removedVideoId = ""
+        return
+    end if
+
+    m.pendingRemoveVideo = video
+
+    if m.playlistRemoveJob <> invalid
+        m.playlistRemoveJob.cancel = true
+        JobSystem.UnobserveCallback(m.playlistRemoveJob)
+    end if
+    m.playlistRemoveJob = JobSystem.CreateCallback(OnPlaylistRemoveJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.PlaylistRemoveVideoJob, {
+        profile: profile
+        playlistId: playlistId
+        removedVideoId: removedVideoId
+    }, m.playlistRemoveJob)
+end function
+
+function OnPlaylistRemoveJobDone(event as object) as void
+    callback = event.getRoSGNode()
+    JobSystem.UnobserveCallback(callback)
+    if callback = m.playlistRemoveJob
+        m.playlistRemoveJob = invalid
+    end if
+
+    if callback.cancel
+        return
+    end if
+
+    if callback.error <> invalid
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.ContextMenu.RemoveFromPlaylist)
+            message: callback.error
+        })
+        return
+    end if
+
+    video = m.pendingRemoveVideo
+    m.pendingRemoveVideo = invalid
+    playlist = m.list.content
+    if video <> invalid and playlist <> invalid
+        playlist.removeChild(video)
+    end if
+
+    DialogUtils.ShowDialogEx({
+        title: Tr(Locale.ContextMenu.RemoveFromPlaylist)
+        message: Tr(Locale.Playlists.RemovedFromPlaylist)
+    })
 end function

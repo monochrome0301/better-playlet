@@ -1,0 +1,49 @@
+import "pkg:/components/ContentNode/ProfileContentAuthTokenUtils.bs"
+import "pkg:/components/Services/Innertube/InnertubeService.bs"
+
+' Creates a playlist and, when input.videoId is set, adds that video to it in the same job.
+@job("PlaylistCreateJob")
+function ExecuteJob() as void
+    input = JobGetInput()
+    profile = input.profile
+    title = input.title
+
+    if JobIsCancelled()
+        JobCancel()
+        return
+    end if
+
+    cancellation = JobGetCancellation()
+
+    auth = ProfileContentAuthTokenUtils.EnsureFreshAccessToken(profile)
+    if auth.state <> ProfileContentAuthTokenUtils.AccessTokenState.Ok
+        JobError("No usable access token to create playlists: " + auth.state)
+        return
+    end if
+
+    requestOptions = {
+        accessToken: auth.token
+        onBehalfOfUser: auth.activeIdentifyToken
+        cancellation: cancellation
+    }
+
+    created = InnertubeService.CreatePlaylist(title, "PRIVATE", requestOptions)
+    if created.error <> invalid
+        JobError("Failed to create playlist: " + ToString(created.error))
+        return
+    end if
+
+    videoId = input.videoId
+    if videoId <> invalid and videoId <> ""
+        added = InnertubeService.AddVideoToPlaylist(created.playlistId, videoId, requestOptions)
+        if added.error <> invalid
+            JobError("Playlist created but failed to add the video: " + ToString(added.error))
+            return
+        end if
+    end if
+
+    JobSuccessData({
+        playlistId: created.playlistId
+        title: title
+    })
+end function

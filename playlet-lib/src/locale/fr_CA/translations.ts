@@ -1441,6 +1441,26 @@
         <translation>Normale</translation>
     </message>
     <message>
+        <source>Chapters</source>
+        <translation>Chapitres</translation>
+    </message>
+    <message>
+        <source>Loop</source>
+        <translation>Boucle</translation>
+    </message>
+    <message>
+        <source>On</source>
+        <translation>Activé</translation>
+    </message>
+    <message>
+        <source>Sleep timer</source>
+        <translation>Minuterie de veille</translation>
+    </message>
+    <message>
+        <source>%1 min</source>
+        <translation>%1 min</translation>
+    </message>
+    <message>
         <source>Comments</source>
         <translation>Commentaires</translation>
     </message>

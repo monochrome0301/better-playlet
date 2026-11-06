@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Playlist management: "Save to playlist" in the player's settings menu and in the long-press context menu of any video, a playlist picker fed by the account's playlists with a "New playlist…" keyboard entry, and "Remove from playlist" in the playlist view (keyed on the entry's setVideoId when the playlist page provides one). Requires being logged in with a YouTube account; mixes can't be edited
+- Watch history screen: a "History" section in Settings opens the account's watch history feed; without a logged-in YouTube account it shows a "you need to log in" notice instead of loading
+- YouTube chapters: the video's chapters from the watch page draw as ticks on the progress bar, the bar's chapter label falls back to the chapter title (SponsorBlock's segment title keeps priority), and the settings menu gains a "Chapters" list that jumps to the picked chapter
+- Loop in the player's settings menu: replays the video from the start at its end instead of advancing the queue (and skips the "up next" dialog with it)
+- Sleep timer in the player's settings menu: arm 5 to 60 minutes and playback pauses when it fires
 - Playback speed in the player's settings menu, with YouTube's speeds from 0.25x to 2x
 - Related-videos feed in the player: press Down to browse the watch page's recommendations in a grid, with a load-more tile and Up on the first row to leave
 - Emoji in titles, queue cells, queue notifications, comments and the player's video description, drawn with a bundled emoji font
@@ -23,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The video details' game card showing a person from the "people mentioned" section instead of the game: the structured description's people cards (square avatars) are now skipped, so the card shows the actual game whose cover is the portrait image
 - The play/pause key working while the player menu, video description or comments are open
 - "View replies" doing nothing on comments whose replies arrive under the commentRepliesRenderer wrapper
 - Up/Down keys staying dead after closing the player menu, comments or video details, because focus stayed on the hidden list

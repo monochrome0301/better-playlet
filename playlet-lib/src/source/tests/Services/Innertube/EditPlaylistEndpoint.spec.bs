@@ -1,0 +1,57 @@
+import "pkg:/components/Playlists/PlaylistEditUtils.bs"
+import "pkg:/components/Services/Innertube/EditPlaylistEndpoint.bs"
+
+namespace Tests
+
+    @suite
+    class EditPlaylistEndpointTests extends Rooibos.BaseTestSuite
+
+        @describe("edit playlist actions")
+
+        @it("builds the add action from the video id")
+        function _()
+            action = Innertube.CreateAddVideoToPlaylistAction("dQw4w9WgXcQ")
+            m.assertEqual(action.action, "ACTION_ADD_VIDEO")
+            m.assertEqual(action.addedVideoId, "dQw4w9WgXcQ")
+        end function
+
+        @it("builds the remove action from the given entry id")
+        function _()
+            action = Innertube.CreateRemoveVideoFromPlaylistAction("set-video-id-1")
+            m.assertEqual(action.action, "ACTION_REMOVE_VIDEO")
+            m.assertEqual(action.removedVideoId, "set-video-id-1")
+        end function
+
+        @describe("PlaylistEdit.PlaylistsFromFeeds")
+
+        @it("flattens playlist items and drops mixes")
+        function _()
+            feeds = [
+                {
+                    title: "Playlists"
+                    items: [
+                        { type: "playlist", playlistId: "PLabc", title: "Favorites" }
+                        { type: "playlist", playlistId: "RDmix1", title: "Mix" }
+                        { type: "video", videoId: "dQw4w9WgXcQ", title: "Video" }
+                        { type: "playlist", playlistId: "WL", title: "Watch later" }
+                    ]
+                }
+                { title: "Empty", items: [] }
+            ]
+            playlists = PlaylistEdit.PlaylistsFromFeeds(feeds)
+            m.assertEqual(playlists.Count(), 2)
+            m.assertEqual(playlists[0].playlistId, "PLabc")
+            m.assertEqual(playlists[0].title, "Favorites")
+            m.assertEqual(playlists[1].playlistId, "WL")
+        end function
+
+        @it("yields nothing for malformed feeds")
+        function _()
+            m.assertEqual(PlaylistEdit.PlaylistsFromFeeds(invalid).Count(), 0)
+            m.assertEqual(PlaylistEdit.PlaylistsFromFeeds([]).Count(), 0)
+            m.assertEqual(PlaylistEdit.PlaylistsFromFeeds([{ title: "x" }]).Count(), 0)
+        end function
+
+    end class
+
+end namespace

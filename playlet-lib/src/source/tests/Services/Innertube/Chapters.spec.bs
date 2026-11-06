@@ -1,0 +1,68 @@
+import "pkg:/components/Services/Innertube/NextEndpoint.bs"
+
+namespace Tests
+
+    @suite
+    class ChaptersTests extends Rooibos.BaseTestSuite
+
+        function Parse(text as string) as object
+            ' bs:disable-next-line NO_PARSE_JSON
+            return ParseJson(text)
+        end function
+
+        @describe("ParseChapters")
+
+        @it("reads the macro markers panel, taking the first filled panel only")
+        function _()
+            payload = m.Parse(`{
+                "engagementPanels": [
+                    {"engagementPanelSectionListRenderer": {"content": {"macroMarkersListRenderer": {"contents": [
+                        {"macroMarkersListItemRenderer": {"title": {"simpleText": "Intro"}, "timeDescription": {"simpleText": "0:00"}, "navigationEndpoint": {"watchEndpoint": {"startTimeSeconds": 0}}}},
+                        {"macroMarkersListItemRenderer": {"title": {"simpleText": "Setup"}, "timeDescription": {"simpleText": "1:05"}, "navigationEndpoint": {"watchEndpoint": {"startTimeSeconds": 65}}}}
+                    ]}}}},
+                    {"engagementPanelSectionListRenderer": {"content": {"macroMarkersListRenderer": {"contents": [
+                        {"macroMarkersListItemRenderer": {"title": {"simpleText": "Auto chapter"}, "navigationEndpoint": {"watchEndpoint": {"startTimeSeconds": 9}}}}}}
+                    ]}}}
+                ]
+            }`)
+            chapters = Innertube.ParseChapters(payload)
+            m.assertEqual(chapters.Count(), 2)
+            m.assertEqual(chapters[0].title, "Intro")
+            m.assertEqual(chapters[0].startMs, 0)
+            m.assertEqual(chapters[1].title, "Setup")
+            m.assertEqual(chapters[1].startMs, 65000)
+        end function
+
+        @it("falls back to the M:SS label when the watchEndpoint is missing")
+        function _()
+            payload = m.Parse(`{
+                "engagementPanels": [
+                    {"engagementPanelSectionListRenderer": {"content": {"macroMarkersListRenderer": {"contents": [
+                        {"macroMarkersListItemRenderer": {"title": {"simpleText": "Deep dive"}, "timeDescription": {"simpleText": "2:03"}}}},
+                        {"macroMarkersListItemRenderer": {"title": {"simpleText": "Long"}, "timeDescription": {"simpleText": "1:02:03"}}}}
+                    ]}}}
+                ]
+            }`)
+            chapters = Innertube.ParseChapters(payload)
+            m.assertEqual(chapters.Count(), 2)
+            m.assertEqual(chapters[0].startMs, 123000)
+            m.assertEqual(chapters[1].startMs, 3723000)
+        end function
+
+        @it("yields nothing without a markers panel or without titles")
+        function _()
+            m.assertEqual(Innertube.ParseChapters(m.Parse(`{"engagementPanels": []}`)).Count(), 0)
+            m.assertEqual(Innertube.ParseChapters(m.Parse(`{}`)).Count(), 0)
+            untitled = m.Parse(`{
+                "engagementPanels": [
+                    {"engagementPanelSectionListRenderer": {"content": {"macroMarkersListRenderer": {"contents": [
+                        {"macroMarkersListItemRenderer": {"timeDescription": {"simpleText": "0:00"}}}}
+                    ]}}}
+                ]
+            }`)
+            m.assertEqual(Innertube.ParseChapters(untitled).Count(), 0)
+        end function
+
+    end class
+
+end namespace

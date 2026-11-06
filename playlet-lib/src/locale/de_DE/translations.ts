@@ -1473,6 +1473,26 @@
         <translation>Normal</translation>
     </message>
     <message>
+        <source>Chapters</source>
+        <translation>Kapitel</translation>
+    </message>
+    <message>
+        <source>Loop</source>
+        <translation>Wiederholen</translation>
+    </message>
+    <message>
+        <source>On</source>
+        <translation>Ein</translation>
+    </message>
+    <message>
+        <source>Sleep timer</source>
+        <translation>Einschlaf-Timer</translation>
+    </message>
+    <message>
+        <source>%1 min</source>
+        <translation>%1 Min</translation>
+    </message>
+    <message>
         <source>Comments</source>
         <translation>Kommentare</translation>
     </message>

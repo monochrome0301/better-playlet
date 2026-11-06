@@ -121,26 +121,73 @@ namespace Tests
 
         @it("includes only the levels that have choices, plus the description and comments shortcuts")
         function _()
-            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false, "")
-            m.assertEqual(rows.Count(), 3)
+            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false, "", "", false, "Off", false, "Off")
+            m.assertEqual(rows.Count(), 4)
             m.assertEqual(rows[0].value, PlayerOverlayLogic.Level.Quality)
-            m.assertEqual(rows[1].title, Tr(Locale.PlaybackMenu.VideoDescription))
-            m.assertEqual(rows[2].value, "comments")
+            m.assertEqual(rows[1].title, Tr(Locale.PlaybackMenu.SleepTimer) + ": " + Tr(Locale.PlaybackMenu.Off))
+            m.assertEqual(rows[2].title, Tr(Locale.PlaybackMenu.VideoDescription))
+            m.assertEqual(rows[3].value, "comments")
 
-            rows = PlayerOverlayLogic.MainRows("Auto", false, "Off", true, "English", true, "1.5x")
-            m.assertEqual(rows.Count(), 5)
+            rows = PlayerOverlayLogic.MainRows("Auto", false, "Off", true, "English", true, "1.5x", "Setup", true, "On", true, "5 min")
+            m.assertEqual(rows.Count(), 8)
             m.assertTrue(rows[0].title.InStr(Tr(Locale.PlaybackMenu.Subtitles)) = 0)
             m.assertEqual(rows[2].value, PlayerOverlayLogic.Level.Speed)
             m.assertEqual(rows[2].title, Tr(Locale.PlaybackMenu.Speed) + ": 1.5x")
+            m.assertEqual(rows[3].value, PlayerOverlayLogic.Level.Chapters)
+            m.assertEqual(rows[3].title, Tr(Locale.PlaybackMenu.Chapters) + ": Setup")
+            m.assertEqual(rows[4].title, Tr(Locale.PlaybackMenu.Loop) + ": " + Tr(Locale.PlaybackMenu.On))
+            m.assertEqual(rows[5].title, Tr(Locale.PlaybackMenu.SleepTimer) + ": " + Tr(Locale.PlaybackMenu.Minutes).Replace("%1", "5"))
         end function
 
         @it("adds the live chat shortcut only on live content")
         function _()
-            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false, "", true)
-            m.assertEqual(rows.Count(), 4)
+            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false, "", "", false, "Off", false, "Off", true)
+            m.assertEqual(rows.Count(), 5)
             m.assertEqual(rows[1].value, "livechat")
             m.assertEqual(rows[1].title, Tr(Locale.PlaybackMenu.LiveChat))
-            m.assertEqual(rows[3].value, "comments")
+            m.assertEqual(rows[4].value, "comments")
+        end function
+
+        @it("adds the save-to-playlist row only when requested")
+        function _()
+            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false, "", "", false, "Off", false, "Off", false, true)
+            m.assertEqual(rows.Count(), 5)
+            m.assertEqual(rows[1].value, PlayerOverlayLogic.Level.PlaylistPicker)
+            m.assertEqual(rows[1].title, Tr(Locale.ContextMenu.SaveToPlaylist))
+
+            rows = PlayerOverlayLogic.MainRows("Auto", true, "Off", false, "", false, "", "", false, "Off", false, "Off", false, false)
+            for each row in rows
+                m.assertNotEqual(row.value, PlayerOverlayLogic.Level.PlaylistPicker)
+            end for
+        end function
+
+        @describe("playlist options")
+
+        @it("lists the playlists plus the new-playlist entry, unmarked")
+        function _()
+            playlists = [
+                { playlistId: "PLabc", title: "Favorites" }
+                { playlistId: "WL", title: "Watch later" }
+            ]
+            options = PlayerOverlayLogic.BuildPlaylistOptions(playlists)
+            m.assertEqual(options.Count(), 3)
+            m.assertEqual(options[0].title, "[  ] Favorites")
+            m.assertEqual(options[0].value, "PLabc")
+            m.assertEqual(options[1].title, "[  ] Watch later")
+            m.assertEqual(options[1].value, "WL")
+            m.assertEqual(options[2].title, "[  ] " + Tr(Locale.Playlists.NewPlaylist))
+            m.assertEqual(options[2].value, "new")
+        end function
+
+        @it("keeps the new-playlist entry when there are no playlists")
+        function _()
+            options = PlayerOverlayLogic.BuildPlaylistOptions([])
+            m.assertEqual(options.Count(), 1)
+            m.assertEqual(options[0].value, "new")
+
+            options = PlayerOverlayLogic.BuildPlaylistOptions(invalid)
+            m.assertEqual(options.Count(), 1)
+            m.assertEqual(options[0].value, "new")
         end function
 
         @describe("speed options")
@@ -378,6 +425,81 @@ namespace Tests
             m.assertEqual(rows[0].meta, "12 · 2 days ago · " + Tr(Locale.PlaybackMenu.ReadMore))
         end function
 
-    end class
+        @describe("chapters")
 
+        function Chapters() as object
+            return [
+                { title: "Intro", startMs: 0 }
+                { title: "Setup", startMs: 60000 }
+                { title: "Deep dive", startMs: 3660000 }
+            ]
+        end function
+
+        @it("normalizes both backends' shapes, sorted, deduped, without junk")
+        function _()
+            chapters = PlayerOverlayLogic.NormalizeChapters([
+                { title: "Setup", start: 60 }
+                { title: "Intro", startMs: 0 }
+                { title: "Setup", startMs: 60000 }
+                { title: "", startMs: 120000 }
+                "junk"
+            ])
+            m.assertEqual(chapters.Count(), 2)
+            m.assertEqual(chapters[0].title, "Intro")
+            m.assertEqual(chapters[0].startMs, 0)
+            m.assertEqual(chapters[1].title, "Setup")
+            m.assertEqual(chapters[1].startMs, 60000)
+        end function
+
+        @it("finds the chapter under the cursor")
+        function _()
+            chapters = m.Chapters()
+            m.assertEqual(PlayerOverlayLogic.SelectedChapterIndex(chapters, -1), -1)
+            m.assertEqual(PlayerOverlayLogic.SelectedChapterIndex(chapters, 0), 0)
+            m.assertEqual(PlayerOverlayLogic.SelectedChapterIndex(chapters, 59999), 0)
+            m.assertEqual(PlayerOverlayLogic.SelectedChapterIndex(chapters, 60000), 1)
+            m.assertEqual(PlayerOverlayLogic.SelectedChapterIndex(chapters, 99999999), 2)
+            m.assertEqual(PlayerOverlayLogic.SelectedChapterIndex([], 1000), -1)
+        end function
+
+        @it("titles the chapter under the cursor")
+        function _()
+            chapters = m.Chapters()
+            m.assertEqual(PlayerOverlayLogic.ChapterTitleForCursor(chapters, 60000), "Setup")
+            m.assertEqual(PlayerOverlayLogic.ChapterTitleForCursor(chapters, 59999), "Intro")
+            m.assertEqual(PlayerOverlayLogic.ChapterTitleForCursor([], 0), "")
+        end function
+
+        @it("labels chapter times like the bar does")
+        function _()
+            m.assertEqual(PlayerOverlayLogic.TimeLabel(0), "00:00")
+            m.assertEqual(PlayerOverlayLogic.TimeLabel(65000), "01:05")
+            m.assertEqual(PlayerOverlayLogic.TimeLabel(3660000), "1:01:00")
+        end function
+
+        @it("builds chapter rows with the start time and the [x] mark on the current one")
+        function _()
+            options = PlayerOverlayLogic.BuildChaptersOptions(m.Chapters(), 120000)
+            m.assertEqual(options.Count(), 3)
+            m.assertEqual(options[1].title, "[x] 01:00 Setup")
+            m.assertEqual(options[1].value, "60000")
+            m.assertEqual(options[2].title, "[  ] 1:01:00 Deep dive")
+            m.assertEqual(PlayerOverlayLogic.BuildChaptersOptions([], 0).Count(), 0)
+        end function
+
+        @describe("sleep timer options")
+
+        @it("leads with Off and marks the armed duration")
+        function _()
+            options = PlayerOverlayLogic.BuildSleepTimerOptions(0)
+            m.assertEqual(options[0].title, "[x] " + Tr(Locale.PlaybackMenu.Off))
+            m.assertEqual(options[0].value, "0")
+            m.assertEqual(options[1].value, "5")
+            options = PlayerOverlayLogic.BuildSleepTimerOptions(30)
+            m.assertEqual(options[6].title, "[x] " + Tr(Locale.PlaybackMenu.Minutes).Replace("%1", "30"))
+            m.assertEqual(options[6].value, "30")
+            m.assertFalse(options[0].title.InStr("[x]") >= 0)
+        end function
+
+    end class
 end namespace

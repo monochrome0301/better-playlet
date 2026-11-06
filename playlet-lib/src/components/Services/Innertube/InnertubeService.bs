@@ -2,6 +2,7 @@ import "pkg:/components/Services/Innertube/BrowseEndpoint.bs"
 import "pkg:/components/Services/Innertube/CommentsEndpoint.bs"
 import "pkg:/components/Services/Innertube/Constants.bs"
 import "pkg:/components/Services/Innertube/Context.bs"
+import "pkg:/components/Services/Innertube/EditPlaylistEndpoint.bs"
 import "pkg:/components/Services/Innertube/GetDrmLicenseEndpoint.bs"
 import "pkg:/components/Services/Innertube/LiveChatEndpoint.bs"
 import "pkg:/components/Services/Innertube/NextEndpoint.bs"
@@ -361,6 +362,77 @@ namespace InnertubeService
 
     function GetPlaylists(options = invalid as object) as object
         return GetBrowseAuthenticatedPage("FEplaylist_aggregation", options)
+    end function
+
+    ' Applies InnerTube edit actions to a user playlist. Returns {} on success, { error } on failure.
+    function EditPlaylist(playlistId as string, actions as object, options = invalid as object) as object
+        cancellation = OptionUtils.Get(options, "cancellation")
+        accessToken = OptionUtils.Get(options, "accessToken")
+
+        request = Innertube.CreateEditPlaylistRequest(playlistId, actions, options)
+        if accessToken <> invalid
+            request.Header("Authorization", "Bearer " + accessToken)
+        end if
+        request.Cancellation(cancellation)
+
+        response = request.Await()
+        if not response.IsSuccess()
+            return {
+                error: response.ErrorMessage()
+            }
+        end if
+
+        status = ObjectUtils.Dig(response.Json(), ["status"])
+        if status <> invalid and status <> "STATUS_SUCCEEDED"
+            return {
+                error: status
+            }
+        end if
+
+        return {}
+    end function
+
+    function AddVideoToPlaylist(playlistId as string, videoId as string, options = invalid as object) as object
+        return EditPlaylist(playlistId, [Innertube.CreateAddVideoToPlaylistAction(videoId)], options)
+    end function
+
+    ' removedVideoId: the entry's setVideoId when known, otherwise the plain videoId (see EditPlaylistEndpoint).
+    function RemoveVideoFromPlaylist(playlistId as string, removedVideoId as string, options = invalid as object) as object
+        return EditPlaylist(playlistId, [Innertube.CreateRemoveVideoFromPlaylistAction(removedVideoId)], options)
+    end function
+
+    ' Returns { playlistId } of the created playlist, or { error }.
+    function CreatePlaylist(title as string, privacyStatus = "PRIVATE" as string, options = invalid as object) as object
+        cancellation = OptionUtils.Get(options, "cancellation")
+        accessToken = OptionUtils.Get(options, "accessToken")
+
+        request = Innertube.CreateCreatePlaylistRequest(title, privacyStatus, options)
+        if accessToken <> invalid
+            request.Header("Authorization", "Bearer " + accessToken)
+        end if
+        request.Cancellation(cancellation)
+
+        response = request.Await()
+        if not response.IsSuccess()
+            return {
+                error: response.ErrorMessage()
+            }
+        end if
+
+        json = response.Json()
+        playlistId = ObjectUtils.Dig(json, ["playlistId"])
+        if playlistId = invalid
+            playlistId = ObjectUtils.Dig(json, ["newPlaylist", "playlistId"])
+        end if
+        if playlistId = invalid
+            return {
+                error: "No playlistId in create playlist response"
+            }
+        end if
+
+        return {
+            playlistId: playlistId
+        }
     end function
 
     function GetBrowseAuthenticatedPage(browseId as string, options = invalid as object) as object

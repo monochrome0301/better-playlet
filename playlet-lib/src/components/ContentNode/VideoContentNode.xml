@@ -26,6 +26,8 @@
         <field id="lines" type="stringarray" />
         <!-- videoInfo is from web client -->
         <field id="videoInfo" type="string" />
+        <!-- per-entry id of a playlist item, needed to remove it from the playlist -->
+        <field id="setVideoId" type="string" />
         <field id="percentDurationWatched" type="float" />
         <!-- DeArrow community branding: "none"|"title"|"thumbnail"|"title_thumbnail"; empty = not resolved yet -->
         <field id="dearrowState" type="string" />

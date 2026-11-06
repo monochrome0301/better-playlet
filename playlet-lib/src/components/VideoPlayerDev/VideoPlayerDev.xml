@@ -53,6 +53,8 @@
         <Timer id="liveEdgeClock" duration="1" repeat="true" />
         <!-- Live chat poll: re-armed by the coordinator after each poll with the server's timeout. -->
         <Timer id="liveChatTimer" duration="5" repeat="false" />
+        <!-- Sleep timer: armed from the player menu (Off + 5..60 min); on fire the coordinator pauses playback. -->
+        <Timer id="sleepTimer" duration="0" repeat="false" />
 
         <!-- ===================== coordinator-owned animations ===================== -->
         <Animation id="chromeFadeIn" duration="0.5" easeFunction="linear">

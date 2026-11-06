@@ -53,6 +53,7 @@ namespace InvidiousContent
         SetIfExists(node, "index", item, "index")
         SetIfExists(node, "lines", item, "lines")
         SetIfExists(node, "videoInfo", item, "videoInfo")
+        SetIfExists(node, "setVideoId", item, "setVideoId")
         SetIfExists(node, "percentDurationWatched", item, "percentDurationWatched")
         ' Some items only carry the channel name in `lines` (lockup recommendations); mirror it into _author
         ' so consumers can use either field.

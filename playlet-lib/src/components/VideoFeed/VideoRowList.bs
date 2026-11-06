@@ -1,5 +1,6 @@
 import "pkg:/components/ChannelView/ChannelUtils.bs"
 import "pkg:/components/ContextMenu/ContextMenuUtils.bs"
+import "pkg:/components/Dialog/DialogUtils.bs"
 import "pkg:/components/JobSystem/Jobs.bs"
 import "pkg:/components/JobSystem/JobSystem.bs"
 import "pkg:/components/Navigation/LongPress.bs"
@@ -153,6 +154,10 @@ function GetContextMenuOptionsForItem(rowItem as object) as object
         authorId = rowItem.authorId
         if not StringUtils.IsNullOrEmpty(authorId)
             options.push(ContextMenuUtils.CreateOption(Tr(Locale.ContextMenu.OpenChannel), m.top, "OpenVideoChannel", [rowItem]))
+        end if
+
+        if CanEditPlaylists()
+            options.push(ContextMenuUtils.CreateOption(Tr(Locale.ContextMenu.SaveToPlaylist), m.top, "SaveVideoToPlaylist", [rowItem]))
         end if
     else if rowItem.type = "playlist"
         options.push(ContextMenuUtils.CreateOption(Tr(Locale.ContextMenu.PlayPlaylist), m.videoQueue, "FuncPlayPlaylist", [rowItem, 0]))
@@ -363,4 +368,226 @@ function OnDispose()
     m.top.screen = invalid
     m.top.content = invalid
     m.top.itemComponentName = invalid
+end function
+
+'-------------------------------------------------------------------------------
+' Save to playlist — context-menu flow: a dialog lists the account's playlists
+' (fetched once and cached), "New playlist…" opens a keyboard dialog.
+'-------------------------------------------------------------------------------
+
+function CanEditPlaylists() as boolean
+    profile = invalid
+    if m.profilesService <> invalid
+        profile = m.profilesService.currentProfile
+    end if
+    return profile <> invalid and profile.type = "youtube"
+end function
+
+function CurrentRowListProfile() as object
+    if m.profilesService = invalid
+        return invalid
+    end if
+    return m.profilesService.currentProfile
+end function
+
+function SaveVideoToPlaylist(video as object) as void
+    if video = invalid
+        return
+    end if
+
+    profile = CurrentRowListProfile()
+    if profile = invalid or profile.type <> "youtube"
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.ContextMenu.SaveToPlaylist)
+            message: Tr(Locale.Playlists.NotLoggedIn)
+        })
+        return
+    end if
+
+    m.playlistPickerVideo = video
+    if m.playlists <> invalid
+        ShowPlaylistPickerDialog()
+        return
+    end if
+
+    if m.playlistListJob <> invalid
+        m.playlistListJob.cancel = true
+        JobSystem.UnobserveCallback(m.playlistListJob)
+    end if
+    m.playlistListJob = JobSystem.CreateCallback(OnRowListPlaylistListJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.PlaylistListJob, {
+        profile: profile
+    }, m.playlistListJob)
+end function
+
+function OnRowListPlaylistListJobDone(event as object) as void
+    callback = event.getRoSGNode()
+    JobSystem.UnobserveCallback(callback)
+    if callback = m.playlistListJob
+        m.playlistListJob = invalid
+    end if
+
+    if callback.cancel
+        return
+    end if
+
+    if callback.error <> invalid
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.Playlists.LoadError)
+            message: callback.error
+        })
+        return
+    end if
+
+    m.playlists = callback.data
+    ShowPlaylistPickerDialog()
+end function
+
+function ShowPlaylistPickerDialog() as void
+    buttons = []
+    for each playlist in m.playlists
+        buttons.Push(ValidString(playlist.title))
+    end for
+    buttons.Push(Tr(Locale.Playlists.NewPlaylist))
+
+    dialog = DialogUtils.ShowDialogEx({
+        title: Tr(Locale.Playlists.SelectPlaylist)
+        buttons: buttons
+    })
+    if dialog = invalid
+        return
+    end if
+    dialog.ObserveField("buttonSelected", FuncName(OnPlaylistPicked))
+end function
+
+function OnPlaylistPicked(event as object) as void
+    index = event.GetData()
+    dialog = event.GetRoSGNode()
+    dialog.close = true
+
+    if m.playlists = invalid or index < 0 or index > m.playlists.Count()
+        return
+    end if
+
+    if index = m.playlists.Count()
+        OpenNewPlaylistKeyboard()
+        return
+    end if
+
+    playlist = m.playlists[index]
+    QueueAddVideoJob(ValidString(playlist.playlistId), ValidString(playlist.title), m.playlistPickerVideo)
+end function
+
+function OpenNewPlaylistKeyboard() as void
+    keyboardDialog = CreateObject("roSGNode", "StandardKeyboardDialog")
+    keyboardDialog.title = Tr(Locale.Playlists.CreatePlaylist)
+    keyboardDialog.message = [Tr(Locale.Playlists.PlaylistNamePrompt)]
+    keyboardDialog.buttons = [Tr(Locale.Buttons.OK), Tr(Locale.Buttons.Cancel)]
+    keyboardDialog.observeField("buttonSelected", FuncName(OnNewPlaylistKeyboardDone))
+
+    m.top.getScene().dialog = keyboardDialog
+end function
+
+function OnNewPlaylistKeyboardDone(event as object) as void
+    keyboard = event.getRoSGNode()
+    buttonSelected = keyboard.buttonSelected
+    text = keyboard.text
+    keyboard.close = true
+    if buttonSelected <> 0 or text = ""
+        return
+    end if
+
+    profile = CurrentRowListProfile()
+    if profile = invalid
+        return
+    end if
+
+    if m.playlistCreateJob <> invalid
+        m.playlistCreateJob.cancel = true
+        JobSystem.UnobserveCallback(m.playlistCreateJob)
+    end if
+    m.playlistCreateJob = JobSystem.CreateCallback(OnRowListPlaylistCreateJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.PlaylistCreateJob, {
+        profile: profile
+        title: text
+        videoId: RowListVideoId(m.playlistPickerVideo)
+    }, m.playlistCreateJob)
+end function
+
+function OnRowListPlaylistCreateJobDone(event as object) as void
+    callback = event.getRoSGNode()
+    JobSystem.UnobserveCallback(callback)
+    if callback = m.playlistCreateJob
+        m.playlistCreateJob = invalid
+    end if
+
+    if callback.cancel
+        return
+    end if
+
+    if callback.error <> invalid
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.Playlists.CreatePlaylist)
+            message: callback.error
+        })
+        return
+    end if
+
+    ' the cached list no longer contains the new playlist
+    m.playlists = invalid
+    DialogUtils.ShowDialogEx({
+        title: Tr(Locale.Playlists.CreatePlaylist)
+        message: Tr(Locale.Playlists.AddedToPlaylist).Replace("%1", `"${callback.data.title}"`)
+    })
+end function
+
+function QueueAddVideoJob(playlistId as string, playlistTitle as string, video as object) as void
+    profile = CurrentRowListProfile()
+    if profile = invalid
+        return
+    end if
+
+    if m.playlistAddJob <> invalid
+        m.playlistAddJob.cancel = true
+        JobSystem.UnobserveCallback(m.playlistAddJob)
+    end if
+    m.playlistAddJob = JobSystem.CreateCallback(OnRowListPlaylistAddJobDone)
+    JobSystem.QueueJob(m.jobQueue, Jobs.PlaylistAddVideoJob, {
+        profile: profile
+        playlistId: playlistId
+        playlistTitle: playlistTitle
+        videoId: RowListVideoId(video)
+    }, m.playlistAddJob)
+end function
+
+function OnRowListPlaylistAddJobDone(event as object) as void
+    callback = event.getRoSGNode()
+    JobSystem.UnobserveCallback(callback)
+    if callback = m.playlistAddJob
+        m.playlistAddJob = invalid
+    end if
+
+    if callback.cancel
+        return
+    end if
+
+    if callback.error <> invalid
+        DialogUtils.ShowDialogEx({
+            title: Tr(Locale.ContextMenu.SaveToPlaylist)
+            message: callback.error
+        })
+        return
+    end if
+
+    DialogUtils.ShowDialogEx({
+        title: Tr(Locale.ContextMenu.SaveToPlaylist)
+        message: Tr(Locale.Playlists.AddedToPlaylist).Replace("%1", `"${callback.data.title}"`)
+    })
+end function
+
+function RowListVideoId(video as object) as string
+    if video = invalid or not video.hasField("videoId")
+        return ""
+    end if
+    return ValidString(video.videoId)
 end function

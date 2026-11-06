@@ -1065,6 +1065,26 @@
         <translation>Normale</translation>
     </message>
     <message>
+        <source>Chapters</source>
+        <translation>Capitoli</translation>
+    </message>
+    <message>
+        <source>Loop</source>
+        <translation>Loop</translation>
+    </message>
+    <message>
+        <source>On</source>
+        <translation>Attivo</translation>
+    </message>
+    <message>
+        <source>Sleep timer</source>
+        <translation>Timer di spegnimento</translation>
+    </message>
+    <message>
+        <source>%1 min</source>
+        <translation>%1 min</translation>
+    </message>
+    <message>
         <source>Comments</source>
         <translation>Commenti</translation>
     </message>

@@ -1,0 +1,33 @@
+import "pkg:/components/ContentNode/ProfileContentAuthTokenUtils.bs"
+import "pkg:/components/Services/Innertube/InnertubeService.bs"
+
+@job("HistoryFeedJob")
+function ExecuteJob() as void
+    input = JobGetInput()
+    profile = input.profile
+
+    if JobIsCancelled()
+        JobCancel()
+        return
+    end if
+
+    cancellation = JobGetCancellation()
+
+    auth = ProfileContentAuthTokenUtils.EnsureFreshAccessToken(profile)
+    if auth.state <> ProfileContentAuthTokenUtils.AccessTokenState.Ok
+        JobError("No usable access token to load watch history: " + auth.state)
+        return
+    end if
+
+    result = InnertubeService.GetWatchHistory({
+        accessToken: auth.token
+        onBehalfOfUser: auth.activeIdentifyToken
+        cancellation: cancellation
+    })
+    if result.error <> invalid
+        JobError("Failed to load watch history: " + ToString(result.error))
+        return
+    end if
+
+    JobSuccessData(result.feeds)
+end function

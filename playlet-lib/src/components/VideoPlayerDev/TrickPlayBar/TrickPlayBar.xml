@@ -21,6 +21,8 @@
         <field id="sbBarUri" type="uri" alias="trackBg.uri" />
         <field id="sbFillBlend" type="color" />
         <field id="chapterText" type="string" alias="chapterLabel.text" />
+        <!-- the VOD's YouTube chapters ([{title, startMs}]); rendered as ticks over the fill. -->
+        <field id="chapters" type="array" />
     </interface>
     <children>
         <Poster id="trackBg"
@@ -30,6 +32,8 @@
         <Poster id="trackFill"
             uri="/RokuOS/Artwork/SceneGraph/FixedTheme/Base/FHD/osd_sliderControl_small.9.png"
             width="1144" height="12" blendColor="0xFF1C30FF" clippingRect="[0,0,0,12]" loadDisplayMode="noScale" />
+        <!-- chapter ticks (VOD only): a 2px mark at each chapter's start, rebuilt from the chapters field. -->
+        <Group id="chapterTicks" />
         <!-- the cursor: a 12px dot that swells half-again while the bar tier holds focus. PositionPlayhead
              moves it; the grow/shrink animations scale it about its center. -->
         <Poster id="playhead"
